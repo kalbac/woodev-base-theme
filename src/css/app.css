@@ -2,6 +2,8 @@
  * Layer order is THE contract (docs/gotchas/tailwind-v4-layer-precedence.md):
  * un-layered CSS beats all layers; adapter is the only place we override Basecoat.
  */
+@source "../../woodev-base-theme/**/*.php";
+
 @layer theme, base, components, adapter, utilities;
 
 @import "tailwindcss";
