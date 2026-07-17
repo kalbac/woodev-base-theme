@@ -1,5 +1,28 @@
 # Session Log — Woodev Base
 
+## s2 — 17.07.2026 — M0 bootstrap executed (PR #1)
+
+**Done:** all 16 plan tasks, subagent-driven (Sonnet workers, Opus verification). Toolchain (Vite 8, Tailwind v4, Basecoat 1.0.2 exact, Alpine), design-token single source → `theme.json` + CSS vars, theme skeleton, hand-rolled autoloader + `Theme`/`Setup`/`Assets`, PHPCS + PHPStan L8 + PHPUnit 10.5/Brain\Monkey + Vitest + Playwright, wp-env, CI. Verified on wp-env: WP 7.0.1 on **PHP 8.1.34** (the declared floor), theme activates, front page 200 with dist assets, zero PHP notices. Tests: 10 PHP unit + 4 JS unit + 3 e2e.
+
+**Plan deviations (reality contradicted the plan — all four verified, not assumed):**
+
+1. `import 'basecoat-css'` → **`basecoat-css/all`**. The bare specifier resolves to the package's `.` export, which is CSS; it would have registered zero components **silently**. `/basecoat` is the registry alone (0 `register()` calls); `/all` has 12.
+2. Dropped **`layer(components)`** from the Basecoat import: it fails the build outright (`@custom-variant cannot be nested`) and is redundant — Basecoat self-declares `@layer components` in 38/39 component files.
+3. Design tokens now emit **un-layered, imported after Basecoat**. Basecoat declares its own `:root` defaults un-layered, so our `@layer theme` tokens were silently losing. Invisible because both ship identical shadcn colours; would have surfaced in M1 as "the Customizer can't move a token". Proven with sentinel builds.
+4. **PHPUnit pinned `^10.5` + `config.platform.php = 8.1`**. PHPUnit 11 needs PHP ≥ 8.2 while ADR-003 fixes the floor at 8.1 and requires CI to target it — the plan asked for both. Local PHP is 8.5, so composer had resolved a lock CI could not install.
+
+Deviations 2 and 3 were **silent failures**: the build/site would look fine and break in M1.
+
+**Other corrections:** WP floor computed as **6.8 / tested 7.0** (plan's `6.7` was a stale placeholder; its `min-2` one-liner breaks now that WP is 7.0). Dev-server CORS narrowed from `cors: true` to the wp-env origins. `wp_json_file_decode()` replaces `file_get_contents`+`json_decode` (WP canon). Vitest scoped to `tests/js` — it was collecting the Playwright spec and failing `npm run test:js`. Prettier scoped to code, not prose (it had realigned every table in the approved spec and in the plan itself). Mockery expectations now count as PHPUnit assertions (tests were "risky", i.e. reporting zero assertions).
+
+**Verification approach:** worker claims were never trusted. PHP setup tests checked by **mutation** (dropping an `add_theme_support`, swapping the text domain — both caught); PHPStan L8 sanity-checked by injecting a type error; the token-cascade e2e guard checked by **simulating the regression** — which revealed its comment was wrong about why it works (Basecoat *does* define `--font-sans`, as Geist; that difference is the only thing that can observe the regression, since every colour is identical).
+
+**Gotchas added:** `basecoat-js-entry-is-a-subpath-export`, `basecoat-tokens-are-un-layered` (both new, both silent-failure traps). `tailwind-v4-layer-precedence` updated with how its traps actually played out.
+
+**Build/commits:** 23 commits on `feat/m0-bootstrap`; PR [#1](https://github.com/kalbac/woodev-base-theme/pull/1). Language rule codified in `AGENTS.md` (Russian only, informal «ты»); `AGENTS.md` made mandatory session-start reading in `CLAUDE.md`.
+
+**Next:** M1 kickoff — WP integration-test harness (research current wp-env docs first), then M1 per spec §7 inventory.
+
 ## s1 — 17.07.2026 — Brainstorm, decisions, full project bootstrap
 
 **Done:**
