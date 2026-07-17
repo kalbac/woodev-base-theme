@@ -22,12 +22,20 @@ test('front page renders with theme assets and no console errors', async ({ page
 });
 
 test('our design tokens win the cascade at runtime', async ({ page }) => {
-  // Guards docs/gotchas/basecoat-tokens-are-un-layered.md: Basecoat declares
-  // its own :root/.dark token defaults UN-LAYERED, and our generated tokens
-  // are also un-layered but imported AFTER Basecoat, so source order makes
-  // ours win. Both currently ship identical shadcn values, so a cascade
-  // regression would be invisible in the rendered page — only a
-  // computed-style assertion catches it.
+  // Guards docs/gotchas/basecoat-tokens-are-un-layered.md: our generated tokens
+  // are un-layered and imported AFTER Basecoat, so source order makes ours win.
+  //
+  // --font-sans is the ONLY token here that can detect a cascade regression, and
+  // the whole test hangs on it. Every colour token we ship is byte-identical to
+  // Basecoat's shadcn default, so if Basecoat's copy won instead, --background
+  // would still read oklch(1 0 0) and every colour assertion would pass while the
+  // cascade is broken. --font-sans differs: Basecoat's vega pack sets "Geist
+  // Sans" (dist/base/base.css), while the spec requires our system stack. If our
+  // tokens ever stop winning, Geist appears here and this test fails — verified
+  // by simulating the regression, not by assuming.
+  //
+  // So: do not "simplify" this to colours only, and do not drop the font
+  // assertion as redundant. It is the only load-bearing one.
   await page.goto('/');
 
   const result = await page.evaluate((expectedBackgroundRaw) => {
@@ -75,9 +83,9 @@ test('our design tokens win the cascade at runtime', async ({ page }) => {
 
   expect(result.actualBackground).toBe(result.expectedBackground);
 
-  // --font-sans is a token Basecoat does NOT define, so a correct value here
-  // proves our tokens.generated.css is actually loaded and applied — not
-  // just that some --background happens to match by coincidence.
+  // The real guard (see the note at the top): Basecoat DOES define --font-sans,
+  // as "Geist Sans", and ours must beat it. Unlike the colour check above, this
+  // one fails if the cascade regresses.
   const expectedFontSans = await page.evaluate((fontFamilyString) => {
     const probe = document.createElement('div');
     probe.style.fontFamily = fontFamilyString;

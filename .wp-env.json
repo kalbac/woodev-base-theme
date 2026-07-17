@@ -1,5 +1,5 @@
 {
-	"core": null,
-	"phpVersion": "8.1",
-	"themes": [ "./woodev-base-theme" ]
+  "core": null,
+  "phpVersion": "8.1",
+  "themes": ["./woodev-base-theme"]
 }

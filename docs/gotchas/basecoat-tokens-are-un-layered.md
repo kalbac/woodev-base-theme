@@ -21,6 +21,10 @@ Sentinel builds, reading the effective `--background` out of the compiled bundle
 
 In the real bundle both blocks are un-layered `:root`; Basecoat's is identifiable by `--card`/`--popover` (tokens we don't ship) and ours follows it.
 
+**Only `--font-sans` can detect the regression.** Every colour token we ship is byte-identical to Basecoat's shadcn default, so if Basecoat's copy wins, `--background` still reads `oklch(1 0 0)` and every colour assertion passes while the cascade is broken — that identity is exactly why the bug is silent. `--font-sans` is the one token whose values genuinely differ: Basecoat's vega pack sets `"Geist Sans"` in its `@theme` (`dist/base/base.css:87`, landing in `@layer theme`), while the spec requires our system stack, which we ship un-layered and later. Simulating the regression confirms it: the e2e font assertion fails with `"Geist Sans", ui-sans-serif, …`; the colour assertions stay green.
+
+This also means our `--font-sans` override is load-bearing, not decorative — it is what makes the theme use the system stack instead of Geist.
+
 ## How to apply here
 
 - `src/css/app.css`: `@import "basecoat-css";` with **no** `layer()` wrapper, and `@import "./tokens.generated.css";` **after** it. That import order is load-bearing — moving the tokens line above Basecoat silently discards every token.
