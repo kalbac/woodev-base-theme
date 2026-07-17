@@ -18,6 +18,9 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
-    cors: true,
+    // Only the local wp-env origins may pull dev-server assets. `cors: true`
+    // would reflect any origin, letting any site a developer visits read this
+    // server's source over CORS while it runs.
+    cors: { origin: ['http://localhost:8888', 'http://localhost:8889'] },
   },
 });

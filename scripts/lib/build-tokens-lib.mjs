@@ -34,20 +34,24 @@ const varsBlock = (colors, indent) =>
 
 export function buildTokensCss(tokens) {
   const fontVars = Object.entries(tokens.fonts)
-    .map(([slug, value]) => `    --font-${slug}: ${value};`)
+    .map(([slug, value]) => `  --font-${slug}: ${value};`)
     .join('\n');
 
   return `/* AUTO-GENERATED from src/tokens/tokens.mjs — do not edit. Run \`npm run tokens\`. */
-@layer theme {
-  :root {
-${varsBlock(tokens.colors.light, '    ')}
-    --radius: ${tokens.radius};
-${fontVars}
-  }
 
-  .dark {
-${varsBlock(tokens.colors.dark, '    ')}
-  }
+/* Deliberately UN-LAYERED: Basecoat declares its own :root/.dark token defaults
+ * un-layered too, and un-layered CSS beats every layer. Wrapped in @layer theme
+ * these would lose to Basecoat and the Customizer could never move them.
+ * Import order in app.css (after Basecoat) is what makes ours win.
+ * See docs/gotchas/basecoat-tokens-are-un-layered.md */
+:root {
+${varsBlock(tokens.colors.light, '  ')}
+  --radius: ${tokens.radius};
+${fontVars}
+}
+
+.dark {
+${varsBlock(tokens.colors.dark, '  ')}
 }
 `;
 }
