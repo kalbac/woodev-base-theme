@@ -74,11 +74,11 @@ This is a well-trodden domain. **Follow WordPress/WooCommerce canon and establis
 
 No feature merges without tests at the appropriate levels; no merge with red tests.
 
-| Level       | Tooling                                                    | Scope                                                                    |
-| ----------- | ---------------------------------------------------------- | ------------------------------------------------------------------------ |
-| Unit        | PHPUnit + Brain\Monkey (PHP, no WP bootstrap); Vitest (JS) | Pure logic, sanitizers, helpers, Alpine modules                          |
-| Integration | WP test suite (`WP_UnitTestCase`) under wp-env             | Anything touching WP/Woo APIs: hooks, Customizer, template loading       |
-| e2e         | Playwright against wp-env                                  | User-visible flows, smoke on key templates, visual checks (light + dark) |
+| Level | Tooling | Scope |
+|---|---|---|
+| Unit | PHPUnit + Brain\Monkey (PHP, no WP bootstrap); Vitest (JS) | Pure logic, sanitizers, helpers, Alpine modules |
+| Integration | WP test suite (`WP_UnitTestCase`) under wp-env | Anything touching WP/Woo APIs: hooks, Customizer, template loading |
+| e2e | Playwright against wp-env | User-visible flows, smoke on key templates, visual checks (light + dark) |
 
 TDD is the default workflow (test first, watch it fail, implement). UI claims ("it renders correctly") require browser/e2e evidence, not assertion.
 

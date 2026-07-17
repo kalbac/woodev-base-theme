@@ -3,7 +3,6 @@
 ## s1 — 17.07.2026 — Brainstorm, decisions, full project bootstrap
 
 **Done:**
-
 - Brainstormed all open decisions from `PROJECT.md`; recorded ADR-001…006: hybrid architecture (classic + theme.json), Customizer (`theme_mods`), PHP ≥ 8.1 / WP & Woo latest-3-majors, Basecoat via pinned npm + adapter layer, GitHub-first distribution (wp.org-compliant from day one), English source strings + ru_RU.
 - Wrote v1 design spec `docs/specs/2026-07-17-woodev-base-v1-design.md`; scaffolded canon: `AGENTS.md` (modern PHP 8.1+ mandatory, SOLID/DRY/YAGNI/KISS, unit+integration+e2e mandatory, Opus 4.8 orchestrator + Sonnet 5 workers + Codex critic), lean `CLAUDE.md`, docs structure.
 - Installed 8 vetted review skills from jorgerosal/wordpress-skills → `.claude/skills/` with PROJECT OVERRIDE preambles (`[]` not `array()`, hybrid-classic scope); Codex critic reads the same files.

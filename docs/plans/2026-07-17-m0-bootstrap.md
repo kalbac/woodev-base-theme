@@ -22,7 +22,6 @@
 ### Task 1: Node tooling init
 
 **Files:**
-
 - Create: `package.json`
 
 - [ ] **Step 1: Create branch**
@@ -85,7 +84,6 @@ git commit -m "chore(m0): init node tooling"
 Single source of truth for tokens; generates `theme.json` and `tokens.generated.css`. Values below are the shadcn neutral defaults Basecoat is designed around.
 
 **Files:**
-
 - Create: `src/tokens/tokens.mjs`
 - Create: `scripts/lib/build-tokens-lib.mjs`
 - Create: `scripts/build-tokens.mjs`
@@ -137,7 +135,7 @@ export const tokens = {
   radius: '0.625rem',
   fonts: {
     sans: "system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
-    mono: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+    mono: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
   },
 };
 ```
@@ -311,7 +309,6 @@ git commit -m "feat(m0): design-token single source generating theme.json and CS
 ### Task 3: CSS entry, layer order, adapter skeleton
 
 **Files:**
-
 - Create: `src/css/app.css`
 - Create: `src/css/adapter/index.css`
 - Create: `src/css/states.css`
@@ -334,11 +331,11 @@ Expected: a version + export keys (confirm `.`/`basecoat-css` CSS export exists)
  */
 @layer theme, base, components, adapter, utilities;
 
-@import 'tailwindcss';
-@import 'basecoat-css' layer(components);
-@import './tokens.generated.css';
-@import './adapter/index.css' layer(adapter);
-@import './states.css';
+@import "tailwindcss";
+@import "basecoat-css" layer(components);
+@import "./tokens.generated.css";
+@import "./adapter/index.css" layer(adapter);
+@import "./states.css";
 ```
 
 ```css
@@ -376,7 +373,6 @@ git commit -m "feat(m0): css entry with layer contract, adapter skeleton, un-lay
 ### Task 4: JS entry
 
 **Files:**
-
 - Create: `src/js/app.js`
 
 - [ ] **Step 1: Write the JS entry**
@@ -404,7 +400,6 @@ git commit -m "feat(m0): js entry — basecoat auto-init + alpine start"
 ### Task 5: Vite config + production build
 
 **Files:**
-
 - Create: `vite.config.mjs`
 
 - [ ] **Step 1: Write the Vite config**
@@ -460,7 +455,6 @@ git commit -m "build(m0): vite config — two entries, manifest, dist into theme
 ### Task 6: Theme skeleton (style.css, functions.php, templates)
 
 **Files:**
-
 - Create: `woodev-base-theme/style.css`
 - Create: `woodev-base-theme/functions.php`
 - Create: `woodev-base-theme/index.php`
@@ -626,7 +620,6 @@ git commit -m "feat(m0): theme skeleton — headers, bootstrap, base templates"
 ### Task 7: PHP QA harness (Composer, PHPUnit + Brain\Monkey)
 
 **Files:**
-
 - Create: `composer.json`
 - Create: `phpunit.xml.dist`
 - Create: `tests/php/bootstrap.php`
@@ -636,36 +629,36 @@ git commit -m "feat(m0): theme skeleton — headers, bootstrap, base templates"
 
 ```json
 {
-  "name": "woodev/woodev-base-theme-dev",
-  "description": "Dev-only QA tooling for the Woodev Base theme. The theme itself does not use Composer in production.",
-  "license": "GPL-2.0-or-later",
-  "require": {
-    "php": ">=8.1"
-  },
-  "require-dev": {
-    "phpunit/phpunit": "^11.5",
-    "brain/monkey": "^2.6",
-    "phpstan/phpstan": "^2.1",
-    "szepeviktor/phpstan-wordpress": "^2.0",
-    "squizlabs/php_codesniffer": "^3.13",
-    "wp-coding-standards/wpcs": "^3.1",
-    "dealerdirect/phpcodesniffer-composer-installer": "^1.0"
-  },
-  "autoload-dev": {
-    "psr-4": {
-      "Woodev\\Theme\\Base\\Tests\\": "tests/php/"
-    }
-  },
-  "config": {
-    "allow-plugins": {
-      "dealerdirect/phpcodesniffer-composer-installer": true
-    }
-  },
-  "scripts": {
-    "phpcs": "phpcs",
-    "phpstan": "phpstan analyse",
-    "test:unit": "phpunit -c phpunit.xml.dist"
-  }
+	"name": "woodev/woodev-base-theme-dev",
+	"description": "Dev-only QA tooling for the Woodev Base theme. The theme itself does not use Composer in production.",
+	"license": "GPL-2.0-or-later",
+	"require": {
+		"php": ">=8.1"
+	},
+	"require-dev": {
+		"phpunit/phpunit": "^11.5",
+		"brain/monkey": "^2.6",
+		"phpstan/phpstan": "^2.1",
+		"szepeviktor/phpstan-wordpress": "^2.0",
+		"squizlabs/php_codesniffer": "^3.13",
+		"wp-coding-standards/wpcs": "^3.1",
+		"dealerdirect/phpcodesniffer-composer-installer": "^1.0"
+	},
+	"autoload-dev": {
+		"psr-4": {
+			"Woodev\\Theme\\Base\\Tests\\": "tests/php/"
+		}
+	},
+	"config": {
+		"allow-plugins": {
+			"dealerdirect/phpcodesniffer-composer-installer": true
+		}
+	},
+	"scripts": {
+		"phpcs": "phpcs",
+		"phpstan": "phpstan analyse",
+		"test:unit": "phpunit -c phpunit.xml.dist"
+	}
 }
 ```
 
@@ -759,7 +752,6 @@ git commit -m "chore(m0): php qa harness — composer, phpunit 11, brain monkey"
 ### Task 8: Theme autoloader + core classes (TDD)
 
 **Files:**
-
 - Create: `woodev-base-theme/inc/autoload.php`
 - Create: `woodev-base-theme/inc/Theme.php`
 - Create: `woodev-base-theme/inc/Setup.php`
@@ -963,7 +955,6 @@ git commit -m "feat(m0): autoloader, Theme composition root, Setup (TDD)"
 ### Task 9: Assets — Vite manifest resolver + enqueue (TDD)
 
 **Files:**
-
 - Create: `woodev-base-theme/inc/Assets.php`
 - Test: `tests/php/Unit/AssetsTest.php`
 
@@ -1121,7 +1112,6 @@ git commit -m "feat(m0): vite manifest resolver + enqueue with dev-server mode (
 ### Task 10: PHPCS config, clean run
 
 **Files:**
-
 - Create: `phpcs.xml.dist`
 
 - [ ] **Step 1: Write the ruleset (single source of truth for WPCS deviations — AGENTS.md)**
@@ -1190,7 +1180,6 @@ git commit -m "chore(m0): phpcs ruleset (wpcs + modern-syntax deviations), codeb
 ### Task 11: PHPStan level 8, clean run
 
 **Files:**
-
 - Create: `phpstan.neon.dist`
 
 - [ ] **Step 1: Write the config**
@@ -1250,7 +1239,6 @@ git commit -m "chore(m0): phpstan level 8 wired with wordpress extension, zero e
 ### Task 12: ESLint + Prettier
 
 **Files:**
-
 - Create: `eslint.config.mjs`
 - Create: `.prettierrc.json`
 - Create: `.prettierignore`
@@ -1319,16 +1307,15 @@ git commit -m "chore(m0): eslint flat config + prettier"
 ### Task 13: wp-env — boot WordPress, activate theme
 
 **Files:**
-
 - Create: `.wp-env.json`
 
 - [ ] **Step 1: Write the config**
 
 ```json
 {
-  "core": null,
-  "phpVersion": "8.1",
-  "themes": ["./woodev-base-theme"]
+	"core": null,
+	"phpVersion": "8.1",
+	"themes": [ "./woodev-base-theme" ]
 }
 ```
 
@@ -1368,7 +1355,6 @@ git commit -m "chore(m0): wp-env config — theme boots and activates on php 8.1
 ### Task 14: Playwright e2e smoke
 
 **Files:**
-
 - Create: `playwright.config.mjs`
 - Test: `tests/e2e/smoke.spec.mjs`
 
@@ -1433,7 +1419,6 @@ git commit -m "test(m0): playwright smoke — front page, theme assets, zero con
 ### Task 15: GitHub Actions CI
 
 **Files:**
-
 - Create: `.github/workflows/ci.yml`
 
 - [ ] **Step 1: Write the workflow**
@@ -1511,7 +1496,6 @@ Expected: all three jobs green. If e2e is flaky on the runner (wp-env startup), 
 ### Task 16: Docs update + PR
 
 **Files:**
-
 - Modify: `docs/CURRENT-STATE.md`
 - Modify: `docs/SESSION-LOG.md`
 

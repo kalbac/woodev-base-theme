@@ -4,13 +4,13 @@
 
 ## Phase status
 
-| Milestone                | Status         | Notes                                                                                |
-| ------------------------ | -------------- | ------------------------------------------------------------------------------------ |
-| Design & decisions       | ✅ Done        | Spec approved, ADR-001…006 recorded                                                  |
-| M0 — Bootstrap           | ⬜ Not started | Repo/docs scaffold done in s1; tooling (Vite, wp-env, CI, lint/test harness) pending |
-| M1 — Core theme          | ⬜ Not started |                                                                                      |
-| M2 — WooCommerce layer   | ⬜ Not started |                                                                                      |
-| M3 — Public release prep | ⬜ Not started |                                                                                      |
+| Milestone | Status | Notes |
+|---|---|---|
+| Design & decisions | ✅ Done | Spec approved, ADR-001…006 recorded |
+| M0 — Bootstrap | ⬜ Not started | Repo/docs scaffold done in s1; tooling (Vite, wp-env, CI, lint/test harness) pending |
+| M1 — Core theme | ⬜ Not started | |
+| M2 — WooCommerce layer | ⬜ Not started | |
+| M3 — Public release prep | ⬜ Not started | |
 
 ## Known bugs
 

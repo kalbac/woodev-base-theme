@@ -14,10 +14,10 @@
 
 Sentinel builds, reading the effective `--background` out of the compiled bundle:
 
-| Our tokens declared as                            | Where they landed                 | Winner                         |
-| ------------------------------------------------- | --------------------------------- | ------------------------------ |
-| `@layer theme { :root { … } }`                    | `[theme]`, hoisted above Basecoat | **Basecoat** — our tokens dead |
-| un-layered `:root { … }`, imported after Basecoat | un-layered, last in source order  | **ours** ✅                    |
+| Our tokens declared as | Where they landed | Winner |
+|---|---|---|
+| `@layer theme { :root { … } }` | `[theme]`, hoisted above Basecoat | **Basecoat** — our tokens dead |
+| un-layered `:root { … }`, imported after Basecoat | un-layered, last in source order | **ours** ✅ |
 
 In the real bundle both blocks are un-layered `:root`; Basecoat's is identifiable by `--card`/`--popover` (tokens we don't ship) and ours follows it.
 
