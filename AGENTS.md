@@ -26,7 +26,7 @@ Eight vetted WordPress review skills are installed project-locally (source: [jor
 
 - Code, comments, commits, all docs: **English**.
 - User-facing theme strings: English source + `ru_RU` translation (ADR-006).
-- Discussions with Maksim: Russian.
+- Discussions with Maksim: **Russian only, always informal «ты»** — never «вы», never English. We're on bro terms; write like a teammate, not a support desk. This applies to every message, including short status updates and questions.
 
 ## Coding standards — PHP
 

@@ -4,8 +4,10 @@ Universal WordPress theme (hybrid: classic templates + theme.json) on Basecoat U
 
 ## Session start
 
-1. Read `AGENTS.md` — authoritative engineering rules (coding standards, testing, roles).
-2. Read `docs/CURRENT-STATE.md` — current phase, bugs, next actions.
+**Both files are MANDATORY reading before any work — no exceptions, including for "quick" tasks.**
+
+1. **`AGENTS.md`** — authoritative engineering rules (coding standards, testing, roles, language rules). Always read it in full first; it wins over this file on engineering matters.
+2. **`docs/CURRENT-STATE.md`** — current phase, bugs, next actions.
 
 ## Key facts
 
@@ -21,7 +23,7 @@ Universal WordPress theme (hybrid: classic templates + theme.json) on Basecoat U
 - Tests mandatory at unit/integration/e2e levels; TDD by default.
 - Never silently override an ADR — surface conflicts first.
 - wp.org Theme Review compliance from day one (escaping, prefixes, no plugin territory).
-- Docs/commits in English; discussions with Maksim in Russian.
+- Docs/commits in English; discussions with Maksim in Russian only, informal «ты» (AGENTS.md "Language rules").
 
 ## Docs map
 
