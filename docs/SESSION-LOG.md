@@ -19,9 +19,15 @@ Deviations 2 and 3 were **silent failures**: the build/site would look fine and 
 
 **Gotchas added:** `basecoat-js-entry-is-a-subpath-export`, `basecoat-tokens-are-un-layered` (both new, both silent-failure traps). `tailwind-v4-layer-precedence` updated with how its traps actually played out.
 
-**Build/commits:** 23 commits on `feat/m0-bootstrap`; PR [#1](https://github.com/kalbac/woodev-base-theme/pull/1). Language rule codified in `AGENTS.md` (Russian only, informal «ты»); `AGENTS.md` made mandatory session-start reading in `CLAUDE.md`.
+**Codex critic (mandatory gate):** ran, **2 × P2 open — nothing auto-fixed, awaiting Maksim** (verbatim in the [PR comment](https://github.com/kalbac/woodev-base-theme/pull/1#issuecomment-4998876196)). Both verified real:
+1. **Dev mode ships no CSS** (`Assets.php:60-61`). `enqueue_dev()` enqueues only the Vite client + JS entry, and `app.js` never imports `app.css` because Vite declares CSS as a separate Rollup entry — so `WOODEV_BASE_DEV` renders with no Tailwind/Basecoat/tokens. e2e only covers the production path, which is why it got through.
+2. **Missing manifest emits a warning** (`Assets.php:73-76`) — **a regression introduced in this session** (`c8f440b`). WP core's `wp_json_file_decode()` calls `wp_trigger_error()` before returning null; dropping the old `is_file()` guard traded a PHPCS warning for a real behaviour change, and the docblock's "enqueue nothing, not a fatal" claim is currently false. Reachable on any fresh checkout before `npm run build` (`assets/dist` is gitignored). Fix: restore the `is_file()` guard ahead of the decode.
 
-**Next:** M1 kickoff — WP integration-test harness (research current wp-env docs first), then M1 per spec §7 inventory.
+Tooling note: the Codex plugin's review job hung 15 min on a `supermemory/recall` MCP call (log dead after the call). Re-ran `codex review --base main -c 'mcp_servers={}'` directly, which completed — worth knowing before trusting a "running" Codex job.
+
+**Build/commits:** 23 commits on `feat/m0-bootstrap`; PR [#1](https://github.com/kalbac/woodev-base-theme/pull/1), CI green (both runs, all three jobs). Language rule codified in `AGENTS.md` (Russian only, informal «ты»); `AGENTS.md` made mandatory session-start reading in `CLAUDE.md`.
+
+**Next:** triage the 2 Codex findings → fix → re-run the critic on the fixes (never self-certify) → merge PR #1. Then M1 kickoff: WP integration-test harness (research current wp-env docs first), then M1 per spec §7 inventory.
 
 ## s1 — 17.07.2026 — Brainstorm, decisions, full project bootstrap
 
