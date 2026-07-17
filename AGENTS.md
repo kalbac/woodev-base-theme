@@ -8,7 +8,8 @@ Woodev Base — a universal WordPress theme (optional WooCommerce layer) built o
 
 ## Roles and models
 
-- **Workers:** Sonnet 5 for routine implementation, Opus for tasks needing deeper reasoning.
+- **Orchestrator:** Opus 4.8 drives implementation sessions using subagent-driven development (`superpowers:subagent-driven-development`): it dispatches plan tasks to workers, verifies each task's tests/lints itself, and never lets a worker mark its own work done.
+- **Workers:** Sonnet 5 subagents for routine implementation tasks; Opus for tasks needing deeper reasoning. Workers follow TDD and this document.
 - **Critic/reviewer:** Codex — every substantial change gets a Codex review pass before merge. Never self-certify fixes made in response to a review.
 - Architecture-shaping decisions must be surfaced **before** coding (🔴 irreversible vs 🟡 graftable). If a task conflicts with an ADR — stop, surface the conflict, propose alternatives. Never silently override an ADR.
 

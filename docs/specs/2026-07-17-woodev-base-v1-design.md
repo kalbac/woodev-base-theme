@@ -82,6 +82,7 @@ woodev-base-theme/
 ### Build: Vite
 
 - Entries: `src/css/app.css`, `src/js/app.js` (+ separate `woo.css`/`woo.js` bundle).
+- **Design-token single source:** tokens (colors incl. light/dark values, typography, spacing, radius) are defined once in `src/tokens/` (JS/JSON module); a small build step generates both the CSS custom properties file and `theme.json`. Neither CSS token values nor `theme.json` presets are ever edited by hand — zero front-end/editor drift.
 - Production: hashed filenames + `manifest.json`; `Assets.php` resolves the manifest for `wp_enqueue_*`.
 - Dev: Vite dev server with HMR against a local WordPress (wp-env); a `WOODEV_BASE_DEV` flag switches enqueues to the dev server.
 
@@ -96,7 +97,7 @@ Layer order (explicit, single source of truth in `app.css`):
 - `components` — Basecoat imports (npm, version pinned).
 - `adapter` — **the only place** where Basecoat is overridden/extended and where project components live.
 - Interactive state overrides that must beat utilities (`:disabled`, `.is-loading`, …) are declared **outside all layers** — inherited rule from woodev-theme (see `docs/gotchas/tailwind-v4-layer-precedence.md`).
-- Design tokens are CSS custom properties on `:root`, dark mode via `data-theme="dark"` attribute toggling (not media-query-only); no `@theme inline` so the runtime cascade stays active.
+- Design tokens are CSS custom properties on `:root`, dark mode via the `.dark` class on `<html>` (Basecoat's upstream convention; class toggling, not media-query-only); no `@theme inline` so the runtime cascade stays active.
 - Utility usage in PHP templates is allowed but repeated patterns (3+ occurrences) must be promoted to an adapter component class.
 
 ### JS: Basecoat JS + Alpine.js split
@@ -125,6 +126,7 @@ Layer order (explicit, single source of truth in `app.css`):
 
 - **Accessibility:** WCAG 2.1 AA target; keyboard navigation, visible focus, reduced-motion support, correct semantics/labels/states per component. Verified per component, not "at the end".
 - **Browsers:** evergreen — last 2 versions of Chrome/Firefox/Safari/Edge; no IE.
+- **Fonts (v1):** system font stack (`system-ui` based) — zero payload, zero licensing, good Cyrillic. A bundled OFL font (served locally, never from Google CDN) may be added as a Customizer option in M1+. Icons: decided at M1 (Lucide is the likely candidate, ISC license).
 - **Testing (mandatory, all three levels):**
   - *Unit* — PHPUnit + Brain\Monkey for PHP (no WP bootstrap), Vitest for JS modules.
   - *Integration* — WordPress test suite (`WP_UnitTestCase`) under wp-env; Woo integration tests in M2.
@@ -155,4 +157,4 @@ See `AGENTS.md` (authoritative for coding agents). Highlights:
 - Concrete WP floor number to print in `style.css` at M0 (per floating "latest 3 majors" policy).
 - Basecoat version pin + upstream watch process.
 - Full component/template inventory for M1 (planned at M1 kickoff).
-- Fonts/icons selection and licensing audit (M1).
+- Icons selection and licensing audit (M1); fonts resolved: system stack (see §8).

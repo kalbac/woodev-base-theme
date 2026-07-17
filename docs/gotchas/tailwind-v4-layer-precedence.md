@@ -14,7 +14,7 @@
 - Layer order is declared once in `src/css/app.css`: `theme, base, components, adapter, utilities`.
 - Basecoat lives in `components`; all our overrides live in `adapter` (still loses to utilities — that is correct and intended: utilities are the escape hatch).
 - Interactive state rules that must beat utilities (`:disabled`, `.is-loading`, forced states) are declared **outside all layers**, deliberately and documented, in one dedicated file.
-- Dark mode via `data-theme="dark"` attribute + CSS custom properties, not build-time values.
+- Dark mode via the `.dark` class on `<html>` (Basecoat convention) + CSS custom properties, not build-time values.
 
 ## Related
 
