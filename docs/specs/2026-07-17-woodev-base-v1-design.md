@@ -151,7 +151,7 @@ The switcher component (header) renders only when `color_scheme_toggle` is on; J
 
 - **Accessibility:** WCAG 2.1 AA target; keyboard navigation, visible focus, reduced-motion support, correct semantics/labels/states per component. Verified per component, not "at the end".
 - **Browsers:** evergreen — last 2 versions of Chrome/Firefox/Safari/Edge; no IE.
-- **Fonts (v1):** system font stack (`system-ui` based) — zero payload, zero licensing, good Cyrillic. A bundled OFL font (served locally, never from Google CDN) may be added as a Customizer option in M1+. Icons: decided at M1 (Lucide is the likely candidate, ISC license).
+- **Fonts (v1):** system font stack (`system-ui` based) — zero payload, zero licensing, good Cyrillic. A bundled OFL font (served locally, never from Google CDN) may be added as a Customizer option in M1+. Icons: **Lucide** (ISC license, the shadcn/Basecoat companion set) — inlined as SVG server-side via a PHP helper, only the icons actually used ship in the markup; no icon-font, no full-set bundle.
 - **Testing (mandatory, all three levels):**
   - *Unit* — PHPUnit + Brain\Monkey for PHP (no WP bootstrap), Vitest for JS modules.
   - *Integration* — WordPress test suite (`WP_UnitTestCase`) under wp-env; Woo integration tests in M2.
@@ -182,4 +182,4 @@ See `AGENTS.md` (authoritative for coding agents). Highlights:
 - Concrete WP floor number to print in `style.css` at M0 (per floating "latest 3 majors" policy).
 - Basecoat version pin + upstream watch process.
 - Full component/template inventory for M1 (planned at M1 kickoff).
-- Icons selection and licensing audit (M1); fonts resolved: system stack (see §8).
+- Fonts and icons resolved: system stack + Lucide (see §8).

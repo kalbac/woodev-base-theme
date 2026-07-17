@@ -21,7 +21,7 @@ None — no code yet.
 - Pin concrete WP floor number in `style.css` at M0 (floating "latest 3 majors" policy, ADR-003).
 - Pin Basecoat version + define upstream watch process (ADR-004).
 - M1 component/template inventory (plan at M1 kickoff).
-- Fonts/icons selection + licensing audit (M1).
+- ~~Fonts/icons selection~~ — resolved s1: system font stack, Lucide icons (ISC).
 - ~~Decide on installing a vetted WordPress skill pack~~ — done in s1: 8 skills from jorgerosal/wordpress-skills installed to `.claude/skills/` with project-override patches.
 
 ## Next actions
