@@ -1,0 +1,10 @@
+/* src/css/adapter/index.css
+ * The ONLY place Basecoat components are overridden/extended and where
+ * project component classes live (spec §5). Loaded into @layer adapter.
+ */
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
