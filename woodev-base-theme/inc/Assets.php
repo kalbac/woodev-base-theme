@@ -55,22 +55,35 @@ final class Assets {
 
 	/**
 	 * Enqueue assets straight from the Vite dev server (HMR, no manifest).
+	 *
+	 * The CSS entry is a separate Rollup input, so app.js never imports it and
+	 * the dev server must be asked for it explicitly — otherwise the page renders
+	 * with no Tailwind, Basecoat or tokens. Vite serves it as a JS module that
+	 * injects the style and carries HMR, hence a script module, not a stylesheet.
 	 */
 	private function enqueue_dev(): void {
 		wp_enqueue_script_module( 'woodev-base-vite-client', self::DEV_SERVER . '/@vite/client', [], null );
+		wp_enqueue_script_module( 'woodev-base-style', self::DEV_SERVER . '/' . self::CSS_ENTRY, [], null );
 		wp_enqueue_script_module( 'woodev-base-app', self::DEV_SERVER . '/' . self::JS_ENTRY, [], null );
 	}
 
 	/**
 	 * Read and decode a Vite manifest; empty array when absent/invalid.
 	 *
-	 * WordPress returns null for a missing or undecodable file, which callers here
-	 * must never see — an absent manifest means "enqueue nothing", not a fatal.
+	 * An absent manifest is the normal state of a fresh checkout (assets/dist is
+	 * gitignored) and means "enqueue nothing" — never a fatal, never a warning.
+	 * The is_file() guard is what keeps it silent: wp_json_file_decode() emits a
+	 * wp_trigger_error() warning of its own before returning null for a path it
+	 * cannot read.
 	 *
 	 * @param string $path Absolute path to the manifest.json file.
 	 * @return array<string, array{file: string, css?: list<string>}>
 	 */
 	public static function read_manifest( string $path ): array {
+		if ( ! \is_file( $path ) ) {
+			return [];
+		}
+
 		$decoded = wp_json_file_decode( $path, [ 'associative' => true ] );
 
 		return \is_array( $decoded ) ? $decoded : [];
