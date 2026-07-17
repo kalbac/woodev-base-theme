@@ -1,0 +1,9 @@
+includes:
+	- vendor/szepeviktor/phpstan-wordpress/extension.neon
+
+parameters:
+	level: 8
+	paths:
+		- woodev-base-theme/functions.php
+		- woodev-base-theme/inc
+	treatPhpDocTypesAsCertain: false

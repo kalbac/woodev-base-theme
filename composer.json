@@ -1,0 +1,35 @@
+{
+  "name": "woodev/woodev-base-theme-dev",
+  "description": "Dev-only QA tooling for the Woodev Base theme. The theme itself does not use Composer in production.",
+  "license": "GPL-2.0-or-later",
+  "require": {
+    "php": ">=8.1"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^10.5",
+    "brain/monkey": "^2.6",
+    "phpstan/phpstan": "^2.1",
+    "szepeviktor/phpstan-wordpress": "^2.0",
+    "squizlabs/php_codesniffer": "^3.13",
+    "wp-coding-standards/wpcs": "^3.1",
+    "dealerdirect/phpcodesniffer-composer-installer": "^1.0"
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Woodev\\Theme\\Base\\Tests\\": "tests/php/"
+    }
+  },
+  "config": {
+    "platform": {
+      "php": "8.1"
+    },
+    "allow-plugins": {
+      "dealerdirect/phpcodesniffer-composer-installer": true
+    }
+  },
+  "scripts": {
+    "phpcs": "phpcs",
+    "phpstan": "phpstan analyse --memory-limit=1G",
+    "test:unit": "phpunit -c phpunit.xml.dist"
+  }
+}

@@ -1,0 +1,18 @@
+woodev-base-theme/assets/dist/
+vendor/
+node_modules/
+package-lock.json
+composer.lock
+*.php
+src/css/tokens.generated.css
+woodev-base-theme/theme.json
+
+# Third-party Claude Code plugin skill files vendored into .claude/skills/ —
+# not part of this project's own source; must not be reformatted by our tooling.
+.claude/
+
+# Prettier formats code, not prose. Our markdown is hand-written and includes
+# records that must not drift: the approved spec, ADRs, and the plans we execute.
+# Reformatting them realigns tables for no benefit while mutating approved
+# artifacts and burying real edits in whitespace noise.
+*.md

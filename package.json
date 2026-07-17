@@ -1,0 +1,31 @@
+{
+  "name": "woodev-base-theme-dev",
+  "private": true,
+  "type": "module",
+  "description": "Dev tooling for the Woodev Base WordPress theme.",
+  "license": "GPL-2.0-or-later",
+  "scripts": {
+    "tokens": "node scripts/build-tokens.mjs",
+    "dev": "npm run tokens && vite",
+    "build": "npm run tokens && vite build",
+    "test:js": "vitest run",
+    "lint:js": "eslint .",
+    "format": "prettier --check .",
+    "e2e": "playwright test",
+    "wp:start": "wp-env start",
+    "wp:stop": "wp-env stop"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.61.1",
+    "@tailwindcss/vite": "^4.3.3",
+    "@wordpress/env": "^11.11.0",
+    "alpinejs": "^3.15.12",
+    "basecoat-css": "1.0.2",
+    "eslint": "^10.7.0",
+    "prettier": "^3.9.5",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.1.5",
+    "vitest": "^4.1.10"
+  }
+}

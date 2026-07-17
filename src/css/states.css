@@ -1,0 +1,5 @@
+/* src/css/states.css
+ * DELIBERATELY UN-LAYERED (wins over all layers, incl. utilities).
+ * Only interactive state overrides that must beat utility classes belong here.
+ * Every rule needs a comment justifying why it can't live in the adapter layer.
+ */
