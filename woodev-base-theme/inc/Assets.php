@@ -71,16 +71,21 @@ final class Assets {
 	 * Read and decode a Vite manifest; empty array when absent/invalid.
 	 *
 	 * An absent manifest is the normal state of a fresh checkout (assets/dist is
-	 * gitignored) and means "enqueue nothing" — never a fatal, never a warning.
-	 * The is_file() guard is what keeps it silent: wp_json_file_decode() emits a
-	 * wp_trigger_error() warning of its own before returning null for a path it
-	 * cannot read.
+	 * gitignored) and means "enqueue nothing" — never a fatal, never a PHP
+	 * diagnostic. The guard is what keeps it silent, and it needs both halves:
+	 * wp_json_file_decode() emits wp_trigger_error() for a path realpath() cannot
+	 * resolve, then hands whatever survives to file_get_contents() with no
+	 * readability check of its own, so an existing-but-unreadable file warns too.
+	 *
+	 * A file replaced or removed between this check and the decode still warns.
+	 * That race is not worth closing here: the manifest is our own build artifact
+	 * under the theme directory, not attacker-controlled input.
 	 *
 	 * @param string $path Absolute path to the manifest.json file.
 	 * @return array<string, array{file: string, css?: list<string>}>
 	 */
 	public static function read_manifest( string $path ): array {
-		if ( ! \is_file( $path ) ) {
+		if ( ! \is_file( $path ) || ! \is_readable( $path ) ) {
 			return [];
 		}
 

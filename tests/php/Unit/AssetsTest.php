@@ -45,13 +45,40 @@ final class AssetsTest extends TestCase {
 
 	// An absent manifest is the normal state of a fresh checkout (assets/dist is
 	// gitignored), so it must stay silent. wp_json_file_decode() does NOT: it
-	// calls wp_trigger_error() before returning null, which is a PHP warning on
-	// the front end. read_manifest() must therefore never reach the decode for a
-	// path that is not a file.
+	// calls wp_trigger_error() before returning null, which surfaces as a PHP
+	// notice on the front end. read_manifest() must therefore never reach the
+	// decode for a path that is not a file.
 	public function test_read_manifest_never_decodes_an_absent_manifest(): void {
 		Functions\expect( 'wp_json_file_decode' )->never();
 
 		self::assertSame( [], Assets::read_manifest( __DIR__ . '/nonexistent/manifest.json' ) );
+	}
+
+	// is_file() is true for a file we cannot open, and core's wp_json_file_decode()
+	// hands the path straight to file_get_contents() with no readability check of
+	// its own — which emits a PHP warning. So existence alone is not enough to
+	// keep the decode silent.
+	public function test_read_manifest_never_decodes_an_unreadable_manifest(): void {
+		$path = \tempnam( \sys_get_temp_dir(), 'wtb-manifest-' );
+		self::assertIsString( $path );
+
+		try {
+			\chmod( $path, 0000 );
+
+			// Windows ignores POSIX permission bits, and root reads anything —
+			// the condition under test cannot exist here, so asserting would be
+			// theatre. CI (ubuntu, non-root) is where this runs for real.
+			if ( \is_readable( $path ) ) {
+				self::markTestSkipped( 'Cannot make a file unreadable on this platform/user.' );
+			}
+
+			Functions\expect( 'wp_json_file_decode' )->never();
+
+			self::assertSame( [], Assets::read_manifest( $path ) );
+		} finally {
+			\chmod( $path, 0644 );
+			\unlink( $path );
+		}
 	}
 
 	// Any real file will do — the decode itself is mocked; is_file() is not.
