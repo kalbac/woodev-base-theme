@@ -22,7 +22,7 @@ None — no code yet.
 - Pin Basecoat version + define upstream watch process (ADR-004).
 - M1 component/template inventory (plan at M1 kickoff).
 - Fonts/icons selection + licensing audit (M1).
-- Decide on installing a vetted WordPress skill pack for coding agents (candidates researched in s1, see SESSION-LOG).
+- ~~Decide on installing a vetted WordPress skill pack~~ — done in s1: 8 skills from jorgerosal/wordpress-skills installed to `.claude/skills/` with project-override patches.
 
 ## Next actions
 

@@ -11,6 +11,6 @@
 
 **Decisions:** see `docs/adr/ADR-001…006`.
 
-**Researched:** existing Claude Code WordPress skill packs (elvismdev/claude-wordpress-skills, jorgerosal/wordpress-skills, Jeffallan/claude-skills wordpress-pro) — installation decision deferred to Maksim.
+**Skills installed:** 8 review skills from jorgerosal/wordpress-skills → `.claude/skills/` (theme-development, woocommerce-dev, security, a11y, test-strategy, phpstan, ci-cd, performance). Vetted (security screen clean), patched: PROJECT OVERRIDE preamble in each (modern PHP 8.1+ / `[]` not `array()`; hybrid-classic scope note in theme-development), normative WPCS-syntax lines corrected. Codex critic reads the same files — no `~/.codex` duplication. Alternatives rejected: elvismdev (performance-only), Jeffallan wordpress-pro (single generic skill).
 
 **Next:** M0 implementation plan + tooling skeleton (see CURRENT-STATE).

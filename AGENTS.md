@@ -12,6 +12,15 @@ Woodev Base — a universal WordPress theme (optional WooCommerce layer) built o
 - **Critic/reviewer:** Codex — every substantial change gets a Codex review pass before merge. Never self-certify fixes made in response to a review.
 - Architecture-shaping decisions must be surfaced **before** coding (🔴 irreversible vs 🟡 graftable). If a task conflicts with an ADR — stop, surface the conflict, propose alternatives. Never silently override an ADR.
 
+## Project skills (`.claude/skills/`)
+
+Eight vetted WordPress review skills are installed project-locally (source: [jorgerosal/wordpress-skills](https://github.com/jorgerosal/wordpress-skills), vetted and patched s1): `wp-theme-development`, `wp-woocommerce-dev`, `wp-security-review`, `wp-accessibility-review`, `wp-test-strategy`, `wp-phpstan-review`, `wp-ci-cd-and-release-engineering`, `wp-performance-review`.
+
+- They are **review-oriented**: use them when reviewing/auditing code and as pattern references. Writing canon stays in this document.
+- Each carries a **PROJECT OVERRIDE** preamble (modern PHP 8.1+ syntax, hybrid-classic scope); the preamble wins over the skill body, and this document wins over both.
+- **Codex critic:** when composing Codex review prompts, instruct Codex to read the matching `.claude/skills/wp-*/SKILL.md` (and only the `references/` files it needs) — single source of truth, no `~/.codex` copies.
+- Upstream sync is manual: re-vet and re-apply override preambles when updating from the source repo.
+
 ## Language rules
 
 - Code, comments, commits, all docs: **English**.
