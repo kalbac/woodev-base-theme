@@ -18,6 +18,16 @@
 		<exclude name="Generic.Arrays.DisallowShortArraySyntax"/>
 		<!-- DEVIATION: PSR-4-style class file names (inc/Theme.php), see autoloader. -->
 		<exclude name="WordPress.Files.FileName"/>
+		<!--
+		DEVIATION: every asset URL we enqueue is a Vite build artifact whose filename
+		already carries a content hash (app-LESVLxdP.js), so the URL changes whenever
+		the bytes change. The sniff exists to guarantee cache busting; hashing achieves
+		that structurally. Passing an explicit version would be strictly worse — it
+		would key invalidation to the theme version instead of the content — and `null`
+		is WP's documented way to omit `?ver=`. Revisit if we ever enqueue an unhashed
+		asset.
+		-->
+		<exclude name="WordPress.WP.EnqueuedResourceParameters.MissingVersion"/>
 	</rule>
 
 	<!-- Enforce the deviation in the positive direction: -->

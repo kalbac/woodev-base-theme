@@ -64,15 +64,14 @@ final class Assets {
 	/**
 	 * Read and decode a Vite manifest; empty array when absent/invalid.
 	 *
+	 * WordPress returns null for a missing or undecodable file, which callers here
+	 * must never see — an absent manifest means "enqueue nothing", not a fatal.
+	 *
 	 * @param string $path Absolute path to the manifest.json file.
 	 * @return array<string, array{file: string, css?: list<string>}>
 	 */
 	public static function read_manifest( string $path ): array {
-		if ( ! \is_file( $path ) ) {
-			return [];
-		}
-
-		$decoded = \json_decode( (string) \file_get_contents( $path ), true );
+		$decoded = wp_json_file_decode( $path, [ 'associative' => true ] );
 
 		return \is_array( $decoded ) ? $decoded : [];
 	}

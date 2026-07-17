@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Woodev\Theme\Base\Tests\Unit;
 
+use Brain\Monkey\Functions;
 use Woodev\Theme\Base\Assets;
 
 final class AssetsTest extends TestCase {
@@ -29,7 +30,22 @@ final class AssetsTest extends TestCase {
 		self::assertSame( [], Assets::entry_css( self::MANIFEST, 'src/css/app.css' ) );
 	}
 
-	public function test_read_manifest_returns_empty_array_for_missing_file(): void {
+	// wp_json_file_decode() returns null for a missing or corrupt file. Callers
+	// index into the result, so read_manifest() must absorb that into an array.
+	public function test_read_manifest_returns_empty_array_when_file_cannot_be_decoded(): void {
+		Functions\expect( 'wp_json_file_decode' )
+			->once()
+			->with( '/nonexistent/manifest.json', [ 'associative' => true ] )
+			->andReturn( null );
+
 		self::assertSame( [], Assets::read_manifest( '/nonexistent/manifest.json' ) );
+	}
+
+	public function test_read_manifest_returns_the_decoded_manifest(): void {
+		Functions\expect( 'wp_json_file_decode' )
+			->once()
+			->andReturn( self::MANIFEST );
+
+		self::assertSame( self::MANIFEST, Assets::read_manifest( '/theme/manifest.json' ) );
 	}
 }
