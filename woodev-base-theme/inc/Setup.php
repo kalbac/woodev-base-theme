@@ -9,12 +9,21 @@ declare(strict_types=1);
 
 namespace Woodev\Theme\Base;
 
+/**
+ * Registers core theme support, i18n loading, and navigation menus.
+ */
 final class Setup {
 
+	/**
+	 * Hook theme setup into WordPress.
+	 */
 	public function register(): void {
 		add_action( 'after_setup_theme', [ $this, 'setup' ] );
 	}
 
+	/**
+	 * Declare theme supports, load translations, register nav menus.
+	 */
 	public function setup(): void {
 		add_theme_support( 'title-tag' );
 		add_theme_support( 'post-thumbnails' );
