@@ -28,7 +28,7 @@ This also means our `--font-sans` override is load-bearing, not decorative — i
 ## How to apply here
 
 - `src/css/app.css`: `@import "basecoat-css";` with **no** `layer()` wrapper, and `@import "./tokens.generated.css";` **after** it. That import order is load-bearing — moving the tokens line above Basecoat silently discards every token.
-- `buildTokensCss()` emits un-layered `:root`/`.dark`. A unit test asserts no `@layer` rule survives in the generated CSS; e2e asserts the computed `--background` equals our token value, because only a runtime check catches a silent cascade regression.
+- `buildTokensCss()` emits un-layered `:root`/`.dark`. A unit test asserts no `@layer` rule survives in the generated CSS. The e2e guard is the computed **`--font-sans`** check — per the note above, the colour assertions cannot fail even when the cascade is broken, so do not treat them as the guard and do not drop the font one as redundant.
 - The declared order `@layer theme, base, components, adapter, utilities;` still stands and is still correct: Tailwind's and Basecoat's `@theme` blocks compile into `theme`, Basecoat's components into `components`, ours into `adapter`.
 - Basecoat's `@theme { --color-background: var(--background); … }` is **not** `@theme inline` — the mapping keeps `var()` indirection, so overriding `--background` at runtime propagates to `bg-background` utilities. Spec §5's "no `@theme inline`" requirement is satisfied by upstream.
 
