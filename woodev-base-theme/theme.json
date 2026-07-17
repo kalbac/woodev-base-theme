@@ -1,0 +1,94 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/theme.json",
+	"version": 3,
+	"settings": {
+		"color": {
+			"palette": [
+				{
+					"slug": "background",
+					"name": "Background",
+					"color": "oklch(1 0 0)"
+				},
+				{
+					"slug": "foreground",
+					"name": "Foreground",
+					"color": "oklch(0.145 0 0)"
+				},
+				{
+					"slug": "primary",
+					"name": "Primary",
+					"color": "oklch(0.205 0 0)"
+				},
+				{
+					"slug": "primary-foreground",
+					"name": "Primary Foreground",
+					"color": "oklch(0.985 0 0)"
+				},
+				{
+					"slug": "secondary",
+					"name": "Secondary",
+					"color": "oklch(0.97 0 0)"
+				},
+				{
+					"slug": "secondary-foreground",
+					"name": "Secondary Foreground",
+					"color": "oklch(0.205 0 0)"
+				},
+				{
+					"slug": "muted",
+					"name": "Muted",
+					"color": "oklch(0.97 0 0)"
+				},
+				{
+					"slug": "muted-foreground",
+					"name": "Muted Foreground",
+					"color": "oklch(0.556 0 0)"
+				},
+				{
+					"slug": "accent",
+					"name": "Accent",
+					"color": "oklch(0.97 0 0)"
+				},
+				{
+					"slug": "accent-foreground",
+					"name": "Accent Foreground",
+					"color": "oklch(0.205 0 0)"
+				},
+				{
+					"slug": "destructive",
+					"name": "Destructive",
+					"color": "oklch(0.577 0.245 27.325)"
+				},
+				{
+					"slug": "border",
+					"name": "Border",
+					"color": "oklch(0.922 0 0)"
+				},
+				{
+					"slug": "input",
+					"name": "Input",
+					"color": "oklch(0.922 0 0)"
+				},
+				{
+					"slug": "ring",
+					"name": "Ring",
+					"color": "oklch(0.708 0 0)"
+				}
+			]
+		},
+		"typography": {
+			"fontFamilies": [
+				{
+					"slug": "sans",
+					"name": "Sans",
+					"fontFamily": "system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+				},
+				{
+					"slug": "mono",
+					"name": "Mono",
+					"fontFamily": "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+				}
+			]
+		}
+	}
+}

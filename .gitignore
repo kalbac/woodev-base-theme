@@ -25,3 +25,6 @@ next-session-promt.md
 # OS noise
 Thumbs.db
 .DS_Store
+
+# Generated build intermediate (regenerate with `npm run tokens`)
+src/css/tokens.generated.css
