@@ -14,6 +14,7 @@ export default [
         console: 'readonly',
         fetch: 'readonly',
         process: 'readonly',
+        getComputedStyle: 'readonly',
       },
     },
   },
