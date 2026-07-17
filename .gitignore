@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Build output (release artifact only, not tracked)
+woodev-base-theme/assets/dist/
+
+# Env / local
+.env
+.env.*
+*.local
+.wp-env.override.json
+
+# Tooling caches
+.vite/
+.phpunit.result.cache
+.phpcs-cache
+jscpd-report/
+playwright-report/
+test-results/
+
+# OS noise
+Thumbs.db
+.DS_Store
