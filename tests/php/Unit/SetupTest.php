@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace Woodev\Theme\Base\Tests\Unit;
 
-use Brain\Monkey\Actions;
 use Brain\Monkey\Functions;
 use Woodev\Theme\Base\Setup;
 

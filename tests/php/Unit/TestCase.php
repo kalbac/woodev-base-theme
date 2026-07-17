@@ -20,6 +20,16 @@ abstract class TestCase extends PHPUnitTestCase {
 	}
 
 	protected function tearDown(): void {
+		// Mockery verifies Brain\Monkey's expectations itself, so PHPUnit counts
+		// zero assertions and marks expectation-only tests "risky". Fold the
+		// expectation count in so a test that only sets expectations still reports
+		// honestly — and so a genuinely assertion-free test stays visible as risky.
+		$container = \Mockery::getContainer();
+
+		if ( null !== $container ) {
+			$this->addToAssertionCount( $container->mockery_getExpectationCount() );
+		}
+
 		Monkey\tearDown();
 		parent::tearDown();
 	}
