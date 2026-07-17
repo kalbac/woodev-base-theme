@@ -19,6 +19,9 @@ jscpd-report/
 playwright-report/
 test-results/
 
+# Local-only handoff prompt
+next-session-promt.md
+
 # OS noise
 Thumbs.db
 .DS_Store

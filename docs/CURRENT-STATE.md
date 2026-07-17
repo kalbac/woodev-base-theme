@@ -25,9 +25,9 @@ None — no code yet.
 
 ## Next actions
 
-1. M0: implementation plan (superpowers:writing-plans) → tooling skeleton: theme headers, autoloader, Vite config, wp-env, phpcs.xml.dist, PHPStan, PHPUnit/Brain Monkey, Vitest, Playwright, GitHub Actions CI.
-2. Verify theme activates cleanly on wp-env with empty index.
+1. Execute `docs/plans/2026-07-17-m0-bootstrap.md` via superpowers:subagent-driven-development (kickoff prompt: `next-session-promt.md`).
+2. After M0 merge: M1 kickoff — WP integration-test harness (research current wp-env docs first), then M1 plan per spec §7 inventory.
 
 ## Last session
 
-s1 (17.07.2026): brainstorm, decisions fixed, project scaffolding created. See SESSION-LOG.
+s1 (17.07.2026): all decisions fixed (ADRs, Customizer contracts, M1 inventory), skills installed, repo published, M0 plan ready. See SESSION-LOG.
