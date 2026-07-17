@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  php-qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          # The supported floor (ADR-003), not a convenience version: CI must
+          # exercise the oldest PHP the theme claims to run on.
+          php-version: '8.1'
+          coverage: none
+      - run: composer install --no-interaction --no-progress
+      - run: composer phpcs
+      - run: composer phpstan
+      - run: composer test:unit
+
+  js-qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run lint:js
+      - run: npm run format
+      - run: npm run test:js
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: theme-dist
+          path: woodev-base-theme/assets/dist
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: js-qa
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx wp-env start
+      - run: npx wp-env run cli wp theme activate woodev-base-theme
+      - run: npx playwright install --with-deps chromium
+      - run: npm run e2e
