@@ -56,10 +56,11 @@ git checkout -b feat/m0-bootstrap
 - [ ] **Step 3: Install dependencies**
 
 ```bash
-npm install -D vite tailwindcss @tailwindcss/vite basecoat-css alpinejs @wordpress/env vitest @playwright/test eslint @eslint/js prettier
+npm install -D vite tailwindcss @tailwindcss/vite alpinejs @wordpress/env vitest @playwright/test eslint @eslint/js prettier
+npm install -D -E basecoat-css@1.0.2
 ```
 
-Expected: `package.json` gains `devDependencies`; `package-lock.json` created; no peer-dependency errors.
+Expected: `package.json` gains `devDependencies`; `package-lock.json` created; no peer-dependency errors. `basecoat-css` MUST be saved exact (`"1.0.2"`, no caret — spec §6: upgrades are deliberate, changelog + visual e2e first).
 
 - [ ] **Step 4: Verify toolchain responds**
 

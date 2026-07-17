@@ -110,7 +110,18 @@ Layer order (explicit, single source of truth in `app.css`):
 ## 6. Customization model
 
 - WordPress Customizer, settings stored as `theme_mods`. Every control has a sanitize callback; capability and nonce handling per WP core conventions.
-- Sections (v1): Colors (presets + key tokens, light/dark values), Typography, Layout (container width, radius scale), Header variants, Footer variants, and a WooCommerce section that registers only when Woo is active.
+- Sections (v1): Colors (style pack, scheme, primary preset), Typography, Layout (container width, radius scale, sidebar), Header variants, Footer variants, and a WooCommerce section that registers only when Woo is active.
+
+**Basecoat style packs.** Basecoat ships 8 standalone visual styles; the admin picks one:
+
+| Setting | Values | Default |
+|---|---|---|
+| `style_preset` | `vega` / `nova` / `maia` / `lyra` / `mira` / `luma` / `sera` / `rhea` | `vega` |
+
+- Upstream forbids combining packs, so the build produces **one standalone CSS bundle per pack** (8 Vite entries); at runtime only the chosen bundle is enqueued — payload stays single-pack.
+- Scheme switching (`.dark`) and the primary preset apply **on top of** whichever pack is active; every pack ships its own light+dark values.
+- Known v1 limitation: the block-editor palette (`theme.json`) is generated from `vega` and does not follow the runtime pack choice (theme.json is static). Documented, acceptable for v1.
+- Basecoat is version-pinned (exact `1.0.2`, no caret); upgrades are deliberate: changelog review + visual e2e across packs before bumping.
 
 **Color scheme (light/dark) controls.** The theme ships both light and dark token values; light is the `:root` default, `.dark` on `<html>` activates dark. Two Customizer settings govern behavior:
 
@@ -124,13 +135,15 @@ Resolution order (implemented as a tiny inline `<head>` script before styles pai
 2. Otherwise use `color_scheme_default`; the value `system` follows `prefers-color-scheme` (and reacts to OS changes live while in system mode).
 3. If `color_scheme_toggle` is off, visitor choices are neither offered nor honored — the admin-chosen default applies to everyone.
 
-The switcher component (header) renders only when `color_scheme_toggle` is on; JS-disabled visitors get the admin default (progressive enhancement: `system` degrades to a `prefers-color-scheme` media-query fallback for the initial paint).
+The switcher is an icon button (Lucide sun/moon) in the header, present in both header variants; it renders only when `color_scheme_toggle` is on. JS-disabled visitors get the admin default (progressive enhancement: `system` degrades to a `prefers-color-scheme` media-query fallback for the initial paint).
 
 **Primary color presets.** The admin picks the accent from a fixed, curated list — no free color picker in v1:
 
 | Setting | Values | Default |
 |---|---|---|
-| `primary_preset` | `neutral` / `blue` / `green` / `red` / `rose` / `orange` / `yellow` / `violet` | `neutral` |
+| `primary_preset` | `default` / `neutral` / `blue` / `green` / `red` / `rose` / `orange` / `yellow` / `violet` | `default` |
+
+- `default` means "inherit the active style pack's own primary" — no override emitted. Explicit values override `--primary`/`--primary-foreground`/`--ring` on top of the pack.
 
 - The list follows the shadcn/Basecoat standard theme colors, so every preset ships **paired light and dark values** for `--primary`, `--primary-foreground` and `--ring` with correct contrast in both schemes — a preset is a coherent tuple, never a single hex.
 - Presets live in the design-token single source (`src/tokens/`); the generator emits them for both CSS and PHP consumption (Customizer choices + inline CSS-var rendering), so the list is defined exactly once.
@@ -139,7 +152,18 @@ The switcher component (header) renders only when `color_scheme_toggle` is on; J
 - Rendering: settings compile to CSS custom properties emitted in a single inline `<style>` after the main stylesheet, overriding token defaults. The theme is fully functional with zero settings touched.
 - Presets first, few high-value controls; no raw token dump into the UI. Reset-to-defaults supported.
 
-## 7. WooCommerce layer (Milestone 2)
+## 7. M1 component & template inventory
+
+Fixed s1 so M1 needs no scoping questions.
+
+- **Templates (classic hierarchy):** `index.php`, `single.php`, `page.php`, `archive.php`, `search.php`, `404.php`, `comments.php`.
+- **Template parts:** header (2 variants: inline nav / centered), footer (2 variants: simple / widget columns), `content`, `content-excerpt`, `content-none`, pagination, sidebar.
+- **Layout:** single column by default; Customizer sidebar option `none` (default) / `right` for blog/archive/single contexts, backed by a Sidebar widget area. Footer columns are widget areas too.
+- **Menus:** `primary` (header), `footer`.
+- **Components (Basecoat markup + adapter classes):** button, badge, card, alert, form controls (input, select, textarea, checkbox, radio), dropdown menu (desktop nav), dialog/drawer (mobile nav), tabs, accordion, pagination, scheme switcher (icon button, Lucide sun/moon).
+- **Icons:** Lucide via a server-side inline-SVG PHP helper (see §9).
+
+## 8. WooCommerce layer (Milestone 2)
 
 - Namespace `Woodev\Theme\Base\Woo`, bootstrapped only when WooCommerce is active; base theme degrades gracefully without it.
 - Declared support: `woocommerce` (+ gallery features as designed), `WC requires at least` / `WC tested up to` kept current.
@@ -147,7 +171,7 @@ The switcher component (header) renders only when `color_scheme_toggle` is on; J
 - Native flows (cart AJAX, checkout, fragments) are styled and hooked, never replaced. No fragile dependencies on Woo internal markup — style via our own wrappers and body classes where possible.
 - Covered areas: shop/archive, single product, cart, checkout, account, store notices.
 
-## 8. Quality baseline
+## 9. Quality baseline
 
 - **Accessibility:** WCAG 2.1 AA target; keyboard navigation, visible focus, reduced-motion support, correct semantics/labels/states per component. Verified per component, not "at the end".
 - **Browsers:** evergreen — last 2 versions of Chrome/Firefox/Safari/Edge; no IE.
@@ -159,7 +183,7 @@ The switcher component (header) renders only when `color_scheme_toggle` is on; J
 - **Static analysis / lint:** PHPStan level 8, PHPCS with WPCS + Theme Review sniffs and documented modern-syntax deviations (`phpcs.xml.dist` is the source of truth), ESLint + Prettier for JS/CSS.
 - **Release gate:** Theme Check plugin pass + full test suite green + build reproducible via CI (GitHub Actions).
 
-## 9. Engineering conventions
+## 10. Engineering conventions
 
 See `AGENTS.md` (authoritative for coding agents). Highlights:
 
@@ -168,18 +192,16 @@ See `AGENTS.md` (authoritative for coding agents). Highlights:
 - WordPress canon over invented conventions: escaping on output, i18n on every user-facing string, prefixed hooks, proper enqueueing.
 - Russian plural rule: avoid `_n()` for count-sensitive copy; use count-agnostic phrasing with `number_format_i18n()`.
 
-## 10. Milestones
+## 11. Milestones
 
 | Milestone | Scope | Exit criteria |
 |---|---|---|
 | **M0 — Bootstrap** | Repo, docs, tooling skeleton (Vite, wp-env, CI, lint/test harness), theme boots with empty index | CI green on scaffold; theme activates cleanly |
-| **M1 — Core theme** | Tokens + theme.json, Basecoat adapter, base templates, header/footer variants, navigation, Customizer v1, i18n | Demo content site fully usable; a11y pass; all tests green |
+| **M1 — Core theme** | Tokens + theme.json, Basecoat adapter + 8 style-pack bundles, templates/parts per §7, header/footer variants, sidebar option, navigation, Customizer v1 (style, scheme, primary, layout), scheme switcher, Lucide helper, i18n | Demo content site fully usable; a11y pass; all tests green |
 | **M2 — WooCommerce layer** | Woo templates/hooks/CSS, Woo Customizer section, Woo e2e | Demo store usable end-to-end; override audit doc complete |
 | **M3 — Public release prep** | Theme Check, wp.org compliance audit, docs, ru_RU completion, release automation | Release ZIP via GitHub Actions; Update URI self-update verified |
 
-## 11. Open items (deferred, tracked in CURRENT-STATE)
+## 12. Open items (deferred, tracked in CURRENT-STATE)
 
-- Concrete WP floor number to print in `style.css` at M0 (per floating "latest 3 majors" policy).
-- Basecoat version pin + upstream watch process.
-- Full component/template inventory for M1 (planned at M1 kickoff).
-- Fonts and icons resolved: system stack + Lucide (see §8).
+- Concrete WP floor number to print in `style.css` at M0 (per floating "latest 3 majors" policy; computed by a plan step).
+- ~~Basecoat pin~~ — resolved: exact `1.0.2` (see §6). ~~M1 inventory~~ — resolved: §7. ~~Fonts/icons~~ — resolved: system stack + Lucide (§9).
