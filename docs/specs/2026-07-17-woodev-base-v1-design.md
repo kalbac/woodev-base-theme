@@ -125,6 +125,17 @@ Resolution order (implemented as a tiny inline `<head>` script before styles pai
 3. If `color_scheme_toggle` is off, visitor choices are neither offered nor honored — the admin-chosen default applies to everyone.
 
 The switcher component (header) renders only when `color_scheme_toggle` is on; JS-disabled visitors get the admin default (progressive enhancement: `system` degrades to a `prefers-color-scheme` media-query fallback for the initial paint).
+
+**Primary color presets.** The admin picks the accent from a fixed, curated list — no free color picker in v1:
+
+| Setting | Values | Default |
+|---|---|---|
+| `primary_preset` | `neutral` / `blue` / `green` / `red` / `rose` / `orange` / `yellow` / `violet` | `neutral` |
+
+- The list follows the shadcn/Basecoat standard theme colors, so every preset ships **paired light and dark values** for `--primary`, `--primary-foreground` and `--ring` with correct contrast in both schemes — a preset is a coherent tuple, never a single hex.
+- Presets live in the design-token single source (`src/tokens/`); the generator emits them for both CSS and PHP consumption (Customizer choices + inline CSS-var rendering), so the list is defined exactly once.
+- The block-editor palette (`theme.json`) is generated from the default preset; the Customizer inline style overrides `--primary`/`--primary-foreground`/`--ring` on the front end when a non-default preset is chosen.
+- Extending the list later is additive (new entry in the token source) — no migration.
 - Rendering: settings compile to CSS custom properties emitted in a single inline `<style>` after the main stylesheet, overriding token defaults. The theme is fully functional with zero settings touched.
 - Presets first, few high-value controls; no raw token dump into the UI. Reset-to-defaults supported.
 
