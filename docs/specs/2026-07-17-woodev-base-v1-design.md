@@ -5,15 +5,15 @@
 
 ## 1. Identity
 
-| Field | Value |
-|---|---|
-| Product name | Woodev Base |
-| Theme slug / text domain | `woodev-base-theme` |
-| PHP namespace | `Woodev\Theme\Base` |
-| Hook/function prefix | `woodev_base_` (filters/actions/functions) |
-| Short prefix | `wtb` — CSS custom properties (`--wtb-*`), data attributes, and other places where brevity matters |
-| Type | Universal WordPress theme with optional WooCommerce support |
-| License | GPL-2.0-or-later (wp.org compatible) |
+| Field                    | Value                                                                                              |
+| ------------------------ | -------------------------------------------------------------------------------------------------- |
+| Product name             | Woodev Base                                                                                        |
+| Theme slug / text domain | `woodev-base-theme`                                                                                |
+| PHP namespace            | `Woodev\Theme\Base`                                                                                |
+| Hook/function prefix     | `woodev_base_` (filters/actions/functions)                                                         |
+| Short prefix             | `wtb` — CSS custom properties (`--wtb-*`), data attributes, and other places where brevity matters |
+| Type                     | Universal WordPress theme with optional WooCommerce support                                        |
+| License                  | GPL-2.0-or-later (wp.org compatible)                                                               |
 
 ## 2. Goals and non-goals
 
@@ -28,18 +28,18 @@
 - No page-builder integrations (Elementor etc.).
 - No block-theme / FSE architecture.
 - No React or client-rendered application behavior.
-- No child themes shipped by us (child-theme *compatibility* is required).
+- No child themes shipped by us (child-theme _compatibility_ is required).
 
 ## 3. Fixed decisions (see ADRs)
 
-| # | Decision | ADR |
-|---|---|---|
-| 1 | Hybrid architecture: classic PHP templates + `theme.json` | ADR-001 |
-| 2 | Customizer is the user-facing settings mechanism; storage in `theme_mods` | ADR-002 |
-| 3 | Floors: PHP ≥ 8.1; WordPress: latest 3 majors (floating); WooCommerce: latest 3 majors | ADR-003 |
-| 4 | Basecoat as pinned npm dependency + own adapter layer | ADR-004 |
-| 5 | Distribution: GitHub Releases + `Update URI` first; wp.org-compliant from day one, submit later | ADR-005 |
-| 6 | i18n: English source strings, complete `ru_RU` translation shipped | ADR-006 |
+| #   | Decision                                                                                        | ADR     |
+| --- | ----------------------------------------------------------------------------------------------- | ------- |
+| 1   | Hybrid architecture: classic PHP templates + `theme.json`                                       | ADR-001 |
+| 2   | Customizer is the user-facing settings mechanism; storage in `theme_mods`                       | ADR-002 |
+| 3   | Floors: PHP ≥ 8.1; WordPress: latest 3 majors (floating); WooCommerce: latest 3 majors          | ADR-003 |
+| 4   | Basecoat as pinned npm dependency + own adapter layer                                           | ADR-004 |
+| 5   | Distribution: GitHub Releases + `Update URI` first; wp.org-compliant from day one, submit later | ADR-005 |
+| 6   | i18n: English source strings, complete `ru_RU` translation shipped                              | ADR-006 |
 
 ## 4. Theme architecture
 
@@ -114,9 +114,9 @@ Layer order (explicit, single source of truth in `app.css`):
 
 **Basecoat style packs.** Basecoat ships 8 standalone visual styles; the admin picks one:
 
-| Setting | Values | Default |
-|---|---|---|
-| `style_preset` | `vega` / `nova` / `maia` / `lyra` / `mira` / `luma` / `sera` / `rhea` | `vega` |
+| Setting        | Values                                                                | Default |
+| -------------- | --------------------------------------------------------------------- | ------- |
+| `style_preset` | `vega` / `nova` / `maia` / `lyra` / `mira` / `luma` / `sera` / `rhea` | `vega`  |
 
 - Upstream forbids combining packs, so the build produces **one standalone CSS bundle per pack** (8 Vite entries); at runtime only the chosen bundle is enqueued — payload stays single-pack.
 - Scheme switching (`.dark`) and the primary preset apply **on top of** whichever pack is active; every pack ships its own light+dark values.
@@ -125,12 +125,13 @@ Layer order (explicit, single source of truth in `app.css`):
 
 **Color scheme (light/dark) controls.** The theme ships both light and dark token values; light is the `:root` default, `.dark` on `<html>` activates dark. Two Customizer settings govern behavior:
 
-| Setting | Values | Default |
-|---|---|---|
-| `color_scheme_default` | `system` / `light` / `dark` | `system` |
-| `color_scheme_toggle` | on / off — show a front-end scheme switcher to visitors | on |
+| Setting                | Values                                                  | Default  |
+| ---------------------- | ------------------------------------------------------- | -------- |
+| `color_scheme_default` | `system` / `light` / `dark`                             | `system` |
+| `color_scheme_toggle`  | on / off — show a front-end scheme switcher to visitors | on       |
 
 Resolution order (implemented as a tiny inline `<head>` script before styles paint — no FOUC):
+
 1. If `color_scheme_toggle` is on and the visitor has a stored choice (`localStorage["wtb-scheme"]`) — use it.
 2. Otherwise use `color_scheme_default`; the value `system` follows `prefers-color-scheme` (and reacts to OS changes live while in system mode).
 3. If `color_scheme_toggle` is off, visitor choices are neither offered nor honored — the admin-chosen default applies to everyone.
@@ -139,8 +140,8 @@ The switcher is an icon button (Lucide sun/moon) in the header, present in both 
 
 **Primary color presets.** The admin picks the accent from a fixed, curated list — no free color picker in v1:
 
-| Setting | Values | Default |
-|---|---|---|
+| Setting          | Values                                                                                     | Default   |
+| ---------------- | ------------------------------------------------------------------------------------------ | --------- |
 | `primary_preset` | `default` / `neutral` / `blue` / `green` / `red` / `rose` / `orange` / `yellow` / `violet` | `default` |
 
 - `default` means "inherit the active style pack's own primary" — no override emitted. Explicit values override `--primary`/`--primary-foreground`/`--ring` on top of the pack.
@@ -177,9 +178,9 @@ Fixed s1 so M1 needs no scoping questions.
 - **Browsers:** evergreen — last 2 versions of Chrome/Firefox/Safari/Edge; no IE.
 - **Fonts (v1):** system font stack (`system-ui` based) — zero payload, zero licensing, good Cyrillic. A bundled OFL font (served locally, never from Google CDN) may be added as a Customizer option in M1+. Icons: **Lucide** (ISC license, the shadcn/Basecoat companion set) — inlined as SVG server-side via a PHP helper, only the icons actually used ship in the markup; no icon-font, no full-set bundle.
 - **Testing (mandatory, all three levels):**
-  - *Unit* — PHPUnit + Brain\Monkey for PHP (no WP bootstrap), Vitest for JS modules.
-  - *Integration* — WordPress test suite (`WP_UnitTestCase`) under wp-env; Woo integration tests in M2.
-  - *e2e* — Playwright against a wp-env site: smoke flows, key user journeys, visual checks of core templates (light + dark).
+  - _Unit_ — PHPUnit + Brain\Monkey for PHP (no WP bootstrap), Vitest for JS modules.
+  - _Integration_ — WordPress test suite (`WP_UnitTestCase`) under wp-env; Woo integration tests in M2.
+  - _e2e_ — Playwright against a wp-env site: smoke flows, key user journeys, visual checks of core templates (light + dark).
 - **Static analysis / lint:** PHPStan level 8, PHPCS with WPCS + Theme Review sniffs and documented modern-syntax deviations (`phpcs.xml.dist` is the source of truth), ESLint + Prettier for JS/CSS.
 - **Release gate:** Theme Check plugin pass + full test suite green + build reproducible via CI (GitHub Actions).
 
@@ -194,12 +195,12 @@ See `AGENTS.md` (authoritative for coding agents). Highlights:
 
 ## 11. Milestones
 
-| Milestone | Scope | Exit criteria |
-|---|---|---|
-| **M0 — Bootstrap** | Repo, docs, tooling skeleton (Vite, wp-env, CI, lint/test harness), theme boots with empty index | CI green on scaffold; theme activates cleanly |
-| **M1 — Core theme** | Tokens + theme.json, Basecoat adapter + 8 style-pack bundles, templates/parts per §7, header/footer variants, sidebar option, navigation, Customizer v1 (style, scheme, primary, layout), scheme switcher, Lucide helper, i18n | Demo content site fully usable; a11y pass; all tests green |
-| **M2 — WooCommerce layer** | Woo templates/hooks/CSS, Woo Customizer section, Woo e2e | Demo store usable end-to-end; override audit doc complete |
-| **M3 — Public release prep** | Theme Check, wp.org compliance audit, docs, ru_RU completion, release automation | Release ZIP via GitHub Actions; Update URI self-update verified |
+| Milestone                    | Scope                                                                                                                                                                                                                          | Exit criteria                                                   |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------- |
+| **M0 — Bootstrap**           | Repo, docs, tooling skeleton (Vite, wp-env, CI, lint/test harness), theme boots with empty index                                                                                                                               | CI green on scaffold; theme activates cleanly                   |
+| **M1 — Core theme**          | Tokens + theme.json, Basecoat adapter + 8 style-pack bundles, templates/parts per §7, header/footer variants, sidebar option, navigation, Customizer v1 (style, scheme, primary, layout), scheme switcher, Lucide helper, i18n | Demo content site fully usable; a11y pass; all tests green      |
+| **M2 — WooCommerce layer**   | Woo templates/hooks/CSS, Woo Customizer section, Woo e2e                                                                                                                                                                       | Demo store usable end-to-end; override audit doc complete       |
+| **M3 — Public release prep** | Theme Check, wp.org compliance audit, docs, ru_RU completion, release automation                                                                                                                                               | Release ZIP via GitHub Actions; Update URI self-update verified |
 
 ## 12. Open items (deferred, tracked in CURRENT-STATE)
 

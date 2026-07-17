@@ -1,0 +1,12 @@
+woodev-base-theme/assets/dist/
+vendor/
+node_modules/
+package-lock.json
+composer.lock
+*.php
+src/css/tokens.generated.css
+woodev-base-theme/theme.json
+
+# Third-party Claude Code plugin skill files vendored into .claude/skills/ —
+# not part of this project's own source; must not be reformatted by our tooling.
+.claude/

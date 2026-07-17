@@ -41,6 +41,6 @@ export const tokens = {
   radius: '0.625rem',
   fonts: {
     sans: "system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
-    mono: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+    mono: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
   },
 };
