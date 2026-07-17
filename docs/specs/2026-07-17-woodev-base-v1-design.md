@@ -111,6 +111,20 @@ Layer order (explicit, single source of truth in `app.css`):
 
 - WordPress Customizer, settings stored as `theme_mods`. Every control has a sanitize callback; capability and nonce handling per WP core conventions.
 - Sections (v1): Colors (presets + key tokens, light/dark values), Typography, Layout (container width, radius scale), Header variants, Footer variants, and a WooCommerce section that registers only when Woo is active.
+
+**Color scheme (light/dark) controls.** The theme ships both light and dark token values; light is the `:root` default, `.dark` on `<html>` activates dark. Two Customizer settings govern behavior:
+
+| Setting | Values | Default |
+|---|---|---|
+| `color_scheme_default` | `system` / `light` / `dark` | `system` |
+| `color_scheme_toggle` | on / off — show a front-end scheme switcher to visitors | on |
+
+Resolution order (implemented as a tiny inline `<head>` script before styles paint — no FOUC):
+1. If `color_scheme_toggle` is on and the visitor has a stored choice (`localStorage["wtb-scheme"]`) — use it.
+2. Otherwise use `color_scheme_default`; the value `system` follows `prefers-color-scheme` (and reacts to OS changes live while in system mode).
+3. If `color_scheme_toggle` is off, visitor choices are neither offered nor honored — the admin-chosen default applies to everyone.
+
+The switcher component (header) renders only when `color_scheme_toggle` is on; JS-disabled visitors get the admin default (progressive enhancement: `system` degrades to a `prefers-color-scheme` media-query fallback for the initial paint).
 - Rendering: settings compile to CSS custom properties emitted in a single inline `<style>` after the main stylesheet, overriding token defaults. The theme is fully functional with zero settings touched.
 - Presets first, few high-value controls; no raw token dump into the UI. Reset-to-defaults supported.
 
