@@ -8,7 +8,7 @@
 |---|---|---|
 | Design & decisions | ✅ Done | Spec approved, ADR-001…006 recorded |
 | M0 — Bootstrap | ✅ Done | PR [#1](https://github.com/kalbac/woodev-base-theme/pull/1) merged s3 after both Codex P2s were fixed and re-reviewed |
-| M1 — Core theme | 🟡 In progress | Integration harness landed s3 (`1020ca8`) on `feat/m1-integration-harness`. Templates/components per spec §7 not started |
+| M1 — Core theme | 🟡 In progress | Split into 5 plans (see below). Harness merged (PR #2); icon helper in PR [#3](https://github.com/kalbac/woodev-base-theme/pull/3). Templates/components per spec §7 not started |
 | M2 — WooCommerce layer | ⬜ Not started | |
 | M3 — Public release prep | ⬜ Not started | |
 
@@ -35,9 +35,21 @@ Both Codex findings on PR #1 were fixed in s3 (`e175958`, `9b0341f`), each repro
 
 ## Next actions
 
-1. ~~M1 kickoff: WP integration-test harness~~ — done s3. `npm run wp:test:start` → `test:integration:install` → `test:integration`; CI job `php-integration`. Mutation-verified (drop a support, rename the menu slug, point the bootstrap at another theme → red).
+**M1 is five plans, not one.** Spec §7's M1 is six independent subsystems; a single plan would bury task 60's dependency on task 5. Each plan leaves the theme working:
+
+| # | Plan | State |
+|---|---|---|
+| M1-01 | Lucide icon helper | PR #3, written as `docs/plans/2026-07-19-m1-01-lucide-icons.md` |
+| M1-02 | Templates & parts (§7: 7 templates, content parts, pagination, sidebar + widget areas, 2+2 header/footer variants) | not written |
+| M1-03 | 8 Basecoat style-pack bundles + adapter | not written |
+| M1-04 | Customizer v1 (§6) | not written |
+| M1-05 | Scheme switcher + no-FOUC head script | not written |
+
+i18n is cross-cutting — a requirement in every task, with `.pot` generation deferred to M3.
+
+1. ~~M1 kickoff: WP integration-test harness~~ — done s3, merged in PR #2. `npm run wp:test:start` → `test:integration:install` → `test:integration`; CI job `php-integration`, green on ubuntu.
 2. **Dev-mode integration coverage** — the deferred item above, now unblocked: the `.wp-env.<variant>.json` mechanism it needed exists and is proven.
-3. M1 planning: component/template inventory and Customizer v1 scope per spec §7.
+3. Write M1-02 and execute; the remaining plans follow, each written after the previous lands so it can use what was learned.
 
 ## Last session
 
