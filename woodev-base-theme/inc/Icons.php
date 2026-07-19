@@ -35,6 +35,8 @@ final class Icons {
 	 *
 	 *     @type string $class CSS class for the root element. Default ''.
 	 *     @type int    $size  Rendered width/height in px. Default 24.
+	 *     @type string $label Accessible name. Empty (default) marks the icon
+	 *                         decorative and hides it from assistive tech.
 	 * @return string Markup, or '' when the icon does not exist.
 	 */
 	public static function get( string $name, array $args = [] ): string {
@@ -50,6 +52,7 @@ final class Icons {
 
 		$class = isset( $args['class'] ) ? (string) $args['class'] : '';
 		$size  = isset( $args['size'] ) ? (int) $args['size'] : 24;
+		$label = isset( $args['label'] ) ? \trim( (string) $args['label'] ) : '';
 
 		$attributes = [
 			'xmlns'           => 'http://www.w3.org/2000/svg',
@@ -62,6 +65,14 @@ final class Icons {
 			'stroke-linecap'  => 'round',
 			'stroke-linejoin' => 'round',
 		];
+
+		if ( '' === $label ) {
+			$attributes['aria-hidden'] = 'true';
+			$attributes['focusable']   = 'false';
+		} else {
+			$attributes['role']       = 'img';
+			$attributes['aria-label'] = $label;
+		}
 
 		if ( '' !== $class ) {
 			$attributes['class'] = $class;

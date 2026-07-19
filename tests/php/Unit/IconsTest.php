@@ -117,4 +117,42 @@ final class IconsTest extends TestCase {
 		self::assertStringContainsString( 'width="24"', $svg );
 		self::assertStringNotContainsString( 'class=', $svg );
 	}
+
+	public function test_is_decorative_by_default(): void {
+		$svg = Icons::get( 'chevron-down' );
+
+		self::assertStringContainsString( 'aria-hidden="true"', $svg );
+		// Without this, IE-era and some current browsers put SVGs in the tab
+		// order, so a decorative icon becomes a focus stop with no name.
+		self::assertStringContainsString( 'focusable="false"', $svg );
+		self::assertStringNotContainsString( 'role="img"', $svg );
+	}
+
+	public function test_a_label_makes_the_icon_meaningful(): void {
+		$svg = Icons::get( 'search', [ 'label' => 'Search' ] );
+
+		self::assertStringContainsString( 'role="img"', $svg );
+		self::assertStringContainsString( 'aria-label="Search"', $svg );
+		// A labelled icon carries the name itself; hiding it would erase it.
+		self::assertStringNotContainsString( 'aria-hidden', $svg );
+	}
+
+	public function test_an_empty_label_is_treated_as_decorative(): void {
+		// Guards the common call pattern woodev_base_icon( 'x', [ 'label' => $maybe_empty ] ):
+		// an empty accessible name is worse than none, because role="img" with no
+		// name is announced as an unlabelled image.
+		$svg = Icons::get( 'x', [ 'label' => '' ] );
+
+		self::assertStringContainsString( 'aria-hidden="true"', $svg );
+		self::assertStringNotContainsString( 'role="img"', $svg );
+	}
+
+	public function test_the_label_is_escaped(): void {
+		Functions\when( 'esc_attr' )->alias( static fn( $value ) => \htmlspecialchars( (string) $value, ENT_QUOTES ) );
+
+		$svg = Icons::get( 'menu', [ 'label' => 'Close "menu" & go' ] );
+
+		self::assertStringContainsString( 'aria-label="Close &quot;menu&quot; &amp; go"', $svg );
+		self::assertStringNotContainsString( '"menu"', $svg );
+	}
 }
