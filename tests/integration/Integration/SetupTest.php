@@ -44,8 +44,11 @@ final class SetupTest extends WP_UnitTestCase {
 	 * test for it (correctly). Re-adding html5 from the test would assert
 	 * WordPress's behaviour rather than ours: tautology.
 	 *
-	 * AssetsTest/SetupTest in the unit suite already pin the exact html5 feature
-	 * list at the point of the add_theme_support() call, mutation-verified in s2.
+	 * The coverage lives in the unit suite instead: tests/php/Unit/SetupTest.php
+	 * pins the exact html5 feature list at the point of the add_theme_support()
+	 * call. Until s3 that claim was false — the unit test only counted the calls,
+	 * so html5 was covered nowhere while this comment said otherwise. Codex
+	 * caught it; the assertion is now mutation-verified.
 	 * See docs/gotchas/wp-test-suite-removes-html5-support.md
 	 */
 

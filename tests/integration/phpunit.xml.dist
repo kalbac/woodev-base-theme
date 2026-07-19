@@ -4,12 +4,18 @@
 	test suite is PHPUnit-9-only. Note there is no failOnNotice here — that
 	attribute does not exist in the 9.6 schema; convertDeprecationsToExceptions
 	is the 9.x lever for the same intent.
+
+	failOnEmptyTestSuite is belt-and-braces, not a fix for an observed bug: a
+	suite matching no files already exits 1 on both 9.6.35 and the root's 10.5
+	(measured, with a control run that removed the attribute). It is set anyway
+	so the intent survives a version bump that changes the default.
 -->
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	bootstrap="bootstrap.php"
 	colors="true"
 	failOnWarning="true"
 	failOnRisky="true"
+	failOnEmptyTestSuite="true"
 	convertDeprecationsToExceptions="true">
 	<testsuites>
 		<testsuite name="integration">
