@@ -4,7 +4,7 @@
  * Spec §9: only the icons used ship in the markup — no icon font, no full set.
  * Run: npm run icons
  */
-import { copyFile, mkdir, readdir, rm } from 'node:fs/promises';
+import { copyFile, mkdir, readdir, unlink } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -25,8 +25,15 @@ const ICONS = [
   'search', // search form (M1-02)
 ];
 
-await rm(DEST, { recursive: true, force: true });
 await mkdir(DEST, { recursive: true });
+
+// Clear the previous SVGs so a name dropped from ICONS stops shipping — but
+// only the SVGs. Removing the whole directory would take README.md with it,
+// which is exactly what the README tells you to trigger ("run npm run icons
+// after changing the ICONS list").
+for (const stale of (await readdir(DEST)).filter((f) => f.endsWith('.svg'))) {
+  await unlink(join(DEST, stale));
+}
 
 for (const name of ICONS) {
   await copyFile(join(SRC, `${name}.svg`), join(DEST, `${name}.svg`));
