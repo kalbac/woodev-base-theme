@@ -65,6 +65,42 @@ final class IconsTest extends TestCase {
 		];
 	}
 
+	/**
+	 * Every shipped icon must survive the parser, not just the handful the other
+	 * tests happen to name. Truncate chevron-left and the asset tests still see a
+	 * plausible file while this helper quietly returns '' — a blank pagination
+	 * arrow that nothing catches.
+	 *
+	 * @dataProvider provide_shipped_icons
+	 */
+	public function test_every_shipped_icon_renders( string $name ): void {
+		$svg = Icons::get( $name );
+
+		self::assertNotSame( '', $svg, "Icon '{$name}' produced no markup" );
+		self::assertStringStartsWith( '<svg ', $svg );
+		self::assertStringEndsWith( '</svg>', $svg );
+		self::assertSame( 1, \substr_count( $svg, '<svg' ), "Nested root in '{$name}'" );
+		self::assertSame( 1, \substr_count( $svg, '</svg>' ), "Stray closing tag in '{$name}'" );
+		self::assertStringNotContainsString( '<!--', $svg, "Comment leaked into '{$name}'" );
+		// Proof the icon has visible geometry: an <svg> with nothing inside is
+		// still well-formed markup and still renders nothing at all.
+		self::assertMatchesRegularExpression( '/<(path|circle|rect|line|polyline|polygon|ellipse)\b/', $svg );
+	}
+
+	/**
+	 * @return array<string, array{string}>
+	 */
+	public static function provide_shipped_icons(): array {
+		$cases = [];
+
+		foreach ( \glob( \dirname( __DIR__, 3 ) . '/woodev-base-theme/assets/static/icons/*.svg' ) ?: [] as $path ) {
+			$name           = \basename( $path, '.svg' );
+			$cases[ $name ] = [ $name ];
+		}
+
+		return $cases;
+	}
+
 	public function test_emits_our_own_svg_wrapper_not_the_upstream_one(): void {
 		$svg = Icons::get( 'sun' );
 

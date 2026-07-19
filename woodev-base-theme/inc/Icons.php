@@ -97,11 +97,15 @@ final class Icons {
 	 * change to the opening tag cannot leak attributes into our markup.
 	 */
 	private static function inner_markup( string $name ): string {
-		if ( isset( self::$cache[ $name ] ) ) {
-			return self::$cache[ $name ];
-		}
-
 		$path = self::directory() . '/' . $name . '.svg';
+
+		// Keyed by full path, not by name: get_template_directory() is part of
+		// what identifies the file, and a long-running worker (FrankenPHP,
+		// Swoole, a multisite process switching themes) outlives the request
+		// this static property was first populated in.
+		if ( isset( self::$cache[ $path ] ) ) {
+			return self::$cache[ $path ];
+		}
 
 		if ( ! \is_file( $path ) || ! \is_readable( $path ) ) {
 			return '';
@@ -119,16 +123,24 @@ final class Icons {
 			return '';
 		}
 
-		$open  = \strpos( $file, '>', $start );
-		$close = \strrpos( $file, '</svg>' );
+		$open = \strpos( $file, '>', $start );
 
-		if ( false === $open || false === $close || $close <= $open ) {
+		// The FIRST closing tag after the root opens, not the last one in the
+		// file. strrpos() would be taken in by a trailing comment containing a
+		// literal `</svg>`: the extracted "inner" markup would then carry the
+		// real closing tag plus an unterminated `<!--`, and our own `</svg>`
+		// would land inside that comment — silently commenting out whatever
+		// followed the icon on the page. Taking the first close is safe because
+		// these files have exactly one root element, which IconAssetsTest pins.
+		$close = false === $open ? false : \strpos( $file, '</svg>', $open );
+
+		if ( false === $open || false === $close ) {
 			return '';
 		}
 
-		self::$cache[ $name ] = \trim( \substr( $file, $open + 1, $close - $open - 1 ) );
+		self::$cache[ $path ] = \trim( \substr( $file, $open + 1, $close - $open - 1 ) );
 
-		return self::$cache[ $name ];
+		return self::$cache[ $path ];
 	}
 
 	/**

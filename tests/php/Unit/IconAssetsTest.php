@@ -56,10 +56,37 @@ final class IconAssetsTest extends BaseTestCase {
 	 * @param string $svg  Raw file contents.
 	 */
 	public function test_icons_contain_nothing_executable( string $path, string $svg ): void {
-		self::assertStringNotContainsStringIgnoringCase( '<script', $svg );
-		self::assertStringNotContainsStringIgnoringCase( '<foreignObject', $svg );
-		self::assertStringNotContainsStringIgnoringCase( 'javascript:', $svg );
-		self::assertDoesNotMatchRegularExpression( '/\son[a-z]+\s*=/i', $svg, "Event handler attribute in {$path}" );
+		// Entities are decoded first: `java&#x73;cript:` is a working URL in a
+		// browser and an unremarkable string to strpos(), so scanning the raw
+		// bytes for 'javascript:' would wave it straight through.
+		$decoded = \html_entity_decode( $svg, ENT_QUOTES | ENT_HTML5 );
+
+		foreach ( [ '<script', '<foreignObject', '<style', '<use', '<image', '<a ', 'href=', 'javascript:', 'data:' ] as $needle ) {
+			self::assertStringNotContainsStringIgnoringCase( $needle, $decoded, "Active content '{$needle}' in {$path}" );
+		}
+
+		self::assertDoesNotMatchRegularExpression( '/\son[a-z]+\s*=/i', $decoded, "Event handler attribute in {$path}" );
+	}
+
+	/**
+	 * An icon these files reference is an icon we do not control: <use> and
+	 * <image> pull in external content, <style> can restyle the whole document
+	 * once inlined, and a link makes the icon clickable. Lucide emits none of
+	 * them, so the whole-element list above is an allowlist in disguise — this
+	 * asserts it explicitly.
+	 *
+	 * @dataProvider provide_icons
+	 *
+	 * @param string $path Absolute path of the icon file.
+	 * @param string $svg  Raw file contents.
+	 */
+	public function test_icons_use_only_plain_drawing_elements( string $path, string $svg ): void {
+		\preg_match_all( '/<([a-z][a-z0-9:-]*)/i', $svg, $matches );
+
+		$allowed = [ 'svg', 'path', 'circle', 'rect', 'line', 'polyline', 'polygon', 'ellipse', 'g' ];
+		$found   = \array_unique( \array_map( 'strtolower', $matches[1] ) );
+
+		self::assertSame( [], \array_diff( $found, $allowed ), "Unexpected element in {$path}" );
 	}
 
 	/**
@@ -75,5 +102,9 @@ final class IconAssetsTest extends BaseTestCase {
 		self::assertStringStartsWith( '<!-- @license', \trim( $svg ), "Missing upstream license header in {$path}" );
 		self::assertSame( 1, \substr_count( $svg, '<svg' ), "More than one root element in {$path}" );
 		self::assertStringContainsString( 'viewBox="0 0 24 24"', $svg, "Unexpected coordinate system in {$path}" );
+		// Without this, a truncated file keeps its license header and its single
+		// root, passes every other assertion here, and makes the helper return
+		// '' — a blank icon on a green suite.
+		self::assertStringContainsString( '</svg>', $svg, "Unterminated root element in {$path}" );
 	}
 }
