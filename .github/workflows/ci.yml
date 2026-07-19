@@ -39,6 +39,24 @@ jobs:
           name: theme-dist
           path: woodev-base-theme/assets/dist
 
+  php-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      # A config file of its own, so this spawns its own container set and
+      # cannot collide with the e2e job's environment. See .wp-env.test.json.
+      - run: npm run wp:test:start
+      # Composer runs inside the container on purpose: it is the PHP that will
+      # execute the suite, so the resolved platform matches by construction
+      # instead of by the runner happening to agree.
+      - run: npm run test:integration:install
+      - run: npm run test:integration
+
   e2e:
     runs-on: ubuntu-latest
     needs: js-qa

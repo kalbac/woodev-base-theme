@@ -28,3 +28,4 @@ Thumbs.db
 
 # Generated build intermediate (regenerate with `npm run tokens`)
 src/css/tokens.generated.css
+tests/integration/vendor/
