@@ -41,4 +41,57 @@ final class IconsTest extends TestCase {
 			'unknown but valid'  => [ 'definitely-not-an-icon' ],
 		];
 	}
+
+	public function test_emits_our_own_svg_wrapper_not_the_upstream_one(): void {
+		$svg = Icons::get( 'sun' );
+
+		self::assertStringStartsWith( '<svg ', $svg );
+		self::assertStringEndsWith( '</svg>', $svg );
+		self::assertStringContainsString( 'viewBox="0 0 24 24"', $svg );
+		self::assertStringContainsString( 'stroke="currentColor"', $svg );
+		// The upstream element carries its own classes; we discard the whole
+		// opening tag, so none of them may survive into our output.
+		self::assertStringNotContainsString( 'lucide', $svg );
+		// Exactly one root element — proof the inner paths were extracted rather
+		// than the whole upstream file being wrapped in a second <svg>.
+		self::assertSame( 1, \substr_count( $svg, '<svg' ) );
+	}
+
+	public function test_keeps_the_inner_paths_untouched(): void {
+		$svg = Icons::get( 'sun' );
+
+		// Lucide's sun is a circle plus 8 rays; if extraction dropped children the
+		// icon would render blank while every attribute assertion still passed.
+		self::assertStringContainsString( '<circle', $svg );
+		self::assertSame( 8, \substr_count( $svg, '<path' ) );
+	}
+
+	public function test_the_upstream_license_comment_does_not_leak_into_the_page(): void {
+		$svg = Icons::get( 'sun' );
+
+		// Every lucide-static file opens with an HTML comment before <svg>.
+		// Extraction anchored to the first '>' in the file would swallow it plus
+		// the real opening tag, producing markup that still renders and still
+		// contains '<svg' — so assert the comment's absence directly.
+		self::assertStringNotContainsString( '@license', $svg );
+		self::assertStringNotContainsString( '<!--', $svg );
+	}
+
+	public function test_applies_a_custom_class_and_size(): void {
+		$svg = Icons::get( 'moon', [ 'class' => 'wtb-nav__icon', 'size' => 16 ] );
+
+		self::assertStringContainsString( 'class="wtb-nav__icon"', $svg );
+		self::assertStringContainsString( 'width="16"', $svg );
+		self::assertStringContainsString( 'height="16"', $svg );
+		// The viewBox is the coordinate system, not the rendered size: it must
+		// stay 24 regardless of the pixel size, or the icon crops.
+		self::assertStringContainsString( 'viewBox="0 0 24 24"', $svg );
+	}
+
+	public function test_defaults_to_24_pixels_and_no_class_attribute(): void {
+		$svg = Icons::get( 'x' );
+
+		self::assertStringContainsString( 'width="24"', $svg );
+		self::assertStringNotContainsString( 'class=', $svg );
+	}
 }
