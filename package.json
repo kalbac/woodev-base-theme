@@ -6,6 +6,7 @@
   "license": "GPL-2.0-or-later",
   "scripts": {
     "tokens": "node scripts/build-tokens.mjs",
+    "icons": "node scripts/copy-icons.mjs",
     "dev": "npm run tokens && vite",
     "build": "npm run tokens && vite build",
     "test:js": "vitest run",
@@ -27,6 +28,7 @@
     "alpinejs": "^3.15.12",
     "basecoat-css": "1.0.2",
     "eslint": "^10.7.0",
+    "lucide-static": "^1.25.0",
     "prettier": "^3.9.5",
     "tailwindcss": "^4.3.3",
     "vite": "^8.1.5",
