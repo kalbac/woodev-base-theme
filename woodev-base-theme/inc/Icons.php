@@ -31,10 +31,10 @@ final class Icons {
 	 * Build the inline SVG markup for an icon.
 	 *
 	 * @param string               $name Icon slug, e.g. 'chevron-down'.
-	 * @param array<string, mixed> $args {
+	 * @param array<string, mixed> $args Optional arguments.
+	 *
 	 *     @type string $class CSS class for the root element. Default ''.
 	 *     @type int    $size  Rendered width/height in px. Default 24.
-	 * }
 	 * @return string Markup, or '' when the icon does not exist.
 	 */
 	public static function get( string $name, array $args = [] ): string {
@@ -78,6 +78,9 @@ final class Icons {
 	/**
 	 * Everything between the upstream <svg> tags, with the tags themselves
 	 * discarded.
+	 *
+	 * @param string $name Icon slug, already validated against NAME_PATTERN.
+	 * @return string Inner markup, or '' when the file is missing or malformed.
 	 *
 	 * Re-emitting our own wrapper rather than rewriting theirs means an upstream
 	 * change to the opening tag cannot leak attributes into our markup.
