@@ -19,6 +19,13 @@ export default [
     },
   },
   {
-    ignores: ['woodev-base-theme/assets/dist/**', 'vendor/**', 'node_modules/**'],
+    // `**/` prefixes are load-bearing: flat-config ignore patterns are anchored
+    // to the config file's directory, so a bare `vendor/**` misses the nested
+    // tests/integration/vendor/ that the integration harness installs — ESLint
+    // then walks into php-code-coverage's bundled jQuery and reports 831 errors.
+    // Invisible in CI, which never installs that tree; only the developer sees it.
+    // (.prettierignore needs no such fix — it uses gitignore syntax, where a
+    // trailing-slash pattern already matches at any depth.)
+    ignores: ['woodev-base-theme/assets/dist/**', '**/vendor/**', '**/node_modules/**'],
   },
 ];

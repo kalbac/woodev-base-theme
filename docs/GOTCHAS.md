@@ -1,6 +1,6 @@
 # Gotchas Index — Woodev Base
 
-> 8 entries. Each gotcha is a separate file in `docs/gotchas/`.
+> 9 entries. Each gotcha is a separate file in `docs/gotchas/`.
 
 | Gotcha | Area | Summary |
 |---|---|---|
@@ -11,4 +11,5 @@
 | [vite-css-entry-is-not-imported-by-the-js-entry](gotchas/vite-css-entry-is-not-imported-by-the-js-entry.md) | Build/Assets | The two Rollup inputs are independent graphs, so dev mode must ask the dev server for the CSS entry by name — and Vite serves it as a JS module (`text/javascript`), so it's a script module, not a stylesheet |
 | [wp-json-file-decode-warns-on-missing-file](gotchas/wp-json-file-decode-warns-on-missing-file.md) | PHP/WP core | It calls `wp_trigger_error()` before returning null — an absent manifest emits a PHP notice on every request. Two holes, so two halves: `is_file() && is_readable()` — core hands the path to `file_get_contents()` unchecked. Returning null is no proof an API stayed quiet |
 | [wp-env-config-constants-persist](gotchas/wp-env-config-constants-persist.md) | Tooling/wp-env | `config` constants are appended to wp-config.php of **both** environments and never removed — not even by `--update`. Plus: `wp eval` probes self-match wp-env's echo, and `display_errors=stderr` hides notices from the HTML |
+| [wp-test-suite-removes-html5-support](gotchas/wp-test-suite-removes-html5-support.md) | Testing/WP core | `WP_UnitTestCase_Base::tear_down()` unconditionally strips html5 — the only `remove_theme_support` in the suite. Assertions on it pass or fail on test order; re-running `Setup::setup()` per test is `_doing_it_wrong`. Integration assertions must survive `tear_down()` |
 | [codex-cli-dies-silently](gotchas/codex-cli-dies-silently.md) | Tooling/Codex | The mandatory critic gate fails in four ways and every one exits 0 — MCP loads despite `-c mcp_servers={}`, argv >32KB, background runs no-op. Working recipe: clean `CODEX_HOME`, foreground, prompt <15KB |

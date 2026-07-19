@@ -1,0 +1,21 @@
+# Normalize line endings to LF in the repository AND in the working tree.
+#
+# Without this, core.autocrlf=true on Windows checks every file out as CRLF,
+# and `composer phpcs` fails on all of them with
+# Generic.Files.LineEndings.InvalidEOLChar before it ever looks at the code —
+# so the mandatory local QA gate is unrunnable on Windows while CI (Linux, LF)
+# stays green. `eol=lf` pins the checkout, not just the blob.
+* text=auto eol=lf
+
+# Binary: never touch these.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.ico binary
+*.mo binary

@@ -3,7 +3,8 @@
 	bootstrap="tests/php/bootstrap.php"
 	colors="true"
 	failOnWarning="true"
-	failOnNotice="true">
+	failOnNotice="true"
+	failOnEmptyTestSuite="true">
 	<testsuites>
 		<testsuite name="unit">
 			<directory>tests/php/Unit</directory>

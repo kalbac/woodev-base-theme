@@ -13,7 +13,11 @@
     "format": "prettier --check .",
     "e2e": "playwright test",
     "wp:start": "wp-env start",
-    "wp:stop": "wp-env stop"
+    "wp:stop": "wp-env stop",
+    "wp:test:start": "wp-env start --config=.wp-env.test.json",
+    "wp:test:stop": "wp-env stop --config=.wp-env.test.json",
+    "test:integration:install": "wp-env run cli --config=.wp-env.test.json --env-cwd=wp-content/woodev-tests composer install",
+    "test:integration": "wp-env run cli --config=.wp-env.test.json --env-cwd=wp-content/woodev-tests vendor/bin/phpunit -c phpunit.xml.dist"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

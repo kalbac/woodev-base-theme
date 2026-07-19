@@ -1,0 +1,10 @@
+{
+  "core": null,
+  "phpVersion": "8.1",
+  "themes": ["./woodev-base-theme"],
+  "testsEnvironment": false,
+  "port": 8890,
+  "mappings": {
+    "wp-content/woodev-tests": "./tests/integration"
+  }
+}
