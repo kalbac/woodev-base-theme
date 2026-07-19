@@ -113,32 +113,44 @@ final class Icons {
 
 		$file = (string) \file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading a vendored theme asset off local disk, not a remote request.
 
-		// Anchor to the <svg> tag, not to the first '>' in the file: every
-		// lucide-static file opens with `<!-- @license lucide-static v1.25.0 - ISC -->`,
-		// so searching from position 0 finds the comment's '>' and drags the whole
-		// opening <svg> tag into the "inner" markup. Verified against v1.25.0.
-		$start = \strpos( $file, '<svg' );
+		/*
+		 * Parsed, not string-sliced. Two earlier attempts located the tag
+		 * boundaries with strpos()/strrpos() and both were wrong in ways that
+		 * produced plausible-looking output: the last '</svg>' in the file can
+		 * belong to a trailing comment, and the first one can sit inside an
+		 * attribute value (`<path d="M0 </svg>">`). Each fix invited the next
+		 * special case, because the real problem was parsing XML without a
+		 * parser. libxml rejects both shapes outright.
+		 *
+		 * No LIBXML_NOENT: entity substitution is what turns a hostile document
+		 * into an XXE read of the filesystem. LIBXML_NONET blocks network
+		 * fetches for the same reason.
+		 */
+		$dom      = new \DOMDocument();
+		$previous = \libxml_use_internal_errors( true );
+		$loaded   = $dom->loadXML( $file, LIBXML_NONET );
 
-		if ( false === $start ) {
+		\libxml_clear_errors();
+		\libxml_use_internal_errors( $previous );
+
+		if ( ! $loaded || ! $dom->documentElement instanceof \DOMElement || 'svg' !== $dom->documentElement->nodeName ) {
 			return '';
 		}
 
-		$open = \strpos( $file, '>', $start );
+		$inner = '';
 
-		// The FIRST closing tag after the root opens, not the last one in the
-		// file. strrpos() would be taken in by a trailing comment containing a
-		// literal `</svg>`: the extracted "inner" markup would then carry the
-		// real closing tag plus an unterminated `<!--`, and our own `</svg>`
-		// would land inside that comment — silently commenting out whatever
-		// followed the icon on the page. Taking the first close is safe because
-		// these files have exactly one root element, which IconAssetsTest pins.
-		$close = false === $open ? false : \strpos( $file, '</svg>', $open );
+		foreach ( $dom->documentElement->childNodes as $child ) {
+			// The upstream license comment lives outside the root, but drop any
+			// comment anyway — a comment inlined into a page is dead weight at
+			// best and an unterminated `<!--` at worst.
+			if ( $child instanceof \DOMComment ) {
+				continue;
+			}
 
-		if ( false === $open || false === $close ) {
-			return '';
+			$inner .= (string) $dom->saveXML( $child );
 		}
 
-		self::$cache[ $path ] = \trim( \substr( $file, $open + 1, $close - $open - 1 ) );
+		self::$cache[ $path ] = \trim( $inner );
 
 		return self::$cache[ $path ];
 	}

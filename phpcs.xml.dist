@@ -38,6 +38,14 @@
 		asset.
 		-->
 		<exclude name="WordPress.WP.EnqueuedResourceParameters.MissingVersion"/>
+		<!--
+		DEVIATION: this sniff flags READING a camelCase property on any object,
+		including objects we do not own. `$dom->documentElement` is PHP's own DOM
+		API and cannot be renamed. The declaration-side rule
+		(ValidVariableName.PropertyNotSnakeCase) stays on, so our own classes are
+		still held to snake_case — only third-party property access is exempt.
+		-->
+		<exclude name="WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase"/>
 	</rule>
 
 	<!-- Enforce the deviation in the positive direction: -->

@@ -81,12 +81,29 @@ final class IconAssetsTest extends BaseTestCase {
 	 * @param string $svg  Raw file contents.
 	 */
 	public function test_icons_use_only_plain_drawing_elements( string $path, string $svg ): void {
-		\preg_match_all( '/<([a-z][a-z0-9:-]*)/i', $svg, $matches );
+		// Walked with a parser rather than matched with a regex. A regex over
+		// '<name' cannot tell an element from the same text inside a comment or
+		// an attribute value, ignores closing tags entirely, and would let
+		// `<SVG>` nest inside `<svg>` unnoticed.
+		$dom      = new \DOMDocument();
+		$previous = \libxml_use_internal_errors( true );
+		$loaded   = $dom->loadXML( $svg, LIBXML_NONET );
 
-		$allowed = [ 'svg', 'path', 'circle', 'rect', 'line', 'polyline', 'polygon', 'ellipse', 'g' ];
-		$found   = \array_unique( \array_map( 'strtolower', $matches[1] ) );
+		\libxml_clear_errors();
+		\libxml_use_internal_errors( $previous );
 
-		self::assertSame( [], \array_diff( $found, $allowed ), "Unexpected element in {$path}" );
+		self::assertTrue( $loaded, "Not well-formed XML: {$path}" );
+
+		$allowed = [ 'path', 'circle', 'rect', 'line', 'polyline', 'polygon', 'ellipse', 'g' ];
+		$found   = [];
+
+		foreach ( $dom->getElementsByTagName( '*' ) as $element ) {
+			$found[] = $element->nodeName;
+		}
+
+		self::assertSame( 'svg', \array_shift( $found ), "Root element is not <svg> in {$path}" );
+		self::assertSame( [], \array_diff( \array_unique( $found ), $allowed ), "Unexpected element in {$path}" );
+		self::assertNotContains( 'svg', $found, "Nested <svg> in {$path}" );
 	}
 
 	/**
