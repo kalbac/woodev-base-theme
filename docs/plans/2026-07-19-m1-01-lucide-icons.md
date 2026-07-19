@@ -192,19 +192,34 @@ final class IconsTest extends TestCase {
 		self::assertSame( '', Icons::get( $name ) );
 	}
 
+	/**
+	 * Two groups, and the difference between them is the whole point.
+	 *
+	 * Most rejected names do not resolve to a file, so `is_file()` would reject
+	 * them even with the slug guard deleted — they document intent but pin
+	 * nothing. The "resolves to a real file" group is what actually holds the
+	 * guard in place: each one escapes the slug shape yet lands on a readable
+	 * SVG, so it can only be stopped by the pattern.
+	 */
 	public static function provide_rejected_names(): array {
 		return [
-			'traversal'          => [ '../../../wp-config' ],
-			'traversal encoded'  => [ '..%2Fwp-config' ],
-			'absolute path'      => [ '/etc/passwd' ],
-			'nested path'        => [ 'sub/sun' ],
-			'null byte'          => [ "sun\0.php" ],
-			'uppercase'          => [ 'Sun' ],
-			'leading dash'       => [ '-sun' ],
-			'trailing dash'      => [ 'sun-' ],
-			'double dash'        => [ 'sun--moon' ],
-			'empty'              => [ '' ],
-			'unknown but valid'  => [ 'definitely-not-an-icon' ],
+			// Rejected by the pattern, and would also miss the filesystem.
+			'traversal'                => [ '../../../wp-config' ],
+			'traversal encoded'        => [ '..%2Fwp-config' ],
+			'absolute path'            => [ '/etc/passwd' ],
+			'nested path'              => [ 'sub/sun' ],
+			'null byte'                => [ "sun\0.php" ],
+			'leading dash'             => [ '-sun' ],
+			'trailing dash'            => [ 'sun-' ],
+			'double dash'              => [ 'sun--moon' ],
+			'empty'                    => [ '' ],
+			'unknown but valid'        => [ 'definitely-not-an-icon' ],
+
+			// Rejected by the pattern alone — these resolve to a real file.
+			'dot slash prefix'         => [ './sun' ],
+			'traversal back into dir'  => [ 'chevron-down/../sun' ],
+			'sibling via parent'       => [ '../icons/sun' ],
+			'case variant'             => [ 'Sun' ],
 		];
 	}
 }
@@ -291,11 +306,17 @@ composer test:unit -- --filter IconsTest
 
 Expected: PASS, 11 tests.
 
-- [ ] **Step 5: Mutation-check the guard**
+- [ ] **Step 5: Mutation-check the guard — after Task 3, not here**
 
-A guard that never fires is decoration. Temporarily replace the `preg_match` early return with `if ( false ) {` and re-run.
+The check cannot work at this point and must not be attempted yet: `get()` still ends in an unconditional `return ''`, so every provider case returns `''` whether the guard runs or not. Neutering the pattern here changes nothing and proves nothing.
 
-Expected: the `traversal`, `absolute path` and `nested path` cases now FAIL (they resolve outside the icon directory). Restore the line and confirm green again. If they still pass, the pattern is not doing the work the test claims — stop and investigate before continuing.
+Come back to this after Task 3's implementation lands, then temporarily replace the `preg_match` early return with `if ( false ) {` and re-run.
+
+Expected: exactly the four cases that resolve to a real file FAIL — `dot slash prefix`, `traversal back into dir`, `sibling via parent`, `case variant`. The other cases do **not** fail, and that is correct: names like `../../../wp-config` and `sub/sun` never reach a file, so `is_file()` stops them with or without the guard. They document intent; they pin nothing.
+
+Only `./sun` and `../icons/sun` fail on **both** Windows and Linux. `chevron-down/../sun` resolves only on Windows (Linux rejects a non-directory path component) and `Sun` only on case-insensitive filesystems — so a provider containing just those two would leave the guard completely unpinned on the Linux runner CI uses. Measured, not reasoned about.
+
+Restore the line and confirm green. If nothing fails, the pattern is not doing the work the test claims — stop and investigate.
 
 - [ ] **Step 6: Commit**
 

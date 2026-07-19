@@ -26,19 +26,42 @@ final class IconsTest extends TestCase {
 		self::assertSame( '', Icons::get( $name ) );
 	}
 
+	/**
+	 * Two groups, and the difference between them is the whole point.
+	 *
+	 * Most rejected names do not resolve to a file, so `is_file()` would reject
+	 * them even with the slug guard deleted — they document intent but pin
+	 * nothing. The "resolves to a real file" group is what actually holds the
+	 * guard in place: each one escapes the slug shape yet lands on a readable
+	 * SVG, so it can only be stopped by the pattern. Deleting the guard turns
+	 * exactly those red.
+	 *
+	 * Measured, not assumed — by deleting the guard and running the suite on
+	 * both platforms. Only './sun' and '../icons/sun' fail everywhere; those two
+	 * are what pin the guard on CI. 'chevron-down/../sun' resolves on Windows
+	 * but not on Linux, where a non-directory path component is an error, and
+	 * 'Sun' resolves only on case-insensitive filesystems. Both are kept as
+	 * documentation of intent, but neither may be relied on as the pin.
+	 */
 	public static function provide_rejected_names(): array {
 		return [
-			'traversal'          => [ '../../../wp-config' ],
-			'traversal encoded'  => [ '..%2Fwp-config' ],
-			'absolute path'      => [ '/etc/passwd' ],
-			'nested path'        => [ 'sub/sun' ],
-			'null byte'          => [ "sun\0.php" ],
-			'uppercase'          => [ 'Sun' ],
-			'leading dash'       => [ '-sun' ],
-			'trailing dash'      => [ 'sun-' ],
-			'double dash'        => [ 'sun--moon' ],
-			'empty'              => [ '' ],
-			'unknown but valid'  => [ 'definitely-not-an-icon' ],
+			// Rejected by the pattern, and would also miss the filesystem.
+			'traversal'                => [ '../../../wp-config' ],
+			'traversal encoded'        => [ '..%2Fwp-config' ],
+			'absolute path'            => [ '/etc/passwd' ],
+			'nested path'              => [ 'sub/sun' ],
+			'null byte'                => [ "sun\0.php" ],
+			'leading dash'             => [ '-sun' ],
+			'trailing dash'            => [ 'sun-' ],
+			'double dash'              => [ 'sun--moon' ],
+			'empty'                    => [ '' ],
+			'unknown but valid'        => [ 'definitely-not-an-icon' ],
+
+			// Rejected by the pattern alone — these resolve to a real file.
+			'dot slash prefix'         => [ './sun' ],
+			'traversal back into dir'  => [ 'chevron-down/../sun' ],
+			'sibling via parent'       => [ '../icons/sun' ],
+			'case variant'             => [ 'Sun' ],
 		];
 	}
 
