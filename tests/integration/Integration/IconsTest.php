@@ -25,7 +25,13 @@ final class IconsTest extends WP_UnitTestCase {
 
 	public function test_a_labelled_icon_carries_its_accessible_name(): void {
 		\ob_start();
-		woodev_base_icon( 'search', [ 'label' => 'Search', 'class' => 'wtb-icon' ] );
+		woodev_base_icon(
+			'search',
+			[
+				'label' => 'Search',
+				'class' => 'wtb-icon',
+			]
+		);
 		$output = (string) \ob_get_clean();
 
 		self::assertStringContainsString( 'role="img"', $output );

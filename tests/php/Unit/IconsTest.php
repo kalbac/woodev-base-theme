@@ -46,22 +46,22 @@ final class IconsTest extends TestCase {
 	public static function provide_rejected_names(): array {
 		return [
 			// Rejected by the pattern, and would also miss the filesystem.
-			'traversal'                => [ '../../../wp-config' ],
-			'traversal encoded'        => [ '..%2Fwp-config' ],
-			'absolute path'            => [ '/etc/passwd' ],
-			'nested path'              => [ 'sub/sun' ],
-			'null byte'                => [ "sun\0.php" ],
-			'leading dash'             => [ '-sun' ],
-			'trailing dash'            => [ 'sun-' ],
-			'double dash'              => [ 'sun--moon' ],
-			'empty'                    => [ '' ],
-			'unknown but valid'        => [ 'definitely-not-an-icon' ],
+			'traversal'               => [ '../../../wp-config' ],
+			'traversal encoded'       => [ '..%2Fwp-config' ],
+			'absolute path'           => [ '/etc/passwd' ],
+			'nested path'             => [ 'sub/sun' ],
+			'null byte'               => [ "sun\0.php" ],
+			'leading dash'            => [ '-sun' ],
+			'trailing dash'           => [ 'sun-' ],
+			'double dash'             => [ 'sun--moon' ],
+			'empty'                   => [ '' ],
+			'unknown but valid'       => [ 'definitely-not-an-icon' ],
 
 			// Rejected by the pattern alone — these resolve to a real file.
-			'dot slash prefix'         => [ './sun' ],
-			'traversal back into dir'  => [ 'chevron-down/../sun' ],
-			'sibling via parent'       => [ '../icons/sun' ],
-			'case variant'             => [ 'Sun' ],
+			'dot slash prefix'        => [ './sun' ],
+			'traversal back into dir' => [ 'chevron-down/../sun' ],
+			'sibling via parent'      => [ '../icons/sun' ],
+			'case variant'            => [ 'Sun' ],
 		];
 	}
 
@@ -101,7 +101,13 @@ final class IconsTest extends TestCase {
 	}
 
 	public function test_applies_a_custom_class_and_size(): void {
-		$svg = Icons::get( 'moon', [ 'class' => 'wtb-nav__icon', 'size' => 16 ] );
+		$svg = Icons::get(
+			'moon',
+			[
+				'class' => 'wtb-nav__icon',
+				'size'  => 16,
+			]
+		);
 
 		self::assertStringContainsString( 'class="wtb-nav__icon"', $svg );
 		self::assertStringContainsString( 'width="16"', $svg );
@@ -115,7 +121,10 @@ final class IconsTest extends TestCase {
 		$svg = Icons::get( 'x' );
 
 		self::assertStringContainsString( 'width="24"', $svg );
-		self::assertStringNotContainsString( 'class=', $svg );
+		// Anchored on the attribute boundary rather than the bare substring
+		// 'class=', which any future attribute ending in "class" would satisfy
+		// and break this test in a confusing way.
+		self::assertDoesNotMatchRegularExpression( '/\sclass="/', $svg );
 	}
 
 	public function test_is_decorative_by_default(): void {

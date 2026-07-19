@@ -3,7 +3,17 @@
 	<description>WPCS + documented modern-PHP-8.1 deviations. See AGENTS.md "Coding standards".</description>
 
 	<file>woodev-base-theme</file>
+	<!--
+	Tests are linted too. They were not until s3, which meant every test file in
+	the project had never been through this gate while `composer phpcs` was
+	presented as proof the work was clean. The rules below narrow WPCS where it
+	is aimed at shipped theme code rather than test code.
+	-->
+	<file>tests</file>
 	<exclude-pattern>woodev-base-theme/assets/*</exclude-pattern>
+	<exclude-pattern>tests/integration/vendor/*</exclude-pattern>
+	<exclude-pattern>tests/e2e/*</exclude-pattern>
+	<exclude-pattern>tests/js/*</exclude-pattern>
 
 	<arg name="extensions" value="php"/>
 	<arg name="basepath" value="."/>
@@ -32,6 +42,38 @@
 
 	<!-- Enforce the deviation in the positive direction: -->
 	<rule ref="Generic.Arrays.DisallowLongArraySyntax"/>
+
+	<!--
+	Test-only relaxations. Each one is a rule that protects shipped theme code
+	and only produces noise in a test:
+
+	- Docblock sniffs: a test's name is its documentation. `test_an_empty_label_
+	  is_treated_as_decorative()` says more than a mandatory @return void would,
+	  and requiring a comment on all 40+ test methods trains people to write
+	  filler.
+	- AlternativeFunctions: the WP_Filesystem API exists so plugins work on
+	  restricted hosts. Tests run on the machine doing the testing — file_get_
+	  contents(), chmod() and unlink() are the correct tools there, and one test
+	  chmods a file precisely to assert unreadable-file behaviour.
+	- EscapeOutput: a test asserting on markup necessarily handles it unescaped.
+	- DisallowShortTernary: `getenv( 'WP_TESTS_DIR' ) ?: '/wordpress-phpunit'` is
+	  clearer than the long form; the shipped theme keeps the strict rule.
+	-->
+	<rule ref="Squiz.Commenting">
+		<exclude-pattern>tests/*</exclude-pattern>
+	</rule>
+	<rule ref="Generic.Commenting.DocComment.MissingShort">
+		<exclude-pattern>tests/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.WP.AlternativeFunctions">
+		<exclude-pattern>tests/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.Security.EscapeOutput">
+		<exclude-pattern>tests/*</exclude-pattern>
+	</rule>
+	<rule ref="Universal.Operators.DisallowShortTernary">
+		<exclude-pattern>tests/*</exclude-pattern>
+	</rule>
 
 	<rule ref="WordPress.WP.I18n">
 		<properties>
