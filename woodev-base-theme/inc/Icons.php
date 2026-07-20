@@ -111,13 +111,16 @@ final class Icons {
 			return '';
 		}
 
-		$file = \trim( (string) \file_get_contents( $path ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading a vendored theme asset off local disk, not a remote request.
+		$file = (string) \file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading a vendored theme asset off local disk, not a remote request.
 
 		// A zero-byte file (a truncated build, or file_get_contents() losing a
 		// race after the is_file() check) is not "malformed XML": loadXML( '' )
 		// throws a ValueError on PHP 8 rather than returning false, which would
 		// break the '' contract this method promises. Guard it before the parser.
-		if ( '' === $file ) {
+		// The emptiness test is trimmed, but $file itself is passed to loadXML
+		// untouched: trimming the input would let libxml accept documents it
+		// should reject (leading NUL bytes, whitespace before the prolog).
+		if ( '' === \trim( $file ) ) {
 			return '';
 		}
 

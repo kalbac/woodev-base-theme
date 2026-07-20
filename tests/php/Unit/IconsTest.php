@@ -226,17 +226,52 @@ final class IconsTest extends TestCase {
 	}
 
 	/**
-	 * The parser toggles libxml_use_internal_errors(); a throw between the toggle
-	 * and its restore would leak that global into the rest of the process. With
-	 * the empty-file guard in place this now passes, but it pins the restore so a
-	 * future refactor cannot silently drop it.
+	 * The emptiness guard trims, but the parser must see the untrimmed file: a
+	 * document wrapped in NUL bytes is rejected by libxml and must stay rejected.
+	 * Trimming before the parse would let such a file through, which is exactly
+	 * the fail-open the guard is meant to avoid. Pins "parse $file, not trim($file)".
+	 */
+	public function test_a_file_wrapped_in_nul_bytes_is_rejected_not_trimmed_into_validity(): void {
+		$dir = \sys_get_temp_dir() . '/wtb-icons-' . \uniqid();
+		\mkdir( $dir . '/assets/static/icons', 0o777, true );
+		\file_put_contents( $dir . '/assets/static/icons/hostile.svg', "\0<svg viewBox=\"0 0 24 24\"><path d=\"M1 1\"/></svg>\0" );
+		Functions\when( 'get_template_directory' )->justReturn( $dir );
+
+		try {
+			self::assertSame( '', Icons::get( 'hostile' ) );
+		} finally {
+			\unlink( $dir . '/assets/static/icons/hostile.svg' );
+			\rmdir( $dir . '/assets/static/icons' );
+			\rmdir( $dir . '/assets/static' );
+			\rmdir( $dir . '/assets' );
+			\rmdir( $dir );
+		}
+	}
+
+	/**
+	 * The parser toggles libxml_use_internal_errors() and must restore it. This
+	 * points at a fresh temp file with a unique path so the static cache is
+	 * guaranteed cold — get('sun') could return a memoised result from an earlier
+	 * test without ever invoking the parser, making the assertion vacuous.
 	 */
 	public function test_libxml_internal_error_state_is_restored(): void {
+		$dir = \sys_get_temp_dir() . '/wtb-icons-' . \uniqid();
+		\mkdir( $dir . '/assets/static/icons', 0o777, true );
+		\file_put_contents( $dir . '/assets/static/icons/probe.svg', '<svg viewBox="0 0 24 24"><path d="M1 1"/></svg>' );
+		Functions\when( 'get_template_directory' )->justReturn( $dir );
+
 		$before = \libxml_use_internal_errors( false );
 		\libxml_use_internal_errors( $before );
 
-		Icons::get( 'sun' );
-
-		self::assertSame( $before, \libxml_use_internal_errors( $before ), 'libxml_use_internal_errors() was not restored' );
+		try {
+			self::assertNotSame( '', Icons::get( 'probe' ), 'Fixture should render, proving the parser ran' );
+			self::assertSame( $before, \libxml_use_internal_errors( $before ), 'libxml_use_internal_errors() was not restored' );
+		} finally {
+			\unlink( $dir . '/assets/static/icons/probe.svg' );
+			\rmdir( $dir . '/assets/static/icons' );
+			\rmdir( $dir . '/assets/static' );
+			\rmdir( $dir . '/assets' );
+			\rmdir( $dir );
+		}
 	}
 }
