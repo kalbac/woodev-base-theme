@@ -8,11 +8,9 @@
 declare(strict_types=1);
 ?>
 </main>
-<footer class="border-t border-[var(--border)]">
-	<div class="mx-auto max-w-5xl p-4 text-sm text-[var(--muted-foreground)]">
-		<?php echo esc_html( get_bloginfo( 'name' ) ); ?>
-	</div>
-</footer>
+
+<?php get_template_part( 'template-parts/footer/' . \Woodev\Theme\Base\Templates\Layout::footer_variant() ); ?>
+
 <?php wp_footer(); ?>
 </body>
 </html>

@@ -8,3 +8,36 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
 }
+
+/*
+ * Accessible skip-link (spec §9, WCAG 2.1 AA): off-screen until it receives
+ * keyboard focus, then moves fully into view.
+ */
+.wtb-skip-link {
+  position: absolute;
+  top: -100%;
+  left: 0.5rem;
+  z-index: 50;
+  padding: 0.5rem 1rem;
+  background-color: var(--background);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  transition: top 0.15s ease-in-out;
+}
+
+.wtb-skip-link:focus {
+  top: 0.5rem;
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/*
+ * Centered max-width wrapper shared by the header, footer and main content
+ * (replaces the repeated `mx-auto max-w-5xl p-4` utility pattern).
+ */
+.wtb-container {
+  margin-inline: auto;
+  max-width: 64rem;
+  padding: 1rem;
+}
