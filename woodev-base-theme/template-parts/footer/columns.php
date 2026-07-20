@@ -54,7 +54,7 @@ declare(strict_types=1);
 				printf(
 					/* translators: 1: current year, 2: site name. */
 					esc_html__( '© %1$s %2$s', 'woodev-base-theme' ),
-					esc_html( number_format_i18n( (int) wp_date( 'Y' ) ) ),
+					esc_html( wp_date( 'Y' ) ),
 					esc_html( get_bloginfo( 'name' ) )
 				);
 				?>
