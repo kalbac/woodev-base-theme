@@ -43,6 +43,35 @@ body {
 }
 
 /*
+ * Layout wrapper (Task 6): single column by default, a two-column grid once
+ * the optional sidebar is present. The breakpoint and sidebar column width
+ * are plain values rather than utilities because `.wtb-layout--has-sidebar`
+ * needs to override the base `.wtb-layout` grid-template-columns, and that
+ * only works cleanly with both rules in the same layer/specificity class.
+ */
+.wtb-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+}
+
+@media (min-width: 64rem) {
+  .wtb-layout--has-sidebar {
+    grid-template-columns: minmax(0, 1fr) 18rem;
+  }
+}
+
+.wtb-layout__content {
+  min-width: 0;
+}
+
+.wtb-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/*
  * Primary navigation (Task 4). The menu's flex layout lives HERE, not as
  * utilities on the <ul>: the mobile responsive rules below must flip the menu
  * between shown and hidden, and a `display` utility (utilities layer) would beat
