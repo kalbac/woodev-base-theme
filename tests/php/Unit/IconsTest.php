@@ -200,4 +200,43 @@ final class IconsTest extends TestCase {
 		self::assertStringContainsString( 'aria-label="Close &quot;menu&quot; &amp; go"', $svg );
 		self::assertStringNotContainsString( '"menu"', $svg );
 	}
+
+	/**
+	 * An empty file is not "malformed XML" — DOMDocument::loadXML( '' ) throws a
+	 * ValueError on PHP 8 rather than returning false, so the fail-closed
+	 * contract the docblock promises ('' when the file is missing or malformed)
+	 * only holds if the empty case is guarded before the parser sees it. A
+	 * zero-byte icon must render nothing, never a fatal.
+	 */
+	public function test_an_empty_icon_file_returns_empty_not_a_fatal(): void {
+		$dir = \sys_get_temp_dir() . '/wtb-icons-' . \uniqid();
+		\mkdir( $dir . '/assets/static/icons', 0o777, true );
+		\file_put_contents( $dir . '/assets/static/icons/blank.svg', '' );
+		Functions\when( 'get_template_directory' )->justReturn( $dir );
+
+		try {
+			self::assertSame( '', Icons::get( 'blank' ) );
+		} finally {
+			\unlink( $dir . '/assets/static/icons/blank.svg' );
+			\rmdir( $dir . '/assets/static/icons' );
+			\rmdir( $dir . '/assets/static' );
+			\rmdir( $dir . '/assets' );
+			\rmdir( $dir );
+		}
+	}
+
+	/**
+	 * The parser toggles libxml_use_internal_errors(); a throw between the toggle
+	 * and its restore would leak that global into the rest of the process. With
+	 * the empty-file guard in place this now passes, but it pins the restore so a
+	 * future refactor cannot silently drop it.
+	 */
+	public function test_libxml_internal_error_state_is_restored(): void {
+		$before = \libxml_use_internal_errors( false );
+		\libxml_use_internal_errors( $before );
+
+		Icons::get( 'sun' );
+
+		self::assertSame( $before, \libxml_use_internal_errors( $before ), 'libxml_use_internal_errors() was not restored' );
+	}
 }

@@ -111,7 +111,15 @@ final class Icons {
 			return '';
 		}
 
-		$file = (string) \file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading a vendored theme asset off local disk, not a remote request.
+		$file = \trim( (string) \file_get_contents( $path ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading a vendored theme asset off local disk, not a remote request.
+
+		// A zero-byte file (a truncated build, or file_get_contents() losing a
+		// race after the is_file() check) is not "malformed XML": loadXML( '' )
+		// throws a ValueError on PHP 8 rather than returning false, which would
+		// break the '' contract this method promises. Guard it before the parser.
+		if ( '' === $file ) {
+			return '';
+		}
 
 		/*
 		 * Parsed, not string-sliced. Two earlier attempts located the tag
@@ -128,10 +136,15 @@ final class Icons {
 		 */
 		$dom      = new \DOMDocument();
 		$previous = \libxml_use_internal_errors( true );
-		$loaded   = $dom->loadXML( $file, LIBXML_NONET );
 
-		\libxml_clear_errors();
-		\libxml_use_internal_errors( $previous );
+		// finally, so a throw inside the parse cannot leak the internal-errors
+		// toggle into the rest of the process.
+		try {
+			$loaded = $dom->loadXML( $file, LIBXML_NONET );
+		} finally {
+			\libxml_clear_errors();
+			\libxml_use_internal_errors( $previous );
+		}
 
 		if ( ! $loaded || ! $dom->documentElement instanceof \DOMElement || 'svg' !== $dom->documentElement->nodeName ) {
 			return '';

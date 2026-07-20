@@ -114,8 +114,9 @@ final class IconAssetsTest extends BaseTestCase {
 	 */
 	public function test_icons_have_the_shape_the_helper_assumes( string $path, string $svg ): void {
 		// Note the file does NOT start with <svg: lucide-static v1.25.0 emits a
-		// license comment first. Icons::inner_markup() anchors on '<svg' for
-		// exactly this reason, so assert the real shape rather than the tidy one.
+		// license comment first. Icons::inner_markup() parses the whole file with
+		// libxml and drops the comment node, so it handles this shape — assert the
+		// real shape rather than the tidy one.
 		self::assertStringStartsWith( '<!-- @license', \trim( $svg ), "Missing upstream license header in {$path}" );
 		self::assertSame( 1, \substr_count( $svg, '<svg' ), "More than one root element in {$path}" );
 		self::assertStringContainsString( 'viewBox="0 0 24 24"', $svg, "Unexpected coordinate system in {$path}" );
