@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { buildThemeJson, buildTokensCss } from '../../scripts/lib/build-tokens-lib.mjs';
+import {
+  buildPrimaryPresets,
+  buildPrimaryPresetsPhp,
+  buildThemeJson,
+  buildTokensCss,
+  lightnessOf,
+} from '../../scripts/lib/build-tokens-lib.mjs';
 import { tokens } from '../../src/tokens/tokens.mjs';
 
 describe('buildThemeJson', () => {
@@ -46,8 +52,6 @@ describe('buildTokensCss', () => {
     expect(withoutComments).toContain(':root {');
   });
 });
-
-import { buildPrimaryPresets, lightnessOf } from '../../scripts/lib/build-tokens-lib.mjs';
 
 describe('buildPrimaryPresets', () => {
   it('reads the lightness of both oklch spellings', () => {
@@ -103,8 +107,6 @@ describe('buildPrimaryPresets', () => {
   });
 });
 
-import { buildPrimaryPresetsPhp } from '../../scripts/lib/build-tokens-lib.mjs';
-
 describe('buildPrimaryPresetsPhp', () => {
   it('emits a strict-typed PHP file returning the preset map', () => {
     const php = buildPrimaryPresetsPhp(tokens);
@@ -131,7 +133,9 @@ describe('buildPrimaryPresetsPhp', () => {
   it('refuses to emit a value that is not a plain oklch() literal', () => {
     const hostile = {
       ...tokens,
-      primaryPalette: { evil: { light: "oklch(1 0 0)'; system('rm -rf /'); '", dark: 'oklch(0 0 0)' } },
+      primaryPalette: {
+        evil: { light: "oklch(1 0 0)'; system('rm -rf /'); '", dark: 'oklch(0 0 0)' },
+      },
     };
 
     expect(() => buildPrimaryPresetsPhp(hostile)).toThrow(/Refusing to emit/);
