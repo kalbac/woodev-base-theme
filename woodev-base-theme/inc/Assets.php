@@ -16,7 +16,6 @@ final class Assets {
 
 	private const DEV_SERVER = 'http://localhost:5173';
 	private const JS_ENTRY   = 'src/js/app.js';
-	private const CSS_ENTRY  = 'src/css/app.css';
 
 	/**
 	 * Hook asset enqueuing into WordPress.
@@ -38,7 +37,8 @@ final class Assets {
 		$dist_uri = get_template_directory_uri() . '/assets/dist';
 		$manifest = self::read_manifest( $dist . '/.vite/manifest.json' );
 
-		$css = self::entry_file( $manifest, self::CSS_ENTRY );
+		$css_entry = StylePreset::from_theme_mod()->css_entry();
+		$css       = self::entry_file( $manifest, $css_entry );
 		if ( null !== $css ) {
 			wp_enqueue_style( 'woodev-base-style', "{$dist_uri}/{$css}", [], null );
 		}
@@ -56,14 +56,15 @@ final class Assets {
 	/**
 	 * Enqueue assets straight from the Vite dev server (HMR, no manifest).
 	 *
-	 * The CSS entry is a separate Rollup input, so app.js never imports it and
-	 * the dev server must be asked for it explicitly — otherwise the page renders
-	 * with no Tailwind, Basecoat or tokens. Vite serves it as a JS module that
-	 * injects the style and carries HMR, hence a script module, not a stylesheet.
+	 * The selected pack's CSS entry is a separate Rollup input, so app.js never
+	 * imports it and the dev server must be asked for it explicitly — otherwise
+	 * the page renders with no Tailwind, Basecoat or tokens. Vite serves it as a
+	 * JS module that injects the style and carries HMR, hence a script module,
+	 * not a stylesheet.
 	 */
 	private function enqueue_dev(): void {
 		wp_enqueue_script_module( 'woodev-base-vite-client', self::DEV_SERVER . '/@vite/client', [], null );
-		wp_enqueue_script_module( 'woodev-base-style', self::DEV_SERVER . '/' . self::CSS_ENTRY, [], null );
+		wp_enqueue_script_module( 'woodev-base-style', self::DEV_SERVER . '/' . StylePreset::from_theme_mod()->css_entry(), [], null );
 		wp_enqueue_script_module( 'woodev-base-app', self::DEV_SERVER . '/' . self::JS_ENTRY, [], null );
 	}
 

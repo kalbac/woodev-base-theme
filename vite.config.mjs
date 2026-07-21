@@ -1,6 +1,7 @@
 // vite.config.mjs
 import { defineConfig } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
+import { PACKS } from './scripts/lib/packs-lib.mjs';
 
 export default defineConfig({
   plugins: [tailwindcss()],
@@ -11,7 +12,9 @@ export default defineConfig({
     rollupOptions: {
       input: {
         app: 'src/js/app.js',
-        style: 'src/css/app.css',
+        // One standalone CSS bundle per Basecoat style pack; Assets.php enqueues
+        // only the one the style_preset theme_mod selects (default vega).
+        ...Object.fromEntries(PACKS.map((pack) => [`style-${pack}`, `src/css/packs/${pack}.css`])),
       },
     },
   },
