@@ -34,11 +34,14 @@ body {
 
 /*
  * Centered max-width wrapper shared by the header, footer and main content
- * (replaces the repeated `mx-auto max-w-5xl p-4` utility pattern).
+ * (replaces the repeated `mx-auto p-4` utility pattern). 90rem = 1440px at the
+ * default root size, and the box is border-box, so the cap includes the padding.
+ * Spec §6 lists container width as a Customizer setting — this is its default,
+ * and M1-04 is where it becomes configurable.
  */
 .wtb-container {
   margin-inline: auto;
-  max-width: 64rem;
+  max-width: 90rem;
   padding: 1rem;
 }
 
