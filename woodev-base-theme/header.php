@@ -16,9 +16,9 @@ declare(strict_types=1);
 </head>
 <body <?php body_class(); ?>>
 <?php wp_body_open(); ?>
-<header class="border-b border-[var(--border)]">
-	<div class="mx-auto max-w-5xl p-4">
-		<a class="font-semibold" href="<?php echo esc_url( home_url( '/' ) ); ?>"><?php bloginfo( 'name' ); ?></a>
-	</div>
-</header>
-<main class="mx-auto max-w-5xl p-4">
+
+<a class="wtb-skip-link" href="#wtb-content"><?php esc_html_e( 'Skip to content', 'woodev-base-theme' ); ?></a>
+
+<?php get_template_part( 'template-parts/header/' . \Woodev\Theme\Base\Templates\Layout::header_variant() ); ?>
+
+<main id="wtb-content" class="wtb-container">

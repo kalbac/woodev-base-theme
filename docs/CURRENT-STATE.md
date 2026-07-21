@@ -8,7 +8,7 @@
 |---|---|---|
 | Design & decisions | ✅ Done | Spec approved, ADR-001…006 recorded |
 | M0 — Bootstrap | ✅ Done | PR [#1](https://github.com/kalbac/woodev-base-theme/pull/1) merged s3 after both Codex P2s were fixed and re-reviewed |
-| M1 — Core theme | 🟡 In progress | Split into 5 plans (see below). Harness merged (PR #2); icon helper in PR [#3](https://github.com/kalbac/woodev-base-theme/pull/3). Templates/components per spec §7 not started |
+| M1 — Core theme | 🟡 In progress | Split into 5 plans (see below). Harness (PR #2) and icon helper (PR [#3](https://github.com/kalbac/woodev-base-theme/pull/3), merged `96df1db` s4) done. M1-02 templates in progress on `feat/m1-templates` |
 | M2 — WooCommerce layer | ⬜ Not started | |
 | M3 — Public release prep | ⬜ Not started | |
 
@@ -39,8 +39,8 @@ Both Codex findings on PR #1 were fixed in s3 (`e175958`, `9b0341f`), each repro
 
 | # | Plan | State |
 |---|---|---|
-| M1-01 | Lucide icon helper | PR #3, written as `docs/plans/2026-07-19-m1-01-lucide-icons.md` |
-| M1-02 | Templates & parts (§7: 7 templates, content parts, pagination, sidebar + widget areas, 2+2 header/footer variants) | not written |
+| M1-01 | Lucide icon helper | ✅ merged `96df1db` (s4); Codex critic passed 2 rounds |
+| M1-02 | Templates & parts (§7: 7 templates, content parts, pagination, sidebar + widget areas, 2+2 header/footer variants) | 🟡 executing on `feat/m1-templates`; plan `docs/plans/2026-07-20-m1-02-templates-and-parts.md` |
 | M1-03 | 8 Basecoat style-pack bundles + adapter | not written |
 | M1-04 | Customizer v1 (§6) | not written |
 | M1-05 | Scheme switcher + no-FOUC head script | not written |

@@ -52,11 +52,20 @@ final class SetupTest extends WP_UnitTestCase {
 	 * See docs/gotchas/wp-test-suite-removes-html5-support.md
 	 */
 
-	public function test_primary_nav_menu_is_registered(): void {
+	public function test_sidebar_and_footer_widget_areas_are_registered(): void {
+		global $wp_registered_sidebars;
+
+		self::assertArrayHasKey( 'sidebar-1', $wp_registered_sidebars );
+		self::assertArrayHasKey( 'footer-1', $wp_registered_sidebars );
+		self::assertArrayHasKey( 'footer-2', $wp_registered_sidebars );
+		self::assertArrayHasKey( 'footer-3', $wp_registered_sidebars );
+	}
+
+	public function test_both_nav_menus_are_registered(): void {
 		$menus = get_registered_nav_menus();
 
 		self::assertArrayHasKey( 'primary', $menus );
-		self::assertNotEmpty( $menus['primary'] );
+		self::assertArrayHasKey( 'footer', $menus );
 	}
 
 	public function test_theme_declares_our_text_domain(): void {

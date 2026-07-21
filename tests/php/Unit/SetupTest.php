@@ -41,7 +41,12 @@ final class SetupTest extends TestCase {
 			->with( 'woodev-base-theme', '/theme/languages' );
 		Functions\expect( 'register_nav_menus' )
 			->once()
-			->with( [ 'primary' => 'Primary Menu' ] );
+			->with(
+				[
+					'primary' => 'Primary Menu',
+					'footer'  => 'Footer Menu',
+				]
+			);
 		Functions\expect( 'get_template_directory' )->andReturn( '/theme' );
 		Functions\when( '__' )->returnArg();
 

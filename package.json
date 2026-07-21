@@ -21,6 +21,7 @@
     "test:integration": "wp-env run cli --config=.wp-env.test.json --env-cwd=wp-content/woodev-tests vendor/bin/phpunit -c phpunit.xml.dist"
   },
   "devDependencies": {
+    "@alpinejs/focus": "^3.15.12",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.61.1",
     "@tailwindcss/vite": "^4.3.3",

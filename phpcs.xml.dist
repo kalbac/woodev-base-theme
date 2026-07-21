@@ -82,6 +82,17 @@
 	<rule ref="Universal.Operators.DisallowShortTernary">
 		<exclude-pattern>tests/*</exclude-pattern>
 	</rule>
+	<!--
+	NoReservedKeywordParameterNames: Brain\Monkey's Functions\when(...)->alias()
+	closures mock a WP function by matching its real signature so the fake stays
+	honest about what it stands in for. get_theme_mod()'s own signature is
+	get_theme_mod( string $key, $default = false ) — the reserved word is WP's,
+	not ours, and renaming it in the closure would make the mock diverge from
+	the function it mocks.
+	-->
+	<rule ref="Universal.NamingConventions.NoReservedKeywordParameterNames">
+		<exclude-pattern>tests/*</exclude-pattern>
+	</rule>
 
 	<rule ref="WordPress.WP.I18n">
 		<properties>
