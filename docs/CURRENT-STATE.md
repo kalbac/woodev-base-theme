@@ -1,6 +1,6 @@
 # Current State — Woodev Base
 
-> Updated: 19.07.2026 (s3)
+> Updated: 20.07.2026 (s4)
 
 ## Phase status
 
@@ -8,18 +8,21 @@
 |---|---|---|
 | Design & decisions | ✅ Done | Spec approved, ADR-001…006 recorded |
 | M0 — Bootstrap | ✅ Done | PR [#1](https://github.com/kalbac/woodev-base-theme/pull/1) merged s3 after both Codex P2s were fixed and re-reviewed |
-| M1 — Core theme | 🟡 In progress | Split into 5 plans (see below). Harness (PR #2) and icon helper (PR [#3](https://github.com/kalbac/woodev-base-theme/pull/3), merged `96df1db` s4) done. M1-02 templates in progress on `feat/m1-templates` |
+| M1 — Core theme | 🟡 In progress | Split into 5 plans (see below). Harness (PR #2), icon helper (PR #3, `96df1db`) and **templates M1-02 (PR [#4](https://github.com/kalbac/woodev-base-theme/pull/4), `f3f5f0a`, s4)** done. M1-03/04/05 not started |
 | M2 — WooCommerce layer | ⬜ Not started | |
 | M3 — Public release prep | ⬜ Not started | |
 
 ## Known bugs
 
-**None open.** The s3 harness review surfaced a real one and it is fixed (`c6f3bb3`, `76b6c58`): `add_theme_support()` was asserted with a bare `->times( 4 )`, so the html5 feature list was covered **nowhere** — and the code comment claiming it was covered in the unit suite is what kept anyone from checking. Both the comment and the gotcha stated it as "mutation-verified in s2"; the phrase was inherited from a session summary and never re-run. Lesson recorded in `docs/gotchas/wp-test-suite-removes-html5-support.md` ("The second trap").
+**None open.**
 
-Both Codex findings on PR #1 were fixed in s3 (`e175958`, `9b0341f`), each reproduced against a real WP first rather than taken on the review's word, and each guarded by a test proven red before the fix. The re-review (mandatory: never self-certify fixes made in response to a review) passed with no P1/P2/P3 and an explicit merge approval.
+s4 caught and fixed two during M1-02 verification (both browser-verified, both now gotchas): `number_format_i18n()` mangled the copyright **year** into `© 2,026` (`docs/gotchas/number-format-i18n-mangles-years.md`), and a dark-mode e2e read a false light value — the theme's dark mode was fine, the test used `browser.newPage()` which skips the config (`docs/gotchas/playwright-browser-newpage-skips-config.md`). The M1-01 icon helper also had a real Codex-found P1 fixed before merge: `DOMDocument::loadXML('')` throws `ValueError` on an empty SVG, breaking the fail-closed contract (guarded + `try/finally`, mutation-pinned).
+
+Earlier (s3): the html5-support coverage hole is fixed (`c6f3bb3`, `76b6c58`) — see `docs/gotchas/wp-test-suite-removes-html5-support.md`.
 
 ## Deferred, tracked
 
+- **`Layout::has_sidebar()` is `! is_page()`, broader than spec §7's "blog/archive/single"** — Codex P1 on M1-02, reviewed and **kept for v1 with Maksim's sign-off** (he said merge). It also allows the sidebar on search (a results list — standard WordPress) and attachment views. The behaviour is unit-tested; tightening to a positive allow-list (`is_home() || is_archive() || is_search() || is_single()`) would rewrite Task 2's mocks. **Narrow in M1-04** if the Customizer work wants it — trivial one-liner + test update.
 - **Dev mode has no integration/e2e coverage** — Codex P2 from the s3 re-review, accepted as real, **deferred to M1** (not waved away). The dev path is pinned only by a unit test with a mocked `wp_enqueue_script_module()`; canon wants WP-API behavior covered at integration level and "renders with styles" proven in a browser. It needs a second wp-env environment carrying `WOODEV_BASE_DEV` — the same `.wp-env.<variant>.json` mechanism M1's integration harness is building and validating, so doing it earlier would build that mechanism twice. **Do it as the first follow-up once the harness lands.** Manual recipe meanwhile: `docs/gotchas/wp-env-config-constants-persist.md`.
 
 ## Open items
@@ -40,17 +43,17 @@ Both Codex findings on PR #1 were fixed in s3 (`e175958`, `9b0341f`), each repro
 | # | Plan | State |
 |---|---|---|
 | M1-01 | Lucide icon helper | ✅ merged `96df1db` (s4); Codex critic passed 2 rounds |
-| M1-02 | Templates & parts (§7: 7 templates, content parts, pagination, sidebar + widget areas, 2+2 header/footer variants) | 🟡 executing on `feat/m1-templates`; plan `docs/plans/2026-07-20-m1-02-templates-and-parts.md` |
-| M1-03 | 8 Basecoat style-pack bundles + adapter | not written |
-| M1-04 | Customizer v1 (§6) | not written |
-| M1-05 | Scheme switcher + no-FOUC head script | not written |
+| M1-02 | Templates & parts (§7: 7 templates, content parts, pagination, sidebar + widget areas, 2+2 header/footer variants) | ✅ merged `f3f5f0a` (s4); Codex critic 3 reviews + re-critic, all findings fixed |
+| M1-03 | 8 Basecoat style-pack bundles + adapter | not written — **next** |
+| M1-04 | Customizer v1 (§6) — writes the header/footer/sidebar `theme_mod`s M1-02 already reads; consider narrowing `has_sidebar` here | not written |
+| M1-05 | Scheme switcher + no-FOUC head script — insert into the documented slot in both header variants (`template-parts/header/*.php`) | not written |
 
 i18n is cross-cutting — a requirement in every task, with `.pot` generation deferred to M3.
 
-1. ~~M1 kickoff: WP integration-test harness~~ — done s3, merged in PR #2. `npm run wp:test:start` → `test:integration:install` → `test:integration`; CI job `php-integration`, green on ubuntu.
-2. **Dev-mode integration coverage** — the deferred item above, now unblocked: the `.wp-env.<variant>.json` mechanism it needed exists and is proven.
-3. Write M1-02 and execute; the remaining plans follow, each written after the previous lands so it can use what was learned.
+1. **Write and execute M1-03** (8 Basecoat style-pack bundles + adapter) — next plan, written now that M1-02 has landed so it can build on the adapter/CSS patterns it introduced.
+2. **Dev-mode integration coverage** — deferred item above, unblocked since s3: the `.wp-env.<variant>.json` mechanism it needs exists and is proven. Good small follow-up.
+3. M1-04 (Customizer) and M1-05 (scheme switcher) follow; each written after the previous lands. M1-05 drops into the documented switcher slot already left in both header variants.
 
 ## Last session
 
-s3 (19.07.2026): PR #1's two P2s fixed, re-reviewed, merged. M1 integration harness built and mutation-verified. Its own review found a real coverage hole hidden behind a false comment — see Known bugs. Also fixed: `composer phpcs` was unrunnable on Windows (EOL).
+s4 (20.07.2026): merged M1-01 icons (PR #3, after the mandatory Codex critic it had never had — one real P1 fixed) and all of M1-02 templates (PR #4, subagent-driven: 8 tasks, 3 Codex reviews + re-critic). Gate green: phpcs 40/40, phpstan L8, unit 80, integration 13, vitest 4, e2e 21. Two bugs caught in-browser during verification (year, dark-test). `has_sidebar` breadth kept for v1 with sign-off. See SESSION-LOG for detail.

@@ -1,6 +1,6 @@
 # Gotchas Index — Woodev Base
 
-> 10 entries. Each gotcha is a separate file in `docs/gotchas/`.
+> 13 entries. Each gotcha is a separate file in `docs/gotchas/`.
 
 | Gotcha | Area | Summary |
 |---|---|---|
@@ -14,3 +14,6 @@
 | [wp-test-suite-removes-html5-support](gotchas/wp-test-suite-removes-html5-support.md) | Testing/WP core | `WP_UnitTestCase_Base::tear_down()` unconditionally strips html5 — the only `remove_theme_support` in the suite. Assertions on it pass or fail on test order; re-running `Setup::setup()` per test is `_doing_it_wrong`. Integration assertions must survive `tear_down()` |
 | [qa-gates-cover-less-than-they-claim](gotchas/qa-gates-cover-less-than-they-claim.md) | Tooling/QA | Exit 0 means "the files this gate looked at were clean". PHPCS never linted tests; ESLint flat-config `vendor/**` missed nested vendor (831 errors locally, invisible in CI); CRLF failed all 8 files before any sniff ran |
 | [codex-cli-dies-silently](gotchas/codex-cli-dies-silently.md) | Tooling/Codex | The mandatory critic gate fails in four ways and every one exits 0 — MCP loads despite `-c mcp_servers={}`, argv >32KB, background runs no-op. Working recipe: clean `CODEX_HOME`, foreground, prompt <15KB |
+| [codex-split-diff-false-positives](gotchas/codex-split-diff-false-positives.md) | Tooling/Codex | A diff too big for one prompt gets split; the critic then flags guards it can't see (a helper in another chunk) as missing. Name the out-of-chunk guards in the prompt; verify every finding against the whole tree |
+| [number-format-i18n-mangles-years](gotchas/number-format-i18n-mangles-years.md) | PHP/i18n | `number_format_i18n()` groups thousands, so a year renders `2,026` / `2 026`. It is for counts only — years/IDs/versions use plain digits. The plan misapplied the count rule to the copyright year |
+| [playwright-browser-newpage-skips-config](gotchas/playwright-browser-newpage-skips-config.md) | Testing/e2e | `browser.newPage()` ignores the project `use` config (baseURL, viewport) — use the `{ page }` fixture. A dark-mode assertion passed alone, failed in-suite; the theme was fine, the test wasn't. Assert visual state via a runtime toggle, not `addInitScript` |
