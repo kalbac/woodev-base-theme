@@ -1,6 +1,6 @@
 # Gotchas Index — Woodev Base
 
-> 13 entries. Each gotcha is a separate file in `docs/gotchas/`.
+> 14 entries. Each gotcha is a separate file in `docs/gotchas/`.
 
 | Gotcha | Area | Summary |
 |---|---|---|
@@ -16,4 +16,5 @@
 | [codex-cli-dies-silently](gotchas/codex-cli-dies-silently.md) | Tooling/Codex | The mandatory critic gate fails in four ways and every one exits 0 — MCP loads despite `-c mcp_servers={}`, argv >32KB, background runs no-op. Working recipe: clean `CODEX_HOME`, foreground, prompt <15KB |
 | [codex-split-diff-false-positives](gotchas/codex-split-diff-false-positives.md) | Tooling/Codex | A diff too big for one prompt gets split; the critic then flags guards it can't see (a helper in another chunk) as missing. Name the out-of-chunk guards in the prompt; verify every finding against the whole tree |
 | [number-format-i18n-mangles-years](gotchas/number-format-i18n-mangles-years.md) | PHP/i18n | `number_format_i18n()` groups thousands, so a year renders `2,026` / `2 026`. It is for counts only — years/IDs/versions use plain digits. The plan misapplied the count rule to the copyright year |
+| [x-trap-focus-move-is-async](gotchas/x-trap-focus-move-is-async.md) | Testing/e2e | `x-trap` moves focus asynchronously — a Tab fired right after opening the drawer lands on the skip link (outside the nav) and the red looks like a broken focus trap. Poll the precondition; `toBeVisible()` isn't one. A latent race surfaced by an unrelated CSS one-liner |
 | [playwright-browser-newpage-skips-config](gotchas/playwright-browser-newpage-skips-config.md) | Testing/e2e | `browser.newPage()` ignores the project `use` config (baseURL, viewport) — use the `{ page }` fixture. A dark-mode assertion passed alone, failed in-suite; the theme was fine, the test wasn't. Assert visual state via a runtime toggle, not `addInitScript` |
