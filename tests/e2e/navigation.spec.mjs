@@ -60,6 +60,18 @@ test.describe('mobile drawer', () => {
     await expect(toggle).toHaveAttribute('aria-expanded', 'true');
     await expect(menu).toBeVisible();
 
+    // x-trap moves focus into the drawer ASYNCHRONOUSLY — it is still on <body>
+    // synchronously after the click and through the next microtask. A Tab fired in
+    // that window walks from <body> to the document's first focusable, which is
+    // the skip link OUTSIDE .wtb-nav, and the loop below then fails on i=0 for a
+    // reason that is not a trap failure. Wait for the precondition rather than
+    // racing it.
+    await expect
+      .poll(async () =>
+        page.evaluate(() => document.querySelector('.wtb-nav').contains(document.activeElement)),
+      )
+      .toBe(true);
+
     // Focus trap: x-trap moves focus into the drawer; tabbing never escapes it.
     for (let i = 0; i < 5; i += 1) {
       await page.keyboard.press('Tab');
