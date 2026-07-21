@@ -1,5 +1,30 @@
 # Session Log — Woodev Base
 
+## s5 — 21–22.07.2026 — M1-03 style packs merged, plus two follow-up fixes
+
+**Done:** three PRs merged to `main` — [#5](https://github.com/kalbac/woodev-base-theme/pull/5) M1-03 (`1fd9dd8`), [#6](https://github.com/kalbac/woodev-base-theme/pull/6) container width (`3fafddc`), [#7](https://github.com/kalbac/woodev-base-theme/pull/7) e2e race fix (`9dc2f3b`). Plan written first (`docs/plans/2026-07-21-m1-03-style-packs.md`), executed subagent-driven (Sonnet workers, Opus orchestration/verification), Codex `gpt-5.6-sol` critic in 3 chunks + re-critic.
+
+**The finding that shaped the whole plan.** Read the shipped `basecoat-css@1.0.2` instead of trusting the s1 gotcha: `basecoat-css/<pack>` = `basecoat-base.css` (colour tokens + component structure) + `styles/<pack>.css`. **All 8 packs share one colour palette**; `styles/<pack>.css` is a shape *skin* (`@apply` radius/height/density) with **zero** colour tokens (verified for all 8). So packs differ in geometry, not colour — e.g. `.btn` is 36px in vega, 32px in nova. Consequence: **a pack switch is invisible on a page rendering no Basecoat component classes**, and M1-02's templates rendered none. Without surfacing a `.btn`, the 8 bundles would have built byte-different and looked identical, and e2e could only have asserted filenames. Scope decision (Maksim): engine + one real button, not the full §7 component set.
+
+**Shipped:** `scripts/lib/packs-lib.mjs` is the single source for the 8 pack names, feeding both a CSS-entry generator (`src/css/packs/<pack>.css`, generated + gitignored) and Vite's 8 Rollup inputs; `src/css/app.css` retired. `StylePreset` backed enum resolves the `style_preset` theme_mod → manifest key; `Assets` enqueues that one bundle (prod + dev). `searchform.php` + read-more carry `.btn`/`.input`.
+
+**Gate:** phpcs 0 · phpstan L8 · unit **92** · integration **15** · vitest **10** · e2e **23** · build OK.
+
+**Codex critic — real findings, all fixed and mutation-pinned:**
+1. **P1** `(string) get_theme_mod()` not fail-safe — an object without `__toString()` throws `Error`, i.e. **a fatal on every front-end request** (`wp_enqueue_scripts`). Now `is_string()` fails closed; mutation reproduced the exact fatal.
+2. **P2** the vitest pinned only `pack → tokens`; reordering Tailwind, wrapping Basecoat in `layer()`, or breaking the `../` paths stayed green. Now pins the full contract.
+3. **P2** `searchform.php` dropped core's supported `aria_label` arg (verified fixed against real WP).
+4. **P2** ambiguous `.btn` e2e locator → `a.wtb-entry-more.btn`.
+5. **P1** the e2e blindly deleted the theme_mod. Re-critic then found **two new defects in my own fix**: the restore interpolated a DB value into a shell (injection) and swallowed read errors. Both fixed; proven by attacking it with `nova; touch /tmp/pwned` — refused loudly, value survived, no command executed.
+
+**The bug the gate caught after merging.** Ran the full gate on merged `main` and `navigation.spec.mjs › … focus is trapped` was red, though green on both branches separately. Not a regression: `x-trap` moves focus **asynchronously** (still `<body>` synchronously after the click and through the next microtask; inside the nav by 50 ms), and the document's first focusable is the skip link, *outside* `.wtb-nav`. A `Tab` fired in that window fails an assertion that blames the trap. Latent since M1-02; #6's one-line CSS change (which cannot affect a 375px viewport) merely perturbed timing. **Bisect pointed at #6 and would have sent me hunting a phantom layout regression** — instrumenting `activeElement` over time is what settled it. Fixed by polling the precondition; mutation (stripping `x-trap`) confirms the guard still bites.
+
+**Process notes:** a worker resolved a WPCS/camelCase conflict by **relaxing `phpcs.xml.dist`** — reverted, renamed to snake_case instead (the whole codebase is snake_case; the camelCase was my design error in the plan). Another worker backgrounded its e2e run and never reported; finished it myself (run, mutation, commit).
+
+**Gotchas:** +1 new `x-trap-focus-move-is-async`; **2 corrected** — `basecoat-style-packs-standalone` (the "standalone full *token* sets" wording was wrong) and `basecoat-tokens-are-un-layered` (`app.css` no longer exists). Index now **14**.
+
+**Next:** M1-04 Customizer (the `style_preset` engine is built and waiting for a control; also the natural home for narrowing `has_sidebar()` and making container width a setting), then M1-05 scheme switcher, plus the dev-mode integration coverage tail.
+
 ## s4 — 20.07.2026 — M1-01 icons merged, M1-02 templates built and merged
 
 **Done:** Two PRs merged to `main`.
