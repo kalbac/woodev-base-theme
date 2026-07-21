@@ -46,3 +46,59 @@ describe('buildTokensCss', () => {
     expect(withoutComments).toContain(':root {');
   });
 });
+
+import { buildPrimaryPresets, lightnessOf } from '../../scripts/lib/build-tokens-lib.mjs';
+
+describe('buildPrimaryPresets', () => {
+  it('reads the lightness of both oklch spellings', () => {
+    expect(lightnessOf('oklch(54.6% 0.245 262.881)')).toBeCloseTo(0.546, 3);
+    expect(lightnessOf('oklch(0.145 0 0)')).toBeCloseTo(0.145, 3);
+    expect(() => lightnessOf('#3b82f6')).toThrow(/Not an oklch colour/);
+  });
+
+  it('emits the 8 curated presets, each a light+dark tuple of 3 vars', () => {
+    const presets = buildPrimaryPresets(tokens);
+
+    expect(Object.keys(presets)).toEqual([
+      'neutral',
+      'blue',
+      'green',
+      'red',
+      'rose',
+      'orange',
+      'yellow',
+      'violet',
+    ]);
+
+    expect(presets.blue.light).toEqual({
+      '--primary': tokens.primaryPalette.blue.light,
+      '--primary-foreground': 'oklch(0.985 0 0)',
+      '--ring': tokens.primaryPalette.blue.light,
+    });
+  });
+
+  // A preset is a coherent tuple, never a single hex (spec §6). The pairing has
+  // to stay readable in BOTH schemes, and the failure mode is silent — a yellow
+  // button with near-white text still renders, it is just unusable.
+  it('keeps every primary/foreground pair far apart in lightness', () => {
+    const presets = buildPrimaryPresets(tokens);
+
+    for (const [slug, schemes] of Object.entries(presets)) {
+      for (const scheme of ['light', 'dark']) {
+        const gap = Math.abs(
+          lightnessOf(schemes[scheme]['--primary']) -
+            lightnessOf(schemes[scheme]['--primary-foreground']),
+        );
+        expect(gap, `${slug}/${scheme}`).toBeGreaterThanOrEqual(0.38);
+      }
+    }
+  });
+
+  it('picks the dark foreground for light primaries', () => {
+    // yellow-600 sits at L 0.681 — above the threshold, so near-white text
+    // would leave a 0.31 gap and an unreadable button.
+    expect(buildPrimaryPresets(tokens).yellow.light['--primary-foreground']).toBe(
+      'oklch(0.145 0 0)',
+    );
+  });
+});
