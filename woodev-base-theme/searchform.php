@@ -13,8 +13,24 @@
 declare(strict_types=1);
 
 $wtb_search_id = 'wtb-search-' . wp_unique_id();
+
+/*
+ * get_search_form() passes its $args through to this template, and core's
+ * default markup honours `aria_label` — it is how a caller distinguishes two
+ * search landmarks on one page. Overriding the template must not silently drop
+ * that contract. $args is absent if the file is ever included directly.
+ */
+$wtb_search_aria_label = isset( $args['aria_label'] ) ? (string) $args['aria_label'] : '';
 ?>
-<form role="search" method="get" class="wtb-search flex gap-2" action="<?php echo esc_url( home_url( '/' ) ); ?>">
+<form
+	role="search"
+	<?php if ( '' !== $wtb_search_aria_label ) : ?>
+		aria-label="<?php echo esc_attr( $wtb_search_aria_label ); ?>"
+	<?php endif; ?>
+	method="get"
+	class="wtb-search flex gap-2"
+	action="<?php echo esc_url( home_url( '/' ) ); ?>"
+>
 	<label class="sr-only" for="<?php echo esc_attr( $wtb_search_id ); ?>">
 		<?php esc_html_e( 'Search for:', 'woodev-base-theme' ); ?>
 	</label>

@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Woodev\Theme\Base\Tests\Unit;
 
 use Brain\Monkey\Functions;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Woodev\Theme\Base\StylePreset;
 
 final class StylePresetTest extends TestCase {
@@ -33,6 +34,38 @@ final class StylePresetTest extends TestCase {
 		Functions\when( 'get_theme_mod' )->justReturn( 'does-not-exist' );
 
 		self::assertSame( StylePreset::Vega, StylePreset::from_theme_mod() );
+	}
+
+	/**
+	 * Non-string theme_mods must fail closed to the default pack.
+	 *
+	 * The setting is `mixed`: get_theme_mod() returns whatever the database or a
+	 * filter hands back, including a half-migrated option. A non-string must
+	 * never reach a string
+	 * cast: an array emits "Array to string conversion" and an object without
+	 * __toString() throws Error — a fatal on every front-end request, since the
+	 * resolver runs on wp_enqueue_scripts.
+	 *
+	 * @param mixed $stored Whatever the theme_mod hands back.
+	 */
+	#[DataProvider( 'non_string_theme_mods' )]
+	public function test_from_theme_mod_falls_back_for_a_non_string_value( mixed $stored ): void {
+		Functions\when( 'get_theme_mod' )->justReturn( $stored );
+
+		self::assertSame( StylePreset::Vega, StylePreset::from_theme_mod() );
+	}
+
+	/**
+	 * @return array<string, array{mixed}>
+	 */
+	public static function non_string_theme_mods(): array {
+		return [
+			'array'  => [ [ 'vega' ] ],
+			'object' => [ new \stdClass() ],
+			'int'    => [ 42 ],
+			'null'   => [ null ],
+			'false'  => [ false ],
+		];
 	}
 
 	public function test_css_entry_matches_the_vite_input_path(): void {

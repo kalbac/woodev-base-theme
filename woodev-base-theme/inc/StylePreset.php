@@ -40,7 +40,17 @@ enum StylePreset: string {
 	 * Resolve the admin-chosen pack from its theme_mod, validated.
 	 */
 	public static function from_theme_mod(): self {
-		$stored = (string) get_theme_mod( 'style_preset', self::default()->value );
+		$stored = get_theme_mod( 'style_preset', self::default()->value );
+
+		// get_theme_mod() returns mixed. The value lives in the database and can be
+		// reshaped by a `theme_mod_style_preset` filter or a half-migrated option,
+		// so a non-string is reachable. Casting first would emit "Array to string
+		// conversion" for an array and throw Error for an object without
+		// __toString() — a fatal on every front-end request, because this runs on
+		// wp_enqueue_scripts. Fail closed to the default pack instead.
+		if ( ! \is_string( $stored ) ) {
+			return self::default();
+		}
 
 		return self::tryFrom( $stored ) ?? self::default();
 	}
