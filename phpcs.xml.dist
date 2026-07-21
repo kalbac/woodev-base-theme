@@ -94,6 +94,19 @@
 		<exclude-pattern>tests/*</exclude-pattern>
 	</rule>
 
+	<!--
+	DEVIATION: PHP enum methods read naturally in camelCase, mirroring the
+	language's own vocabulary on the same enum (`tryFrom()`, `cases()`) rather
+	than WPCS's snake_case convention for classes. StylePreset is the project's
+	first backed enum (AGENTS.md: "Backed enums for closed value sets"); this
+	scopes the exception to enum files as they are added rather than relaxing
+	method naming project-wide — regular classes (Layout.php, etc.) keep
+	snake_case.
+	-->
+	<rule ref="WordPress.NamingConventions.ValidFunctionName.MethodNameInvalid">
+		<exclude-pattern>woodev-base-theme/inc/StylePreset.php</exclude-pattern>
+	</rule>
+
 	<rule ref="WordPress.WP.I18n">
 		<properties>
 			<property name="text_domain" type="array">
