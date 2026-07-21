@@ -39,7 +39,7 @@ enum StylePreset: string {
 	/**
 	 * Resolve the admin-chosen pack from its theme_mod, validated.
 	 */
-	public static function fromThemeMod(): self {
+	public static function from_theme_mod(): self {
 		$stored = (string) get_theme_mod( 'style_preset', self::default()->value );
 
 		return self::tryFrom( $stored ) ?? self::default();
@@ -48,7 +48,7 @@ enum StylePreset: string {
 	/**
 	 * The Vite manifest key (and dev-server path) for this pack's CSS bundle.
 	 */
-	public function cssEntry(): string {
+	public function css_entry(): string {
 		return "src/css/packs/{$this->value}.css";
 	}
 }
