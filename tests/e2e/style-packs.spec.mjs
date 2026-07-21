@@ -13,6 +13,7 @@
 // its own Playwright project, or run this file with --workers=1.
 import { execSync } from 'node:child_process';
 import { expect, test } from '@playwright/test';
+import { PACKS } from '../../scripts/lib/packs-lib.mjs';
 
 /** Run a wp-cli command in the cli container, return trimmed stdout. */
 function wp(command) {
@@ -22,18 +23,35 @@ function wp(command) {
   }).trim();
 }
 
-/** The stored style_preset, or '' when unset. */
+/**
+ * The stored style_preset, or '' when genuinely unset.
+ *
+ * Errors are deliberately NOT swallowed: a wp-cli failure or unparseable output
+ * dressed up as "unset" would make afterAll() delete the very setting it exists
+ * to restore. Let it throw loudly instead.
+ *
+ * The value is also validated against the known pack list before it can ever be
+ * interpolated back into a shell command — it comes out of the database, and
+ * style_preset is a closed set, so anything else is corrupt or hostile.
+ */
 function currentPreset() {
-  try {
-    const [row] = JSON.parse(wp('theme mod get style_preset --format=json'));
-    return row?.value ?? '';
-  } catch {
-    return '';
+  const [row] = JSON.parse(wp('theme mod get style_preset --format=json'));
+  const value = row?.value ?? '';
+
+  if ('' !== value && !PACKS.includes(value)) {
+    throw new Error(
+      `Refusing to round-trip an unrecognised style_preset: ${JSON.stringify(value)}`,
+    );
   }
+
+  return value;
 }
 
-/** Whatever style_preset held before this file ran, so it can be put back. */
-let previousPreset = '';
+/**
+ * Whatever style_preset held before this file ran, so it can be put back.
+ * Stays null until it has actually been read.
+ */
+let previousPreset = null;
 
 /**
  * Height (px, rounded) of the blog index's read-more button.
@@ -55,6 +73,12 @@ test.describe.serial('Basecoat style packs', () => {
   });
 
   test.afterAll(() => {
+    // beforeAll never got a readable value, so the prior state is unknown —
+    // touching it now would destroy exactly what we failed to read.
+    if (null === previousPreset) {
+      return;
+    }
+
     // Restore rather than remove: blindly deleting would discard a deliberate
     // setting on whatever site the suite was pointed at.
     if ('' === previousPreset) {
