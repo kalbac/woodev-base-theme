@@ -41,8 +41,10 @@ final class LayoutTest extends TestCase {
 	public function test_sidebar_is_off_by_default(): void {
 		Functions\when( 'get_theme_mod' )->alias( static fn( string $key, $default = false ) => $default );
 		Functions\when( 'is_active_sidebar' )->justReturn( true );
-		Functions\when( 'is_singular' )->justReturn( true );
-		Functions\when( 'is_page' )->justReturn( false );
+		Functions\when( 'is_home' )->justReturn( false );
+		Functions\when( 'is_archive' )->justReturn( false );
+		Functions\when( 'is_search' )->justReturn( false );
+		Functions\when( 'is_single' )->justReturn( true );
 
 		self::assertFalse( Layout::has_sidebar() );
 	}
@@ -54,8 +56,10 @@ final class LayoutTest extends TestCase {
 	public function test_sidebar_requires_widgets_to_be_present(): void {
 		Functions\when( 'get_theme_mod' )->justReturn( 'right' );
 		Functions\when( 'is_active_sidebar' )->justReturn( false );
-		Functions\when( 'is_singular' )->justReturn( true );
-		Functions\when( 'is_page' )->justReturn( false );
+		Functions\when( 'is_home' )->justReturn( false );
+		Functions\when( 'is_archive' )->justReturn( false );
+		Functions\when( 'is_search' )->justReturn( false );
+		Functions\when( 'is_single' )->justReturn( true );
 
 		self::assertFalse( Layout::has_sidebar() );
 	}
@@ -65,11 +69,13 @@ final class LayoutTest extends TestCase {
 	 * page is a layout the author controls with blocks; a sidebar bolted onto it
 	 * fights the page's own design.
 	 */
-	public function test_pages_never_get_the_sidebar(): void {
+	public function test_a_static_page_never_gets_the_sidebar(): void {
 		Functions\when( 'get_theme_mod' )->justReturn( 'right' );
 		Functions\when( 'is_active_sidebar' )->justReturn( true );
-		Functions\when( 'is_singular' )->justReturn( true );
-		Functions\when( 'is_page' )->justReturn( true );
+		Functions\when( 'is_home' )->justReturn( false );
+		Functions\when( 'is_archive' )->justReturn( false );
+		Functions\when( 'is_search' )->justReturn( false );
+		Functions\when( 'is_single' )->justReturn( false );
 
 		self::assertFalse( Layout::has_sidebar() );
 	}
@@ -77,8 +83,63 @@ final class LayoutTest extends TestCase {
 	public function test_sidebar_shows_on_a_single_post_when_enabled_and_filled(): void {
 		Functions\when( 'get_theme_mod' )->justReturn( 'right' );
 		Functions\when( 'is_active_sidebar' )->justReturn( true );
-		Functions\when( 'is_singular' )->justReturn( true );
-		Functions\when( 'is_page' )->justReturn( false );
+		Functions\when( 'is_home' )->justReturn( false );
+		Functions\when( 'is_archive' )->justReturn( false );
+		Functions\when( 'is_search' )->justReturn( false );
+		Functions\when( 'is_single' )->justReturn( true );
+
+		self::assertTrue( Layout::has_sidebar() );
+	}
+
+	/**
+	 * Calling get_theme_mod() returns mixed and the value can be reshaped by a
+	 * `theme_mod_header_variant` filter or a half-migrated option. Casting an
+	 * object without __toString() to string throws Error — and this runs inside
+	 * header.php, i.e. on every front-end request. Fail closed instead.
+	 */
+	public function test_a_non_string_header_variant_falls_back_instead_of_fataling(): void {
+		Functions\when( 'get_theme_mod' )->justReturn( new \stdClass() );
+
+		self::assertSame( 'inline', Layout::header_variant() );
+	}
+
+	public function test_an_array_footer_variant_falls_back_instead_of_warning(): void {
+		Functions\when( 'get_theme_mod' )->justReturn( [ 'columns' ] );
+
+		self::assertSame( 'simple', Layout::footer_variant() );
+	}
+
+	public function test_sanitizers_are_reusable_by_the_customizer(): void {
+		self::assertSame( 'centered', Layout::sanitize_header_variant( 'centered' ) );
+		self::assertSame( 'inline', Layout::sanitize_header_variant( 'bogus' ) );
+		self::assertSame( 'columns', Layout::sanitize_footer_variant( 'columns' ) );
+		self::assertSame( 'simple', Layout::sanitize_footer_variant( null ) );
+		self::assertSame( 'right', Layout::sanitize_sidebar_position( 'right' ) );
+		self::assertSame( 'none', Layout::sanitize_sidebar_position( 'left' ) );
+	}
+
+	/**
+	 * Spec §7 lists blog, archive and single. The old `! is_page()` was broader —
+	 * it also caught 404s, attachments and any future singular type.
+	 */
+	public function test_the_404_template_never_gets_the_sidebar(): void {
+		Functions\when( 'get_theme_mod' )->justReturn( 'right' );
+		Functions\when( 'is_active_sidebar' )->justReturn( true );
+		Functions\when( 'is_home' )->justReturn( false );
+		Functions\when( 'is_archive' )->justReturn( false );
+		Functions\when( 'is_search' )->justReturn( false );
+		Functions\when( 'is_single' )->justReturn( false );
+
+		self::assertFalse( Layout::has_sidebar() );
+	}
+
+	public function test_the_search_results_list_gets_the_sidebar(): void {
+		Functions\when( 'get_theme_mod' )->justReturn( 'right' );
+		Functions\when( 'is_active_sidebar' )->justReturn( true );
+		Functions\when( 'is_home' )->justReturn( false );
+		Functions\when( 'is_archive' )->justReturn( false );
+		Functions\when( 'is_search' )->justReturn( true );
+		Functions\when( 'is_single' )->justReturn( false );
 
 		self::assertTrue( Layout::has_sidebar() );
 	}

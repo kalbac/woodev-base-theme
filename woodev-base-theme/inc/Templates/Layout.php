@@ -18,28 +18,63 @@ namespace Woodev\Theme\Base\Templates;
  */
 final class Layout {
 
-	public const HEADER_VARIANTS = [ 'inline', 'centered' ];
-	public const FOOTER_VARIANTS = [ 'simple', 'columns' ];
+	public const HEADER_VARIANTS   = [ 'inline', 'centered' ];
+	public const FOOTER_VARIANTS   = [ 'simple', 'columns' ];
+	public const SIDEBAR_POSITIONS = [ 'none', 'right' ];
 
 	/**
 	 * Which header part to load.
 	 */
 	public static function header_variant(): string {
-		return self::validate( (string) get_theme_mod( 'header_variant', 'inline' ), self::HEADER_VARIANTS, 'inline' );
+		return self::sanitize_header_variant( get_theme_mod( 'header_variant', 'inline' ) );
 	}
 
 	/**
 	 * Which footer part to load.
 	 */
 	public static function footer_variant(): string {
-		return self::validate( (string) get_theme_mod( 'footer_variant', 'simple' ), self::FOOTER_VARIANTS, 'simple' );
+		return self::sanitize_footer_variant( get_theme_mod( 'footer_variant', 'simple' ) );
+	}
+
+	/**
+	 * Where the sidebar column goes, when it is shown at all.
+	 */
+	public static function sidebar_position(): string {
+		return self::sanitize_sidebar_position( get_theme_mod( 'sidebar_position', 'none' ) );
+	}
+
+	/**
+	 * Customizer sanitize callback for `header_variant`.
+	 *
+	 * @param mixed $value Raw value from the Customizer or the database.
+	 */
+	public static function sanitize_header_variant( mixed $value ): string {
+		return self::validate( $value, self::HEADER_VARIANTS, 'inline' );
+	}
+
+	/**
+	 * Customizer sanitize callback for `footer_variant`.
+	 *
+	 * @param mixed $value Raw value from the Customizer or the database.
+	 */
+	public static function sanitize_footer_variant( mixed $value ): string {
+		return self::validate( $value, self::FOOTER_VARIANTS, 'simple' );
+	}
+
+	/**
+	 * Customizer sanitize callback for `sidebar_position`.
+	 *
+	 * @param mixed $value Raw value from the Customizer or the database.
+	 */
+	public static function sanitize_sidebar_position( mixed $value ): string {
+		return self::validate( $value, self::SIDEBAR_POSITIONS, 'none' );
 	}
 
 	/**
 	 * Whether the current view renders the sidebar column.
 	 */
 	public static function has_sidebar(): bool {
-		if ( 'right' !== get_theme_mod( 'sidebar_position', 'none' ) ) {
+		if ( 'right' !== self::sidebar_position() ) {
 			return false;
 		}
 
@@ -49,19 +84,28 @@ final class Layout {
 			return false;
 		}
 
-		// Spec §7: blog, archive and single contexts only. Static pages are
-		// author-composed layouts and keep the full width.
-		return ! is_page();
+		// Spec §7: blog, archive, search results and single posts. A positive
+		// allow-list, not `! is_page()`: the negative form also matched 404s,
+		// attachments and every future singular post type — layouts nobody asked
+		// to put a sidebar on.
+		return is_home() || is_archive() || is_search() || is_single();
 	}
 
 	/**
 	 * Fall back to a known-good value when the stored one is not on the allow list.
 	 *
-	 * @param string   $value    Stored value.
+	 * The parameter is `mixed`, not `string`, on purpose. get_theme_mod() returns
+	 * mixed: the value lives in the database and can be reshaped by a
+	 * `theme_mod_*` filter or a half-migrated option. Casting first would emit
+	 * "Array to string conversion" for an array and throw Error for an object
+	 * without __toString() — a fatal on every front-end request, since these
+	 * resolvers run from header.php and footer.php. Fail closed instead.
+	 *
+	 * @param mixed    $value    Stored value, any type.
 	 * @param string[] $allowed  Permitted values.
 	 * @param string   $fallback Value to use when $value is not permitted.
 	 */
-	private static function validate( string $value, array $allowed, string $fallback ): string {
-		return \in_array( $value, $allowed, true ) ? $value : $fallback;
+	private static function validate( mixed $value, array $allowed, string $fallback ): string {
+		return \is_string( $value ) && \in_array( $value, $allowed, true ) ? $value : $fallback;
 	}
 }
