@@ -102,3 +102,38 @@ describe('buildPrimaryPresets', () => {
     );
   });
 });
+
+import { buildPrimaryPresetsPhp } from '../../scripts/lib/build-tokens-lib.mjs';
+
+describe('buildPrimaryPresetsPhp', () => {
+  it('emits a strict-typed PHP file returning the preset map', () => {
+    const php = buildPrimaryPresetsPhp(tokens);
+
+    expect(php.startsWith('<?php\n')).toBe(true);
+    expect(php).toContain('declare(strict_types=1);');
+    expect(php).toContain('AUTO-GENERATED');
+    // Spacing is not one space everywhere: WPCS's
+    // WordPress.Arrays.MultipleStatementAlignment.DoubleArrowNotAligned sniff
+    // requires every `=>` in a contiguous block to align on the widest key in
+    // that block ('neutral' among slugs, '--primary-foreground' among the
+    // three preset vars). The generator computes that padding so the
+    // committed file is PHPCS-clean without a phpcs:ignore.
+    expect(php).toContain("'blue'    => [");
+    expect(php).toContain(`'--primary'            => '${tokens.primaryPalette.blue.light}',`);
+    expect(php).toContain("'dark'  => [");
+    expect(php.endsWith('];\n')).toBe(true);
+  });
+
+  // The emitted strings are interpolated straight into single-quoted PHP and
+  // then into a <style> block. A value carrying a quote, backslash or angle
+  // bracket would break out of both. The generator is where that is stopped,
+  // once, rather than at every consumer.
+  it('refuses to emit a value that is not a plain oklch() literal', () => {
+    const hostile = {
+      ...tokens,
+      primaryPalette: { evil: { light: "oklch(1 0 0)'; system('rm -rf /'); '", dark: 'oklch(0 0 0)' } },
+    };
+
+    expect(() => buildPrimaryPresetsPhp(hostile)).toThrow(/Refusing to emit/);
+  });
+});

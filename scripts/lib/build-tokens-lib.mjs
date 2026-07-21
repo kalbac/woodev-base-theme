@@ -101,3 +101,75 @@ export function buildPrimaryPresets(tokens) {
     ]),
   );
 }
+
+// A colour that reaches the generated PHP is interpolated into a single-quoted
+// string and later into a <style> block. Pin the shape here so neither consumer
+// has to defend itself: digits, dots, spaces, percent signs, nothing else.
+const OKLCH_LITERAL = /^oklch\([\d.% ]+\)$/;
+
+// PHPCS's WordPress.Arrays.MultipleStatementAlignment sniff requires every
+// `=>` in a contiguous block of array-item assignments to land in the same
+// column, padded to the widest key in that block. Doing this by hand in the
+// template (as an earlier draft did) drifts the moment a preset is added or
+// renamed; computing it keeps the generator PHPCS-clean without ever hand
+// -editing the generated file or reaching for phpcs:ignore.
+const quoteKey = (key) => `'${key}'`;
+
+const widestKey = (keys) => Math.max(...keys.map((key) => quoteKey(key).length));
+
+const alignedArrow = (key, width) => {
+  const label = quoteKey(key);
+  return `${label}${' '.repeat(width - label.length + 1)}=>`;
+};
+
+/**
+ * The preset map as a committed PHP file (spec §6: one source, two consumers).
+ */
+export function buildPrimaryPresetsPhp(tokens) {
+  const presets = buildPrimaryPresets(tokens);
+
+  const slugWidth = widestKey(Object.keys(presets));
+  const schemeLabelWidth = widestKey(['light', 'dark']);
+
+  const scheme = (vars) => {
+    const propertyWidth = widestKey(Object.keys(vars));
+
+    return Object.entries(vars)
+      .map(([property, value]) => {
+        if (!OKLCH_LITERAL.test(value)) {
+          throw new Error(`Refusing to emit a non-oklch preset value: ${value}`);
+        }
+
+        return `\t\t\t${alignedArrow(property, propertyWidth)} '${value}',`;
+      })
+      .join('\n');
+  };
+
+  const entries = Object.entries(presets)
+    .map(
+      ([slug, schemes]) =>
+        `\t${alignedArrow(slug, slugWidth)} [\n` +
+        `\t\t${alignedArrow('light', schemeLabelWidth)} [\n${scheme(schemes.light)}\n\t\t],\n` +
+        `\t\t${alignedArrow('dark', schemeLabelWidth)} [\n${scheme(schemes.dark)}\n\t\t],\n` +
+        `\t],`,
+    )
+    .join('\n');
+
+  return `<?php
+/**
+ * AUTO-GENERATED from src/tokens/tokens.mjs — do not edit. Run \`npm run tokens\`.
+ *
+ * The curated primary presets (spec §6). Each is a coherent light+dark tuple of
+ * --primary, --primary-foreground and --ring; \`default\` is not listed because
+ * it means "inherit the active style pack" and emits no override at all.
+ *
+ * @package Woodev\\Theme\\Base
+ */
+
+declare(strict_types=1);
+
+return [
+${entries}
+];
+`;
+}
