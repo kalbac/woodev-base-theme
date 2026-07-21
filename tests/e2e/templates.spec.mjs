@@ -49,6 +49,10 @@ for (const [schemeName, isDark] of Object.entries(SCHEMES)) {
       await expect(page.locator('article.wtb-entry--excerpt').first()).toBeVisible();
       await expect(page.getByText(NOT_FOUND_TEXT)).toHaveCount(0);
 
+      // Exactly one h1 — the blog index carries its own page heading (the excerpt
+      // cards are h2), so the document is not left headingless.
+      await expect(page.locator('h1')).toHaveCount(1);
+
       expect(errors).toEqual([]);
     });
 

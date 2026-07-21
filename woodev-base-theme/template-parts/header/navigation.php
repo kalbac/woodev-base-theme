@@ -26,6 +26,7 @@ if ( ! has_nav_menu( 'primary' ) ) {
 	x-init="$el.classList.add('wtb-nav--enhanced')"
 	x-bind:class="{ 'wtb-nav--open': open }"
 	x-on:keydown.escape="open = false; $nextTick(() => $refs.toggle.focus())"
+	x-on:resize.window.debounce="if ( open && ! window.matchMedia('(max-width: 48rem)').matches ) open = false"
 >
 	<button
 		type="button"

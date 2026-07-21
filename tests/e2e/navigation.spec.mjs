@@ -78,6 +78,26 @@ test.describe('mobile drawer', () => {
 
     expect(errors).toEqual([]);
   });
+
+  test('widening to desktop while open releases the focus trap', async ({ page }) => {
+    // Regression guard: an open drawer left `open = true` and x-trap active when
+    // the viewport grew to desktop, where the toggle is display:none — Escape
+    // then tried to focus a hidden button and keyboard focus stayed trapped in
+    // the now-inline menu. Widening must drop `open` and free focus.
+    await page.goto('/');
+
+    const toggle = page.locator('.wtb-nav__toggle');
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+
+    await page.setViewportSize({ width: 1280, height: 800 });
+
+    // open is cleared, so nothing is trapped: focus can reach the footer.
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    const footerLink = page.locator('.wtb-footer a').first();
+    await footerLink.focus();
+    await expect(footerLink).toBeFocused();
+  });
 });
 
 test.describe('desktop submenu', () => {
