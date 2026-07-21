@@ -94,18 +94,25 @@ final class Layout {
 	/**
 	 * Fall back to a known-good value when the stored one is not on the allow list.
 	 *
-	 * The parameter is `mixed`, not `string`, on purpose. get_theme_mod() returns
-	 * mixed: the value lives in the database and can be reshaped by a
-	 * `theme_mod_*` filter or a half-migrated option. Casting first would emit
-	 * "Array to string conversion" for an array and throw Error for an object
-	 * without __toString() — a fatal on every front-end request, since these
-	 * resolvers run from header.php and footer.php. Fail closed instead.
+	 * The parameter is `mixed`, not `string`, on purpose, and NOTHING here casts.
+	 * get_theme_mod() returns mixed: the value lives in the database and can be
+	 * reshaped by a `theme_mod_*` filter or a half-migrated option. A `(string)`
+	 * cast anywhere on this path emits "Array to string conversion" for an array
+	 * and throws Error for an object without __toString() — a fatal on every
+	 * front-end request, since these resolvers run from header.php and
+	 * footer.php. LayoutTest pins that: re-introducing the cast turns
+	 * test_a_non_string_header_variant_falls_back_instead_of_fataling red.
+	 *
+	 * The strict in_array() is what makes the cast unnecessary — a non-string
+	 * simply matches nothing and takes the fallback. An `is_string()` guard in
+	 * front of it would be dead weight: PHPStan L8 narrows the return type
+	 * without it, and no test can tell whether it is present.
 	 *
 	 * @param mixed    $value    Stored value, any type.
 	 * @param string[] $allowed  Permitted values.
 	 * @param string   $fallback Value to use when $value is not permitted.
 	 */
 	private static function validate( mixed $value, array $allowed, string $fallback ): string {
-		return \is_string( $value ) && \in_array( $value, $allowed, true ) ? $value : $fallback;
+		return \in_array( $value, $allowed, true ) ? $value : $fallback;
 	}
 }
