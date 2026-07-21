@@ -7,8 +7,9 @@
   "scripts": {
     "tokens": "node scripts/build-tokens.mjs",
     "icons": "node scripts/copy-icons.mjs",
-    "dev": "npm run tokens && vite",
-    "build": "npm run tokens && vite build",
+    "packs": "node scripts/build-pack-entries.mjs",
+    "dev": "npm run tokens && npm run packs && vite",
+    "build": "npm run tokens && npm run packs && vite build",
     "test:js": "vitest run",
     "lint:js": "eslint .",
     "format": "prettier --check .",
