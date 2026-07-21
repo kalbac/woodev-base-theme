@@ -25,7 +25,7 @@ declare(strict_types=1);
 	</div>
 
 	<p class="mt-2">
-		<a class="wtb-entry-more" href="<?php the_permalink(); ?>">
+		<a class="wtb-entry-more btn" href="<?php the_permalink(); ?>">
 			<?php esc_html_e( 'Read more', 'woodev-base-theme' ); ?>
 			<span class="sr-only">
 				<?php
