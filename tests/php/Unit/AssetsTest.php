@@ -11,16 +11,16 @@ use Woodev\Theme\Base\Assets;
 final class AssetsTest extends TestCase {
 
 	private const MANIFEST = [
-		'src/js/app.js'   => [
+		'src/js/app.js'          => [
 			'file' => 'assets/app-B3xY.js',
 			'css'  => [ 'assets/app-D4zQ.css' ],
 		],
-		'src/css/app.css' => [ 'file' => 'assets/style-A1bC.css' ],
+		'src/css/packs/vega.css' => [ 'file' => 'assets/style-vega-A1bC.css' ],
 	];
 
 	public function test_entry_file_resolves_hashed_file(): void {
 		self::assertSame( 'assets/app-B3xY.js', Assets::entry_file( self::MANIFEST, 'src/js/app.js' ) );
-		self::assertSame( 'assets/style-A1bC.css', Assets::entry_file( self::MANIFEST, 'src/css/app.css' ) );
+		self::assertSame( 'assets/style-vega-A1bC.css', Assets::entry_file( self::MANIFEST, 'src/css/packs/vega.css' ) );
 	}
 
 	public function test_entry_file_returns_null_for_unknown_entry(): void {
@@ -29,7 +29,7 @@ final class AssetsTest extends TestCase {
 
 	public function test_entry_css_lists_imported_css(): void {
 		self::assertSame( [ 'assets/app-D4zQ.css' ], Assets::entry_css( self::MANIFEST, 'src/js/app.js' ) );
-		self::assertSame( [], Assets::entry_css( self::MANIFEST, 'src/css/app.css' ) );
+		self::assertSame( [], Assets::entry_css( self::MANIFEST, 'src/css/packs/vega.css' ) );
 	}
 
 	// wp_json_file_decode() returns null for a corrupt file. Callers index into
@@ -90,18 +90,15 @@ final class AssetsTest extends TestCase {
 		self::assertSame( self::MANIFEST, Assets::read_manifest( __FILE__ ) );
 	}
 
-	// WOODEV_BASE_DEV can never be undefined once set, so this branch only stays
-	// testable in a process of its own.
-	//
-	// The CSS entry is the load-bearing one: Vite declares it as a separate
-	// Rollup input, so app.js does not import it and the dev server would
-	// otherwise render the theme with no Tailwind, Basecoat or tokens. Vite
-	// serves /src/css/app.css as a JS module (text/javascript) that injects the
-	// style and carries HMR — hence a script module, not wp_enqueue_style.
+	// WOODEV_BASE_DEV can never be undefined once set, so these branches only stay
+	// testable in a process of their own. The CSS entry is load-bearing: Vite
+	// declares it a separate Rollup input, so app.js does not import it and the
+	// dev server would otherwise render the theme with no Tailwind/Basecoat/tokens.
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function test_dev_mode_enqueues_vite_client_css_and_js_from_the_dev_server(): void {
+	public function test_dev_mode_enqueues_the_default_pack_from_the_dev_server(): void {
 		\define( 'WOODEV_BASE_DEV', true );
+		Functions\when( 'get_theme_mod' )->alias( static fn( string $key, $default = false ) => $default );
 
 		$modules = [];
 		Functions\when( 'wp_enqueue_script_module' )->alias(
@@ -109,8 +106,6 @@ final class AssetsTest extends TestCase {
 				$modules[ $handle ] = $src;
 			}
 		);
-
-		// Dev mode must not touch the dist build at all.
 		Functions\expect( 'wp_enqueue_style' )->never();
 		Functions\expect( 'wp_json_file_decode' )->never();
 
@@ -119,10 +114,31 @@ final class AssetsTest extends TestCase {
 		self::assertSame(
 			[
 				'woodev-base-vite-client' => 'http://localhost:5173/@vite/client',
-				'woodev-base-style'       => 'http://localhost:5173/src/css/app.css',
+				'woodev-base-style'       => 'http://localhost:5173/src/css/packs/vega.css',
 				'woodev-base-app'         => 'http://localhost:5173/src/js/app.js',
 			],
 			$modules
+		);
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_dev_mode_enqueues_the_pack_the_theme_mod_selects(): void {
+		\define( 'WOODEV_BASE_DEV', true );
+		Functions\when( 'get_theme_mod' )->justReturn( 'nova' );
+
+		$modules = [];
+		Functions\when( 'wp_enqueue_script_module' )->alias(
+			static function ( string $handle, string $src ) use ( &$modules ): void {
+				$modules[ $handle ] = $src;
+			}
+		);
+
+		( new Assets() )->enqueue();
+
+		self::assertSame(
+			'http://localhost:5173/src/css/packs/nova.css',
+			$modules['woodev-base-style']
 		);
 	}
 }
