@@ -1,6 +1,6 @@
 # Gotchas Index — Woodev Base
 
-> 14 entries. Each gotcha is a separate file in `docs/gotchas/`.
+> 17 entries. Each gotcha is a separate file in `docs/gotchas/`.
 
 | Gotcha | Area | Summary |
 |---|---|---|
@@ -18,3 +18,6 @@
 | [number-format-i18n-mangles-years](gotchas/number-format-i18n-mangles-years.md) | PHP/i18n | `number_format_i18n()` groups thousands, so a year renders `2,026` / `2 026`. It is for counts only — years/IDs/versions use plain digits. The plan misapplied the count rule to the copyright year |
 | [x-trap-focus-move-is-async](gotchas/x-trap-focus-move-is-async.md) | Testing/e2e | `x-trap` moves focus asynchronously — a Tab fired right after opening the drawer lands on the skip link (outside the nav) and the red looks like a broken focus trap. Poll the precondition; `toBeVisible()` isn't one. A latent race surfaced by an unrelated CSS one-liner |
 | [playwright-browser-newpage-skips-config](gotchas/playwright-browser-newpage-skips-config.md) | Testing/e2e | `browser.newPage()` ignores the project `use` config (baseURL, viewport) — use the `{ page }` fixture. A dark-mode assertion passed alone, failed in-suite; the theme was fine, the test wasn't. Assert visual state via a runtime toggle, not `addInitScript` |
+| [not-selector-carries-its-arguments-specificity](gotchas/not-selector-carries-its-arguments-specificity.md) | CSS | `:not()` (and `:is()`) contribute their argument's specificity, so `:root:not(.light):not(.dark)` is (0,3,0) and outranks every override in the theme — a Customizer accent choice silently did nothing on the commonest config. `:where()` is the zero-cost wrapper |
+| [three-rounds-of-fixes-means-change-the-approach](gotchas/three-rounds-of-fixes-means-change-the-approach.md) | Process | When each review round finds a NARROWER defect in the same function, the approach is wrong, not the code. Regex-parsing HTML attributes lost three times; the fix was to stop parsing and use the asymmetry of the trade |
+| [serena-writes-native-line-endings](gotchas/serena-writes-native-line-endings.md) | Tooling | `line_ending` unset means CRLF on Windows and PHPCS dies on line 1 — the third route into this project's oldest trap. Pin `lf`, and keep `.gitattributes`/Prettier out of `.serena/` |

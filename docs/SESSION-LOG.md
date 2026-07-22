@@ -1,5 +1,33 @@
 # Session Log — Woodev Base
 
+## s6 — 22.07.2026 — M1-04 Customizer and M1-05 scheme switcher merged; **M1 complete**
+
+**Done:** two PRs merged to `main` — [#8](https://github.com/kalbac/woodev-base-theme/pull/8) M1-04 Customizer v1 (`e480b3a`) and [#9](https://github.com/kalbac/woodev-base-theme/pull/9) M1-05 colour-scheme switcher (`11ce459`). Both planned first, executed subagent-driven (Sonnet workers, Opus orchestration and verification), Codex `gpt-5.6-sol` critic in focused chunks plus re-critic passes.
+
+**Gate on merged `main`:** phpcs 0 · phpstan L8 · unit **141** · vitest **25** · integration **28** · e2e **34** · build OK.
+
+**M1-04** — 8 settings, one validator each used BOTH as the Customizer `sanitize_callback` and as the front-end resolver, so the two can never disagree. Closed two deferred items (`has_sidebar()` narrowed, container width configurable). Found on the way in: `Layout::header_variant()`/`footer_variant()` still carried the `(string) get_theme_mod()` cast that Codex had flagged in `StylePreset` during s5 — a fatal on every front-end request for an object value.
+
+**M1-05** — two scheme settings, a no-FOUC `<head>` script at `wp_head` 1, the sun/moon switcher, and a generated `prefers-color-scheme` fallback for JS-disabled visitors. Closes M1.
+
+**The finding worth remembering (M1-04, accessibility).** The accent presets are derived from Tailwind's palette, and the first version picked `--primary-foreground` by a lightness threshold. Codex called `rose/light` below AA; measuring properly (oklch → oklab → linear sRGB → WCAG luminance) confirmed 4.32:1 — and revealed that **11 of the 16 palette values sit outside sRGB**, so how out-of-gamut colours are handled decides the answer. Per-channel clamping and chroma reduction disagree by ~0.25 of a ratio point, and CSS Color 4 §14 lets a UA pick either. The generator now measures BOTH and keeps the **worse**, throwing below 4.5:1 — so an inaccessible palette value fails the build. rose moved to `-700`.
+
+**The finding worth remembering (M1-05, cascade).** The `prefers-color-scheme` fallback was scoped `:root:not(.light):not(.dark)` — specificity **(0,3,0)**, because `:not()` contributes its argument's. That outranked the Customizer's own inline `:root` and Additional CSS, so on the shipped default (`system`) with a dark OS the accent preset silently did nothing. Two green e2e tests straddled the hole: one pinned the fallback, one pinned the accent, neither ran both at once. `:where()` fixes it. New gotcha `not-selector-carries-its-arguments-specificity`.
+
+**The process lesson.** `add_html_class()` took three review rounds, each finding a *narrower* defect than the last (word boundary matching `data-class=`; unquoted/spaced/uppercase forms missed; `str_replace` rewriting other attributes; a match inside a quoted value winning; a newline falling through to an empty match). Converging bug reports in one function mean the **approach** is wrong. Stopped parsing entirely — the attribute exists only for the no-JS visitor, so declining to touch a string that already mentions a class is a bounded cost, while corrupting a plugin's attribute is not. New gotcha `three-rounds-of-fixes-means-change-the-approach`.
+
+**Comments that lied, four times.** A phpcs deviation claimed WP core uses `wp_strip_all_tags()` for inline CSS (it does not — it checks for a literal `</style>`); an `InlineStyles` comment claimed a child theme loads after our block (it does not — enqueued styles print at `wp_head` 8, ours at 20; only Additional CSS at 101 comes later); a comment promised the matchMedia listener had "a real teardown path" before `destroy()` existed; a `Layout` docblock described an `is_string()` guard that PHPStan proved redundant. Each was settled in one command against the real source. **If a comment asserts what WP core, a browser or PHP does, verify it before writing it.**
+
+**Codex tooling, corrected.** The s3 recipe pins `CODEX_HOME=~/.codex-review-clean`, which has its OWN `auth.json` — five days stale, so every run failed with "refresh token already used" while the default profile was freshly authorised. The 403s alongside it came from an **MCP worker**, not the model. Working invocation: default profile plus `-c 'mcp_servers={}'` (the s2 flag, unused until now).
+
+**Tooling adopted:** Serena, scoped to `./woodev-base-theme`, pinned to `line_ending: "lf"` (unset it wrote CRLF and PHPCS died on line 1), with `.gitattributes -text` and `.prettierignore` keeping other tools out of `.serena/`. `AGENTS.md` now requires Serena for codebase work. New gotcha `serena-writes-native-line-endings`.
+
+**Also:** `WordPress.Security.EscapeOutput.OutputNotEscaped` is no longer weakened anywhere in the ruleset — both legitimate non-HTML echoes carry a line-scoped `phpcs:ignore` with a reason, after a global `customEscapingFunctions` entry and then per-file exclusions were each shown to be too broad. `tests/e2e/style-packs.spec.mjs` was absorbed into a single serial `theme-mods.spec.mjs` that owns every theme_mod mutation, retiring its ISOLATION CAVEAT.
+
+**Gotchas:** +3, index now **17**.
+
+**Next:** M2 (WooCommerce layer), with the dev-mode integration coverage tail (deferred since s3) as a small unblocked side task.
+
 ## s5 — 21–22.07.2026 — M1-03 style packs merged, plus two follow-up fixes
 
 **Done:** three PRs merged to `main` — [#5](https://github.com/kalbac/woodev-base-theme/pull/5) M1-03 (`1fd9dd8`), [#6](https://github.com/kalbac/woodev-base-theme/pull/6) container width (`3fafddc`), [#7](https://github.com/kalbac/woodev-base-theme/pull/7) e2e race fix (`9dc2f3b`). Plan written first (`docs/plans/2026-07-21-m1-03-style-packs.md`), executed subagent-driven (Sonnet workers, Opus orchestration/verification), Codex `gpt-5.6-sol` critic in 3 chunks + re-critic.
