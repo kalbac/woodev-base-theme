@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Woodev\Theme\Base\Customizer;
 
+use Woodev\Theme\Base\Scheme;
 use Woodev\Theme\Base\StylePreset;
 use Woodev\Theme\Base\Templates\Layout;
 
@@ -101,6 +102,42 @@ final class Customizer {
 			Settings::PRIMARY_PRESET_DEFAULT,
 			Settings::sanitize_primary_preset( ... ),
 			__( 'Applies on top of the style pack, in both light and dark schemes.', 'woodev-base-theme' )
+		);
+
+		$this->add_select(
+			$wp_customize,
+			'color_scheme_default',
+			'woodev_base_colors',
+			__( 'Colour scheme', 'woodev-base-theme' ),
+			[
+				'system' => __( 'Follow system', 'woodev-base-theme' ),
+				'light'  => __( 'Light', 'woodev-base-theme' ),
+				'dark'   => __( 'Dark', 'woodev-base-theme' ),
+			],
+			Scheme::DEFAULT_SCHEME,
+			Scheme::sanitize_default( ... ),
+			__( 'The scheme a visitor sees before making their own choice.', 'woodev-base-theme' )
+		);
+
+		/*
+		 * Spec §6 ships the switcher ON, and that is what is registered here.
+		 *
+		 * Note that this is the ONE setting whose default and whose fail-closed
+		 * value differ: Scheme::sanitize_toggle() returns false for anything that
+		 * is not `true` or the string '1', because a switcher whose stored state
+		 * cannot be read is worse than no switcher. CustomizerTest documents that
+		 * exception explicitly rather than letting the generic
+		 * default-equals-junk-fallback assertion quietly dictate the product
+		 * default — which is what happened on the first pass through this task.
+		 */
+		$this->add_checkbox(
+			$wp_customize,
+			'color_scheme_toggle',
+			'woodev_base_colors',
+			__( 'Show the colour-scheme switcher', 'woodev-base-theme' ),
+			true,
+			Scheme::sanitize_toggle( ... ),
+			__( 'Lets a visitor override the default and remembers their choice.', 'woodev-base-theme' )
 		);
 
 		$this->add_number(
@@ -229,6 +266,38 @@ final class Customizer {
 				'section'     => $section,
 				'type'        => 'select',
 				'choices'     => $choices,
+			]
+		);
+	}
+
+	/**
+	 * Register a checkbox-type setting and its control.
+	 *
+	 * @param \WP_Customize_Manager $wp_customize  Customizer manager.
+	 * @param string                $id            Setting id.
+	 * @param string                $section       Section id.
+	 * @param string                $label         Control label.
+	 * @param bool                  $default_value Default value.
+	 * @param callable              $sanitize      Sanitize callback.
+	 * @param string                $description   Optional control description.
+	 */
+	private function add_checkbox( \WP_Customize_Manager $wp_customize, string $id, string $section, string $label, bool $default_value, callable $sanitize, string $description = '' ): void {
+		$wp_customize->add_setting(
+			$id,
+			[
+				'default'           => $default_value,
+				'sanitize_callback' => $sanitize,
+				'transport'         => 'refresh',
+			]
+		);
+
+		$wp_customize->add_control(
+			$id,
+			[
+				'label'       => $label,
+				'description' => $description,
+				'section'     => $section,
+				'type'        => 'checkbox',
 			]
 		);
 	}

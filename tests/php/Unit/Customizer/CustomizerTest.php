@@ -18,14 +18,16 @@ final class CustomizerTest extends TestCase {
 	 */
 	public static function expected_settings(): array {
 		return [
-			'style_preset'     => [ 'style_preset', 'vega' ],
-			'primary_preset'   => [ 'primary_preset', 'default' ],
-			'base_font_size'   => [ 'base_font_size', 16 ],
-			'container_width'  => [ 'container_width', 1440 ],
-			'radius_scale'     => [ 'radius_scale', 'md' ],
-			'sidebar_position' => [ 'sidebar_position', 'none' ],
-			'header_variant'   => [ 'header_variant', 'inline' ],
-			'footer_variant'   => [ 'footer_variant', 'simple' ],
+			'style_preset'         => [ 'style_preset', 'vega' ],
+			'primary_preset'       => [ 'primary_preset', 'default' ],
+			'color_scheme_default' => [ 'color_scheme_default', 'system' ],
+			'color_scheme_toggle'  => [ 'color_scheme_toggle', true ],
+			'base_font_size'       => [ 'base_font_size', 16 ],
+			'container_width'      => [ 'container_width', 1440 ],
+			'radius_scale'         => [ 'radius_scale', 'md' ],
+			'sidebar_position'     => [ 'sidebar_position', 'none' ],
+			'header_variant'       => [ 'header_variant', 'inline' ],
+			'footer_variant'       => [ 'footer_variant', 'simple' ],
 		];
 	}
 
@@ -140,17 +142,43 @@ final class CustomizerTest extends TestCase {
 	}
 
 	/**
+	 * Settings whose fail-closed value is deliberately NOT their default, with
+	 * the reason. Everything else must agree, and the assertion below keeps it
+	 * that way.
+	 *
+	 * @var array<string, mixed>
+	 */
+	private const JUNK_FALLBACKS = [
+		// Spec §6 ships the switcher ON. But if the stored value is unreadable,
+		// the safe outcome is to NOT render a control we cannot reason about —
+		// a missing switcher is a smaller failure than one whose state is
+		// unknown. So "default" and "fail closed" legitimately differ here, and
+		// this is the only setting where they do.
+		'color_scheme_toggle' => false,
+	];
+
+	/**
 	 * Each sanitize callback must be the SAME validator the front end resolves
 	 * with — otherwise the Customizer can store a value the renderer rejects.
 	 */
 	public function test_the_sanitize_callbacks_reject_junk(): void {
 		foreach ( $this->capture()['settings'] as $id => $args ) {
 			$sanitized = \call_user_func( $args['sanitize_callback'], new \stdClass() );
+			$expected  = self::JUNK_FALLBACKS[ $id ] ?? $args['default'];
 
 			self::assertSame(
-				$args['default'],
+				$expected,
 				$sanitized,
-				"{$id} did not fall back to its default for a non-scalar value"
+				"{$id} did not fall back to the value this test documents for a non-scalar"
+			);
+
+			// Whatever it fell back to must itself be stable: sanitising the
+			// fallback again cannot move it. Without this, an exception in the
+			// map above could hide a callback that never settles.
+			self::assertSame(
+				$sanitized,
+				\call_user_func( $args['sanitize_callback'], $sanitized ),
+				"{$id}'s fallback is not a fixed point of its own sanitizer"
 			);
 		}
 	}

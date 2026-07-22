@@ -19,6 +19,7 @@ Universal WordPress theme (hybrid: classic templates + theme.json) on Basecoat U
 
 ## Hard rules
 
+- **Work the codebase through Serena** (`find_symbol`, `replace_symbol_body`, …). Built-in `Read`/`Edit`/`Write` and shell rewrites are the fallback for when Serena is unavailable — details and scope in AGENTS.md "Code navigation and editing".
 - Modern PHP 8.1+ syntax mandatory (`[]`, `fn()`, promotion, enums, `match`) — details in AGENTS.md.
 - Tests mandatory at unit/integration/e2e levels; TDD by default.
 - Never silently override an ADR — surface conflicts first.

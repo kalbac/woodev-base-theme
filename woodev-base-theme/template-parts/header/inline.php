@@ -14,9 +14,7 @@ declare(strict_types=1);
 		<?php get_template_part( 'template-parts/header/navigation' ); ?>
 
 		<div class="wtb-header__actions">
-			<?php
-			// M1-05 inserts the colour-scheme switcher here (spec §6).
-			?>
+			<?php get_template_part( 'template-parts/header/scheme-toggle' ); ?>
 		</div>
 	</div>
 </header>

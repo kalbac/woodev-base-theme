@@ -1,6 +1,6 @@
 # Current State — Woodev Base
 
-> Updated: 22.07.2026 (s5)
+> Updated: 22.07.2026 (s6)
 
 ## Phase status
 
@@ -8,13 +8,13 @@
 |---|---|---|
 | Design & decisions | ✅ Done | Spec approved, ADR-001…006 recorded |
 | M0 — Bootstrap | ✅ Done | PR [#1](https://github.com/kalbac/woodev-base-theme/pull/1) merged s3 |
-| M1 — Core theme | 🟡 In progress | 5 plans. Harness (PR #2), icons M1-01 (`96df1db`), templates M1-02 (`f3f5f0a`) and **style packs M1-03 (PR [#5](https://github.com/kalbac/woodev-base-theme/pull/5), `1fd9dd8`, s5)** done. M1-04/05 not started |
+| M1 — Core theme | 🟡 In progress | 5 plans. M1-01 icons (`96df1db`), M1-02 templates (`f3f5f0a`), M1-03 style packs (`1fd9dd8`), **M1-04 Customizer (PR [#8](https://github.com/kalbac/woodev-base-theme/pull/8), `e480b3a`, s6)** done. **M1-05 in flight** on `feat/m1-05-scheme-switcher` |
 | M2 — WooCommerce layer | ⬜ Not started | |
 | M3 — Public release prep | ⬜ Not started | |
 
 ## Known bugs
 
-**None open.** `main` is green: phpcs 0, phpstan L8, unit 92, integration 15, vitest 10, e2e 23, build OK.
+**None open.** `main` is green, verified on the MERGED commit and not just per-branch: phpcs 0, phpstan L8, unit 128, vitest 23, integration 22, e2e 28, build OK.
 
 s5 found and fixed one real defect after merging — the mobile-drawer focus-trap e2e was red on merged `main` while green on each branch alone. Not a product regression: `x-trap` moves focus asynchronously and a premature `Tab` lands on the skip link, outside the nav (`docs/gotchas/x-trap-focus-move-is-async.md`, PR #7 `9dc2f3b`). Codex also caught a would-be **fatal on every front-end request** before merge — `(string) get_theme_mod()` throws `Error` for an object; now fails closed.
 

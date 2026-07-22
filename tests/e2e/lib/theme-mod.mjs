@@ -39,7 +39,7 @@ export function readThemeMod(name, isValid) {
  * Put a theme_mod back exactly as readThemeMod() found it.
  *
  * @param {string} name     theme_mod name.
- * @param {string|null} previous Value from readThemeMod, or null if never read.
+ * @param {string|boolean|null} previous Value from readThemeMod, or null if never read.
  */
 export function restoreThemeMod(name, previous) {
   // Never read means the prior state is unknown — touching it now would destroy
@@ -50,10 +50,29 @@ export function restoreThemeMod(name, previous) {
 
   if ('' === previous) {
     wp(`theme mod remove ${name}`);
-  } else {
-    wp(`theme mod set ${name} ${previous}`);
+    return;
   }
+
+  // A boolean came from a real Customizer save, and `wp theme mod set` can only
+  // write STRINGS — restoring `true` as '1' silently changes the stored TYPE of
+  // a setting this helper promises to put back untouched, which any
+  // `true === get_theme_mod(…)` comparison would then read differently. Go
+  // through PHP so the literal boolean survives. The name is a key of the
+  // spec's own TOUCHED map, never a database value, so it is safe to embed.
+  if ('boolean' === typeof previous) {
+    wp(`eval "set_theme_mod( '${name}', ${previous ? 'true' : 'false'} );"`);
+
+    return;
+  }
+
+  wp(`theme mod set ${name} ${previous}`);
 }
 
 /** Guard for the integer settings. */
 export const isInteger = (value) => /^\d+$/.test(value);
+
+/** Guard for a checkbox theme_mod: either CLI string form or a real PHP bool
+ * (get_theme_mod() returns whatever was actually stored — a Customizer save
+ * stores the sanitized bool, a bare `wp theme mod set` stores the string). */
+export const isToggleValue = (value) =>
+  '1' === value || '0' === value || true === value || false === value;

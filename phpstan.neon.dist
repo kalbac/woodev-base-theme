@@ -14,9 +14,11 @@ parameters:
 			# property) as `string` only. WP core enforces no such constraint:
 			# WP_Customize_Setting::__construct() assigns $args['default'] verbatim,
 			# with no cast. Our number controls (base_font_size, container_width)
-			# intentionally keep an int default end to end — Settings::*_DEFAULT,
-			# the resolvers, and CustomizerTest's assertSame() all agree on int — so
+			# intentionally keep an int default end to end, and our checkbox control
+			# (color_scheme_toggle, M1-05) keeps a bool default end to end —
+			# Settings::*_DEFAULT / Scheme's fallback, the resolvers, and
+			# CustomizerTest's assertSame() all agree on the non-string type — so
 			# this is a documented stub-precision gap, not a bug in our code.
 			message: '#^Parameter \#2 \$args of method WP_Customize_Manager::add_setting\(\) expects array#'
 			path: woodev-base-theme/inc/Customizer/Customizer.php
-			count: 1
+			count: 2

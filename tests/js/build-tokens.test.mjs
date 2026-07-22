@@ -52,6 +52,44 @@ describe('buildTokensCss', () => {
     expect(withoutComments).not.toContain('@layer');
     expect(withoutComments).toContain(':root {');
   });
+
+  // A `system` visitor with JS disabled never gets a .light/.dark class, so
+  // without this block they would be stuck on the :root light values no
+  // matter what their OS says (M1-05 Task 2). The block must stay un-layered
+  // like the rest of this file (docs/gotchas/basecoat-tokens-are-un-layered.md)
+  // and must be excluded the moment an explicit class is present, so it never
+  // fights a decision (admin default or stored visitor choice) that has
+  // already been made.
+  it('falls back to the dark values under prefers-color-scheme for a class-less system visitor', () => {
+    const css = buildTokensCss(tokens);
+
+    expect(css).toContain('@media (prefers-color-scheme: dark)');
+    expect(css).toContain(':root:where(:not(.light):not(.dark)) {');
+
+    // The :where() wrapper is the whole point, not cosmetic. Unwrapped,
+    // :root:not(.light):not(.dark) is (0,3,0) and outranks the Customizer's
+    // inline :root{--primary:…} AND a site owner's Additional CSS — so the
+    // accent preset would silently die for `system` + a dark OS, the single
+    // commonest configuration. Adversarial review found exactly that.
+    // Strip comments first: the generator's own explanation of this trap
+    // contains the very selector we are forbidding.
+    expect(css.replace(/\/\*[\s\S]*?\*\//g, '')).not.toMatch(/:root:not\(/);
+
+    for (const [slug, value] of Object.entries(tokens.colors.dark)) {
+      expect(css).toContain(`--${slug}: ${value};`);
+    }
+
+    const mediaBlock = css.slice(css.indexOf('@media (prefers-color-scheme: dark)'));
+
+    for (const [slug, value] of Object.entries(tokens.colors.dark)) {
+      expect(mediaBlock).toContain(`--${slug}: ${value};`);
+    }
+  });
+
+  it('still emits no @layer anywhere, including the prefers-color-scheme block', () => {
+    const withoutComments = buildTokensCss(tokens).replace(/\/\*[\s\S]*?\*\//g, '');
+    expect(withoutComments).not.toContain('@layer');
+  });
 });
 
 describe('buildPrimaryPresets', () => {

@@ -15,5 +15,92 @@ import focus from '@alpinejs/focus';
 // Must be registered BEFORE Alpine.start().
 Alpine.plugin(focus);
 
+// Colour-scheme switcher (M1-05, spec §6). Named component, not inline
+// x-data: it owns a matchMedia listener with a real teardown path (destroy(),
+// plus _stopFollowingSystem() when the visitor chooses explicitly), which is
+// unwieldy to express as one attribute string. Registered BEFORE
+// Alpine.start(), same as the focus plugin above.
+//
+// `labels` is the two translated accessible-name strings, injected from PHP
+// (template-parts/header/scheme-toggle.php) as the x-data() call argument —
+// they cannot live here because a .js file has no text domain for the .pot
+// scanner to find.
+Alpine.data('wtbSchemeToggle', (labels) => ({
+  dark: false,
+  followSystem: false,
+  mql: null,
+  _onSystemChange: null,
+
+  init() {
+    const root = document.documentElement;
+    const hasExplicitClass = root.classList.contains('light') || root.classList.contains('dark');
+
+    this.mql = window.matchMedia('(prefers-color-scheme: dark)');
+    this.followSystem = !hasExplicitClass;
+    this.dark = hasExplicitClass ? root.classList.contains('dark') : this.mql.matches;
+
+    if (this.followSystem) {
+      this._startFollowingSystem();
+    }
+
+    this.$el.classList.add('wtb-scheme-toggle--enhanced');
+  },
+
+  // While the resolved scheme is `system` (no explicit class on <html>), the
+  // button keeps following the OS live rather than freezing at whatever the
+  // OS reported on load.
+  _startFollowingSystem() {
+    this._onSystemChange = (event) => {
+      this.dark = event.matches;
+    };
+    this.mql.addEventListener('change', this._onSystemChange);
+  },
+
+  _stopFollowingSystem() {
+    if (this._onSystemChange) {
+      this.mql.removeEventListener('change', this._onSystemChange);
+      this._onSystemChange = null;
+    }
+    this.followSystem = false;
+  },
+
+  // Alpine calls this when the component's element leaves the DOM. Releasing
+  // the listener here and not only in toggle() is the difference between a
+  // STATE transition and a LIFECYCLE one: a visitor who never touches the
+  // button stays in `system`, so _stopFollowingSystem() is never reached, and
+  // anything that replaces the header (Customizer selective refresh, an AJAX
+  // swap) would leave the MediaQueryList holding a callback that closes over a
+  // detached component — one leak per replacement. Both critics flagged it.
+  destroy() {
+    this._stopFollowingSystem();
+  },
+
+  toggle() {
+    this._stopFollowingSystem();
+
+    this.dark = !this.dark;
+    const scheme = this.dark ? 'dark' : 'light';
+    const root = document.documentElement;
+
+    root.classList.remove('light', 'dark');
+    root.classList.add(scheme);
+
+    // Throws, rather than returning null, in Safari private mode and
+    // whenever storage/cookies are blocked — mirrors Scheme::build_head_script().
+    // An uncaught exception here would abort the click handler and leave the
+    // class flip above applied but the choice unremembered on reload.
+    try {
+      localStorage.setItem('wtb-scheme', scheme);
+    } catch {
+      // No persistence available; the class flip for this page view still
+      // stands.
+    }
+  },
+
+  get label() {
+    return this.dark ? labels.toLight : labels.toDark;
+  },
+}));
+
 window.Alpine = Alpine;
 Alpine.start();

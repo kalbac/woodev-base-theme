@@ -13,6 +13,47 @@ Woodev Base — a universal WordPress theme (optional WooCommerce layer) built o
 - **Critic/reviewer:** Codex — every substantial change gets a Codex review pass before merge. Never self-certify fixes made in response to a review.
 - Architecture-shaping decisions must be surfaced **before** coding (🔴 irreversible vs 🟡 graftable). If a task conflicts with an ADR — stop, surface the conflict, propose alternatives. Never silently override an ADR.
 
+## Code navigation and editing — Serena first
+
+**Serena is the required tool for working with this codebase.** The built-in
+`Read` / `Edit` / `Write` / `Grep` tools, and shell one-liners (`sed`, `python`,
+heredocs) that rewrite source files, are the **fallback** — permitted only when
+Serena is genuinely unavailable, and then say so in the report rather than
+silently switching.
+
+| Task | Serena tool |
+|---|---|
+| Find a class, method or function | `find_symbol` |
+| Understand a file's shape before touching it | `get_symbols_overview` |
+| Find who calls a symbol | `find_referencing_symbols` |
+| Search a pattern across the project | `search_for_pattern` |
+| Read a source file | `read_file` |
+| Replace a whole function/method body | `replace_symbol_body` |
+| Add code next to a symbol | `insert_after_symbol` / `insert_before_symbol` |
+| Rename a symbol everywhere | `rename_symbol` |
+
+Why this is a rule and not a preference: a symbol-level edit either resolves the
+symbol or fails loudly, whereas a text-level edit silently succeeds against the
+wrong occurrence. Half of this session's self-inflicted breakages came from
+shell rewrites — a `?>` inside a `//` comment that closed PHP mode, a string
+replace that matched a docblock instead of the code it described, and several
+`python` replacements that silently matched nothing and were only caught because
+a later test failed.
+
+**Config and scope** (`.serena/project.yml`, versioned):
+
+- The symbol index covers **`./woodev-base-theme` only** — the shipped theme.
+  `tests/`, `src/`, `scripts/` are outside it, so `find_symbol` and
+  `find_referencing_symbols` will not see them. `search_for_pattern`, `read_file`
+  and `list_dir` still work project-wide.
+- **Consequence to keep in mind:** a symbol's test usages do not appear in
+  `find_referencing_symbols`. Use `search_for_pattern` for those.
+- `languages: [php, typescript]`. The theme ships no JS yet; TypeScript stays
+  registered because it will (Woo layer, further Alpine modules).
+
+**Non-source files** — Markdown, JSON, YAML, `.env`, and this document — are
+fine with the built-in tools.
+
 ## Project skills (`.claude/skills/`)
 
 Eight vetted WordPress review skills are installed project-locally (source: [jorgerosal/wordpress-skills](https://github.com/jorgerosal/wordpress-skills), vetted and patched s1): `wp-theme-development`, `wp-woocommerce-dev`, `wp-security-review`, `wp-accessibility-review`, `wp-test-strategy`, `wp-phpstan-review`, `wp-ci-cd-and-release-engineering`, `wp-performance-review`.

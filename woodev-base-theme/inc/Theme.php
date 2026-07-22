@@ -22,5 +22,6 @@ final class Theme {
 		( new Assets() )->register();
 		( new Customizer\Customizer() )->register();
 		( new Customizer\InlineStyles() )->register();
+		( new Scheme() )->register();
 	}
 }
