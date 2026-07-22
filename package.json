@@ -14,6 +14,7 @@
     "lint:js": "eslint .",
     "format": "prettier --check .",
     "e2e": "playwright test",
+    "e2e:dev": "playwright test --config=playwright.dev.config.mjs",
     "wp:start": "wp-env start",
     "wp:stop": "wp-env stop",
     "wp:test:start": "wp-env start --config=.wp-env.test.json",
