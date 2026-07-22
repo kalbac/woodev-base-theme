@@ -20,6 +20,7 @@ final class Theme {
 	public static function boot(): void {
 		( new Setup() )->register();
 		( new Assets() )->register();
+		( new Customizer\Customizer() )->register();
 		( new Customizer\InlineStyles() )->register();
 	}
 }

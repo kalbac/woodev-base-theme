@@ -7,3 +7,16 @@ parameters:
 		- woodev-base-theme/functions.php
 		- woodev-base-theme/inc
 	treatPhpDocTypesAsCertain: false
+	ignoreErrors:
+		-
+			# php-stubs/wordpress-stubs types WP_Customize_Manager::add_setting()'s
+			# `default` array key (and the mirrored WP_Customize_Setting::$default
+			# property) as `string` only. WP core enforces no such constraint:
+			# WP_Customize_Setting::__construct() assigns $args['default'] verbatim,
+			# with no cast. Our number controls (base_font_size, container_width)
+			# intentionally keep an int default end to end — Settings::*_DEFAULT,
+			# the resolvers, and CustomizerTest's assertSame() all agree on int — so
+			# this is a documented stub-precision gap, not a bug in our code.
+			message: '#^Parameter \#2 \$args of method WP_Customize_Manager::add_setting\(\) expects array#'
+			path: woodev-base-theme/inc/Customizer/Customizer.php
+			count: 1
