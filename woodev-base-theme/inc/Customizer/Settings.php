@@ -215,16 +215,29 @@ final class Settings {
 	 * (int) on an object throws, and (int) 'wide' is a silent 0 that would
 	 * collapse the layout.
 	 *
+	 * is_numeric() is necessary but NOT sufficient: it accepts overflowing
+	 * literals like '1e309', which become INF as a float. Casting INF to int
+	 * emits "The float INF is not representable as an int" — a PHP warning on a
+	 * front-end request — and yields 0, so an absurdly LARGE value would clamp
+	 * to the MINIMUM. is_finite() is what turns that into the documented
+	 * fallback. NAN takes the same path.
+	 *
 	 * @param mixed $value    Raw value.
 	 * @param int   $min      Lower bound.
 	 * @param int   $max      Upper bound.
-	 * @param int   $fallback Value for non-numeric input.
+	 * @param int   $fallback Value for non-numeric or non-finite input.
 	 */
 	private static function clamp( mixed $value, int $min, int $max, int $fallback ): int {
 		if ( ! \is_numeric( $value ) ) {
 			return $fallback;
 		}
 
-		return max( $min, min( $max, (int) round( (float) $value ) ) );
+		$number = (float) $value;
+
+		if ( ! \is_finite( $number ) ) {
+			return $fallback;
+		}
+
+		return max( $min, min( $max, (int) round( $number ) ) );
 	}
 }

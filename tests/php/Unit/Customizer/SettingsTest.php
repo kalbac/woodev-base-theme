@@ -65,6 +65,19 @@ final class SettingsTest extends TestCase {
 		self::assertSame( 20, Settings::sanitize_base_font_size( 400 ) );
 	}
 
+	/**
+	 * Overflowing literals slip past is_numeric(): (float) '1e309' is INF, and
+	 * casting INF to int both emits a PHP warning on a front-end request and
+	 * yields 0 — so the LARGEST possible input would clamp to the MINIMUM.
+	 * Codex P2 on the M1-04 diff; reproduced before it was fixed.
+	 */
+	public function test_an_overflowing_numeric_string_takes_the_documented_fallback(): void {
+		self::assertSame( 1440, Settings::sanitize_container_width( '1e309' ) );
+		self::assertSame( 1440, Settings::sanitize_container_width( -INF ) );
+		self::assertSame( 16, Settings::sanitize_base_font_size( '1e309' ) );
+		self::assertSame( 16, Settings::sanitize_base_font_size( NAN ) );
+	}
+
 	public function test_radius_scale_is_a_closed_set(): void {
 		self::assertSame( 'md', Settings::sanitize_radius_scale( 'md' ) );
 		self::assertSame( 'none', Settings::sanitize_radius_scale( 'none' ) );
