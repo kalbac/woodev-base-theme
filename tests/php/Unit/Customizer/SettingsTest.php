@@ -13,6 +13,42 @@ final class SettingsTest extends TestCase {
 		Functions\when( 'get_theme_mod' )->justReturn( $value );
 	}
 
+	/**
+	 * Point the theme root at the fixture whose generated map has been tampered
+	 * with, so the rejection path is exercised through the public API.
+	 */
+	private function stub_malformed_theme(): void {
+		Functions\when( 'get_template_directory' )
+			->justReturn( \dirname( __DIR__, 2 ) . '/fixtures/malformed-theme' );
+	}
+
+	/**
+	 * The generated map is the single point where strings enter the inline
+	 * <style>, so the shape check has to hold at the public boundary — not just
+	 * inside the private normaliser. Every rejected entry below is a real
+	 * failure mode: a value that closes the declaration and hides the page, a
+	 * CSS function we never emit, and a half-written file missing its dark half.
+	 */
+	public function test_a_tampered_generated_map_yields_only_its_sound_entries(): void {
+		$this->stub_malformed_theme();
+
+		self::assertSame( [ 'sound' ], array_keys( Settings::presets() ) );
+	}
+
+	/**
+	 * The same boundary from the Customizer's side: a slug that was dropped
+	 * during normalisation must not be selectable either, or the Customizer
+	 * would store a preset the renderer then refuses to emit.
+	 */
+	public function test_a_rejected_slug_is_not_a_valid_primary_preset(): void {
+		$this->stub_malformed_theme();
+
+		self::assertSame( 'default', Settings::sanitize_primary_preset( 'injected' ) );
+		self::assertSame( 'default', Settings::sanitize_primary_preset( 'not_oklch' ) );
+		self::assertSame( 'default', Settings::sanitize_primary_preset( 'missing_dark' ) );
+		self::assertSame( 'sound', Settings::sanitize_primary_preset( 'sound' ) );
+	}
+
 	public function test_container_width_defaults_and_clamps(): void {
 		self::assertSame( 1440, Settings::sanitize_container_width( '' ) );
 		self::assertSame( 1200, Settings::sanitize_container_width( '1200' ) );
