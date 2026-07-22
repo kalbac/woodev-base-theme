@@ -38,13 +38,13 @@ final class InlineStylesTest extends TestCase {
 	public function test_a_non_default_container_width_emits_one_custom_property(): void {
 		$this->stub_mods( [ 'container_width' => 1200 ] );
 
-		self::assertSame( ":root:root{--wtb-container-max:1200px}\n", InlineStyles::build_css() );
+		self::assertSame( ":root{--wtb-container-max:1200px}\n", InlineStyles::build_css() );
 	}
 
 	public function test_a_non_default_radius_overrides_the_token(): void {
 		$this->stub_mods( [ 'radius_scale' => 'lg' ] );
 
-		self::assertSame( ":root:root{--radius:1rem}\n", InlineStyles::build_css() );
+		self::assertSame( ":root{--radius:1rem}\n", InlineStyles::build_css() );
 	}
 
 	public function test_a_non_default_font_size_sets_the_root_size(): void {
@@ -64,7 +64,7 @@ final class InlineStylesTest extends TestCase {
 
 		self::assertStringContainsString( '--primary:oklch(54.6% 0.245 262.881)', $css );
 		self::assertStringContainsString( '--ring:oklch(54.6% 0.245 262.881)', $css );
-		self::assertStringContainsString( ':root.dark{', $css );
+		self::assertStringContainsString( '.dark{', $css );
 		self::assertStringContainsString( '--primary:oklch(70.7% 0.165 254.624)', $css );
 	}
 
@@ -75,14 +75,13 @@ final class InlineStylesTest extends TestCase {
 	}
 
 	/**
-	 * Codex P2 on the M1-04 diff: source order alone does not win. In dev mode
-	 * Vite serves the pack CSS as a JS module that injects its <style> when the
-	 * module EXECUTES — after this block was parsed — so an un-layered `:root`
-	 * here would lose to tokens.generated.css and the Customizer would look
-	 * broken in dev only. Doubling the selector (0,2,0 vs 0,1,0) settles it on
-	 * specificity instead. A plain `:root`/`.dark` here turns this red.
+	 * Re-critic finding on my own fix. Doubling the selector to `:root:root`
+	 * made the settings win everywhere — including over a child theme or
+	 * Additional CSS, which load after this block and are the documented way to
+	 * restyle a theme token. Specificity must stay (0,1,0) so source order
+	 * decides and the site owner still has the last word.
 	 */
-	public function test_the_overrides_outrank_a_later_plain_root_rule(): void {
+	public function test_the_overrides_stay_beatable_by_a_later_plain_root_rule(): void {
 		$this->stub_mods(
 			[
 				'container_width' => 1000,
@@ -92,10 +91,10 @@ final class InlineStylesTest extends TestCase {
 
 		$css = InlineStyles::build_css();
 
-		self::assertStringContainsString( ':root:root{', $css );
-		self::assertStringContainsString( ':root.dark{', $css );
-		self::assertDoesNotMatchRegularExpression( '/(^|\n):root\{/', $css );
-		self::assertDoesNotMatchRegularExpression( '/(^|\n)\.dark\{/', $css );
+		self::assertStringContainsString( ':root{', $css );
+		self::assertStringContainsString( '.dark{', $css );
+		self::assertStringNotContainsString( ':root:root', $css );
+		self::assertStringNotContainsString( '!important', $css );
 	}
 
 	public function test_everything_lands_in_one_root_block(): void {
@@ -107,7 +106,7 @@ final class InlineStylesTest extends TestCase {
 			]
 		);
 
-		self::assertSame( 1, substr_count( InlineStyles::build_css(), ':root:root{' ) );
+		self::assertSame( 1, substr_count( InlineStyles::build_css(), ':root{' ) );
 	}
 
 	public function test_it_prints_after_the_stylesheets(): void {

@@ -78,6 +78,20 @@ final class SettingsTest extends TestCase {
 		self::assertSame( 16, Settings::sanitize_base_font_size( NAN ) );
 	}
 
+	/**
+	 * Re-critic finding on my own is_finite() fix: it closed INF but not a
+	 * FINITE value outside the integer range. '1e100' passes both guards, and
+	 * casting it emits "The float 1.0E+100 is not representable as an int" —
+	 * again a PHP warning on a front-end request — then yields 0, clamping the
+	 * largest possible input to the MINIMUM. Clamping before the cast is what
+	 * fixes it.
+	 */
+	public function test_a_finite_value_beyond_the_integer_range_clamps_to_the_maximum(): void {
+		self::assertSame( 1920, Settings::sanitize_container_width( '1e100' ) );
+		self::assertSame( 960, Settings::sanitize_container_width( '-1e100' ) );
+		self::assertSame( 20, Settings::sanitize_base_font_size( 1e100 ) );
+	}
+
 	public function test_radius_scale_is_a_closed_set(): void {
 		self::assertSame( 'md', Settings::sanitize_radius_scale( 'md' ) );
 		self::assertSame( 'none', Settings::sanitize_radius_scale( 'none' ) );

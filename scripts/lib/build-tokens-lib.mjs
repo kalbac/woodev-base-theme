@@ -86,12 +86,48 @@ function parseOklch(color) {
     throw new Error(`Not an oklch colour: ${color}`);
   }
 
-  return {
+  const parsed = {
     l: '%' === match[2] ? Number(match[1]) / 100 : Number(match[1]),
     c: Number(match[3]),
     h: Number(match[4]),
   };
+
+  // The pattern bounds the SHAPE, not the magnitude: 309 digits is still all
+  // digits, and Number() turns it into Infinity. That would poison the colour
+  // maths into NaN, and `NaN < MIN_CONTRAST` is false — so an unmeasurable
+  // colour would sail through the contrast gate as if it had passed.
+  if (!Object.values(parsed).every(Number.isFinite)) {
+    throw new Error(`Not a finite oklch colour: ${color}`);
+  }
+
+  return parsed;
 }
+
+// Channel tolerance for "inside sRGB" — floating-point slack, not a real gamut
+// allowance.
+const GAMUT_EPSILON = 0.0001;
+
+/**
+ * Linear sRGB channels for an oklch colour, without gamut correction.
+ */
+function linearChannels({ l, c, h }) {
+  const radians = (h * Math.PI) / 180;
+  const a = c * Math.cos(radians);
+  const b = c * Math.sin(radians);
+
+  const long = (l + 0.3963377774 * a + 0.2158037573 * b) ** 3;
+  const medium = (l - 0.1055613458 * a - 0.0638541728 * b) ** 3;
+  const short = (l - 0.0894841775 * a - 1.291485548 * b) ** 3;
+
+  return [
+    4.0767416621 * long - 3.3077115913 * medium + 0.2309699292 * short,
+    -1.2684380046 * long + 2.6097574011 * medium - 0.3413193965 * short,
+    -0.0041960863 * long - 0.7034186147 * medium + 1.707614701 * short,
+  ];
+}
+
+const insideSrgb = (channels) =>
+  channels.every((channel) => channel >= -GAMUT_EPSILON && channel <= 1 + GAMUT_EPSILON);
 
 /**
  * Lightness of an oklch() colour, normalised to 0…1.
@@ -104,24 +140,40 @@ export function lightnessOf(color) {
  * WCAG relative luminance of an oklch() colour.
  *
  * oklch -> oklab -> LMS -> linear sRGB (Björn Ottosson's published matrices),
- * then the sRGB luminance coefficients. Out-of-gamut components are clamped,
- * which is what a browser does when it paints the colour anyway.
+ * then the sRGB luminance coefficients.
+ *
+ * Out-of-gamut colours are GAMUT-MAPPED, not per-channel clamped, and that
+ * distinction is load-bearing here: 11 of the 16 palette values fall outside
+ * sRGB (Tailwind's oklch palette reaches past it), and clamping channels
+ * inflates their luminance. Measured on rose-700 the clamped estimate is
+ * 5.80:1 while the mapped one is 6.05:1 — the error runs in BOTH directions
+ * depending on hue, so a clamped gate can report a pass for a pair a browser
+ * would render below AA. CSS Color 4 §13 leaves the exact algorithm to the UA
+ * but describes chroma reduction at constant lightness and hue, which is what
+ * this does by bisection.
  */
 function luminanceOf(color) {
   const { l, c, h } = parseOklch(color);
-  const radians = (h * Math.PI) / 180;
-  const a = c * Math.cos(radians);
-  const b = c * Math.sin(radians);
+  let channels = linearChannels({ l, c, h });
 
-  const long = (l + 0.3963377774 * a + 0.2158037573 * b) ** 3;
-  const medium = (l - 0.1055613458 * a - 0.0638541728 * b) ** 3;
-  const short = (l - 0.0894841775 * a - 1.291485548 * b) ** 3;
+  if (!insideSrgb(channels)) {
+    let low = 0;
+    let high = c;
 
-  const [red, green, blue] = [
-    4.0767416621 * long - 3.3077115913 * medium + 0.2309699292 * short,
-    -1.2684380046 * long + 2.6097574011 * medium - 0.3413193965 * short,
-    -0.0041960863 * long - 0.7034186147 * medium + 1.707614701 * short,
-  ].map((channel) => Math.min(1, Math.max(0, channel)));
+    for (let step = 0; step < 32; step += 1) {
+      const middle = (low + high) / 2;
+
+      if (insideSrgb(linearChannels({ l, c: middle, h }))) {
+        low = middle;
+      } else {
+        high = middle;
+      }
+    }
+
+    channels = linearChannels({ l, c: low, h });
+  }
+
+  const [red, green, blue] = channels.map((channel) => Math.min(1, Math.max(0, channel)));
 
   return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
 }
@@ -151,7 +203,7 @@ const presetTuple = (primary) => {
   const onDark = contrastRatio(primary, FOREGROUND_ON_DARK);
   const best = Math.max(onLight, onDark);
 
-  if (best < MIN_CONTRAST) {
+  if (!Number.isFinite(best) || best < MIN_CONTRAST) {
     throw new Error(
       `Primary ${primary} cannot reach WCAG AA (${MIN_CONTRAST}:1) against either neutral — ` +
         `best is ${best.toFixed(2)}:1. Pick a darker or lighter shade in tokens.mjs.`,

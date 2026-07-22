@@ -19,19 +19,23 @@ namespace Woodev\Theme\Base\Customizer;
  * wp_enqueue_scripts at 1 and prints styles at 8, so 20 puts this after every
  * stylesheet WordPress itself printed.
  *
- * Source order alone is not enough, though, and the selectors below are doubled
- * (`:root:root`, `:root.dark`) for a reason. Two cases beat a plain `:root` that
- * merely comes later in the document:
+ * The selectors are a plain `:root` and `.dark` — specificity (0,1,0), the same
+ * as Basecoat's and our own token defaults — so this block wins on SOURCE
+ * ORDER, and anything a site owner adds later still wins over it. That is
+ * deliberate, and it was briefly the other way: doubling to `:root:root` made
+ * the settings unbeatable, which also broke the documented way to restyle a
+ * theme token (a child theme stylesheet, or Appearance -> Customize ->
+ * Additional CSS, both of which load after this and legitimately expect a plain
+ * `:root { --primary: … }` to take effect). A theme that can only be overridden
+ * with `!important` is a worse theme.
  *
- * 1. Dev mode. Vite serves the pack CSS as a JS module that injects its <style>
- *    when the module EXECUTES — after this block was parsed. Its un-layered
- *    `:root` from tokens.generated.css would then win on source order and the
- *    Customizer would look broken in dev only, which is precisely the kind of
- *    dev-path silent failure this theme has shipped before.
- * 2. Any plugin printing un-layered `:root` CSS later in wp_head.
- *
- * Raising specificity (0,2,0 against Basecoat's and our own 0,1,0) makes the
- * admin's choice win on the cascade rather than on luck, in both modes.
+ * KNOWN LIMITATION, dev mode only: under WOODEV_BASE_DEV the pack CSS is served
+ * by Vite as a JS module that injects its <style> when the module EXECUTES,
+ * i.e. after this block was parsed — so tokens.generated.css wins on source
+ * order and Customizer overrides appear to do nothing. Production is
+ * unaffected (an e2e mutation pins it: moving this to priority 5 turns the
+ * accent-preset assertion red). Raising specificity would fix dev at the cost
+ * of every real site's override path, which is the wrong trade.
  */
 final class InlineStyles {
 
@@ -91,7 +95,7 @@ final class InlineStyles {
 			$dark = $tuple['dark'];
 		}
 
-		$css = self::rule( ':root:root', $root ) . self::rule( ':root.dark', $dark );
+		$css = self::rule( ':root', $root ) . self::rule( '.dark', $dark );
 
 		$font_size = Settings::base_font_size();
 		if ( Settings::BASE_FONT_SIZE_DEFAULT !== $font_size ) {

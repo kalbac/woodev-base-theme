@@ -121,11 +121,28 @@ describe('buildPrimaryPresets', () => {
   it('refuses a palette value that cannot carry readable text', () => {
     const unreadable = {
       ...tokens,
-      // rose-600: 4.32:1 on near-white, 4.39:1 on near-black — neither reaches AA.
-      primaryPalette: { rose: { light: 'oklch(58.6% 0.253 17.585)', dark: 'oklch(0.2 0 0)' } },
+      // A mid grey is the hardest case there is: 4.28:1 on near-white and
+      // 4.43:1 on near-black, so no choice of foreground reaches AA.
+      primaryPalette: { grey: { light: 'oklch(0.57 0 0)', dark: 'oklch(0.2 0 0)' } },
     };
 
     expect(() => buildPrimaryPresets(unreadable)).toThrow(/cannot reach WCAG AA/);
+  });
+
+  it('refuses a component that is not finite', () => {
+    // 309 digits is still all digits, so the pattern admits it and Number()
+    // returns Infinity. The colour maths then yields NaN, and `NaN < 4.5` is
+    // false — an unmeasurable colour would pass the contrast gate.
+    const huge = `oklch(${'9'.repeat(309)} 0 0)`;
+
+    expect(() => lightnessOf(huge)).toThrow(/Not a finite oklch colour/);
+  });
+
+  // 11 of the 16 palette values fall outside sRGB, so how the gate handles
+  // out-of-gamut colours decides its answers. Per-channel clamping inflated
+  // rose-700 to 5.80:1 where chroma reduction gives 6.05:1.
+  it('gamut-maps rather than clamping out-of-gamut colours', () => {
+    expect(contrastRatio('oklch(51.4% 0.222 16.935)', 'oklch(0.985 0 0)')).toBeCloseTo(6.05, 1);
   });
 
   it('rejects malformed and exotic oklch spellings', () => {

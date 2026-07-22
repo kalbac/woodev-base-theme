@@ -238,6 +238,12 @@ final class Settings {
 			return $fallback;
 		}
 
-		return max( $min, min( $max, (int) round( $number ) ) );
+		// Clamp as a FLOAT, then cast. The other order looks equivalent and is
+		// not: casting a float outside the integer range is undefined in PHP —
+		// '1e100' passes is_numeric() and is_finite(), then (int) emits "The
+		// float 1.0E+100 is not representable as an int" and yields 0, so the
+		// largest possible input would clamp to the MINIMUM. Bounding first
+		// means the cast only ever sees a value inside [min, max].
+		return (int) round( max( (float) $min, min( (float) $max, $number ) ) );
 	}
 }

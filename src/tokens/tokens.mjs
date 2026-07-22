@@ -53,10 +53,13 @@ export const tokens = {
     blue: { light: 'oklch(54.6% 0.245 262.881)', dark: 'oklch(70.7% 0.165 254.624)' },
     green: { light: 'oklch(62.7% 0.194 149.214)', dark: 'oklch(79.2% 0.209 151.711)' },
     red: { light: 'oklch(57.7% 0.245 27.325)', dark: 'oklch(70.4% 0.191 22.216)' },
-    // The one exception to the -600 rule: rose-600 measures 4.32:1 against
-    // near-white and 4.39:1 against near-black, so NEITHER neutral reaches AA
-    // on it. rose-700 does (5.80:1). The generator refuses to emit a pair below
-    // 4.5:1, so this is enforced, not just documented.
+    // The one exception to the -600 rule. rose-600 measures 4.53:1 against
+    // near-white — it passes AA by 0.03, and only under one particular
+    // gamut-mapping algorithm. CSS Color 4 §13 lets a UA choose its own, and
+    // rose-600 is outside sRGB, so that margin is smaller than the uncertainty
+    // in the measurement itself. rose-700 is 6.05:1 and needs no such argument.
+    // (An earlier note here claimed 4.32:1 and a hard failure; that number came
+    // from per-channel clamping, before the generator gamut-mapped properly.)
     rose: { light: 'oklch(51.4% 0.222 16.935)', dark: 'oklch(71.2% 0.194 13.428)' },
     orange: { light: 'oklch(64.6% 0.222 41.116)', dark: 'oklch(75% 0.183 55.934)' },
     yellow: { light: 'oklch(68.1% 0.162 75.834)', dark: 'oklch(85.2% 0.199 91.936)' },
