@@ -34,12 +34,19 @@ export default [
     // tripped no-undef. `*.config.mjs` (no `**/` prefix) is anchored to this
     // file's directory, so this intentionally does not match config files
     // nested under scripts/ or tests/.
+    // The list is the Node globals these files may legitimately reach for, not
+    // just the one `process` that today's code happens to use — a narrower
+    // whitelist would reject a plain `console.log()` in vite.config.mjs.
     files: ['*.config.mjs'],
     languageOptions: {
       ecmaVersion: 2024,
       sourceType: 'module',
       globals: {
         process: 'readonly',
+        console: 'readonly',
+        URL: 'readonly',
+        Buffer: 'readonly',
+        __dirname: 'readonly',
       },
     },
   },

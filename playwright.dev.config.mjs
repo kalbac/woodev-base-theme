@@ -26,11 +26,16 @@ export default defineConfig({
     // fix), or from another worktree, answers the same @vite/client URL, so
     // `npm run dev` would never start and the spec would fail against a
     // foreign module graph while this checkout is perfectly fine.
-    // vite.config.mjs sets strictPort: true, so with reuseExistingServer
-    // false a foreign server already on :5173 now makes the run fail loudly
-    // with a port conflict instead of silently reusing the wrong assets —
-    // the desired outcome. If you see that conflict, stop whatever `npm run
-    // dev` you have running elsewhere before `npm run e2e:dev`.
+    // What happens instead is that Playwright refuses the run itself, before
+    // `command` is ever executed — measured by putting a foreign listener on
+    // :5173 and running this config:
+    //   Error: http://localhost:5173/@vite/client is already used, make sure
+    //   that nothing is running on the port/url or set
+    //   reuseExistingServer:true in config.webServer.
+    // (Vite's own strictPort is NOT what produces this and cannot be: the Vite
+    // process is never started. An earlier version of this comment claimed it
+    // was.) Loud refusal is the desired outcome — if you see it, stop whatever
+    // `npm run dev` you have running elsewhere before `npm run e2e:dev`.
     reuseExistingServer: false,
     timeout: 120_000,
   },

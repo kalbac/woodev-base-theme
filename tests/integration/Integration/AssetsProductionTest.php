@@ -83,12 +83,22 @@ final class AssetsProductionTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Deliberately two independent assertions rather than one broad
+	 * Two independent assertions rather than one broad
 	 * `assertStringContainsString( 'assets/dist', ... )`: that single check
 	 * proved only that SOME built asset was printed, so deleting the JS
-	 * module enqueue in Assets::enqueue() stayed green because the
-	 * stylesheet still matched (and vice versa). Each assertion below can
-	 * only be satisfied by the enqueue call it corresponds to.
+	 * module enqueue in Assets::enqueue() stayed green because the stylesheet
+	 * still matched, and vice versa.
+	 *
+	 * Both are anchored on the element **id**, not on the URL. A URL check
+	 * would still be too weak to pin either enqueue: Assets::enqueue() also
+	 * enqueues the JS entry's imported CSS in a loop, so deleting the main
+	 * stylesheet leaves other `assets/dist` links standing, and any plugin may
+	 * enqueue from that path too. WordPress derives the id from the handle
+	 * (`woodev-base-style` → `woodev-base-style-css`, `woodev-base-app` →
+	 * `woodev-base-app-js-module` — read off a real response), so each id
+	 * belongs to exactly one enqueue call. The URL substring is kept as a
+	 * secondary constraint: it is what proves the handle resolved through the
+	 * build directory rather than to some fallback.
 	 */
 	public function test_built_assets_are_enqueued_from_the_manifest(): void {
 		$manifest = get_template_directory() . '/assets/dist/.vite/manifest.json';
@@ -99,16 +109,18 @@ final class AssetsProductionTest extends WP_UnitTestCase {
 
 		$html = self::render_front_end_assets();
 
-		AssetMarkup::assert_stylesheet_link_with_href_containing(
+		AssetMarkup::assert_stylesheet_link_with_id(
 			$html,
+			'woodev-base-style-css',
 			'assets/dist',
-			'Expected the built stylesheet (wp_enqueue_style( \'woodev-base-style\', … )) to print a stylesheet link element from assets/dist.'
+			'Expected the built stylesheet (wp_enqueue_style( \'woodev-base-style\', … )) to resolve through assets/dist.'
 		);
 
-		AssetMarkup::assert_script_module_with_src_containing(
+		AssetMarkup::assert_script_module_with_id(
 			$html,
+			'woodev-base-app-js-module',
 			'assets/dist',
-			'Expected the built JS entry (wp_enqueue_script_module( \'woodev-base-app\', … )) to print a script module from assets/dist.'
+			'Expected the built JS entry (wp_enqueue_script_module( \'woodev-base-app\', … )) to resolve through assets/dist.'
 		);
 	}
 }

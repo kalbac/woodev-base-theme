@@ -43,14 +43,21 @@ final class AssetsDevModeTest extends WP_UnitTestCase {
 	 *     print_enqueued_script_modules() is hooked to wp_footer. Stylesheets
 	 *     still print in wp_head.
 	 *
-	 * Memoized for the lifetime of the process: WP_Script_Modules::$done
-	 * (class-wp-script-modules.php, print_script_module()) is a singleton-level
-	 * array that marks each module ID as printed and silently skips it on any
-	 * later call in the same PHPUnit process. WP_UnitTestCase runs every test
-	 * method in one process, so a second render() call would re-enqueue the
-	 * same handles but print none of them — not a regex bug, an empty second
-	 * render. Rendering once and sharing the string across test methods avoids
-	 * that trap entirely.
+	 * Memoized for the lifetime of the process: on WordPress 6.9+,
+	 * WP_Script_Modules::$done (class-wp-script-modules.php,
+	 * print_script_module()) is a singleton-level array that marks each module
+	 * ID as printed and silently skips it on any later call in the same
+	 * PHPUnit process. WP_UnitTestCase runs every test method in one process,
+	 * so a second render() call would re-enqueue the same handles but print
+	 * none of them — an empty second render, not a failed assertion.
+	 * Rendering once and sharing the string across test methods avoids that
+	 * trap entirely.
+	 *
+	 * That property does not exist on 6.8, our declared floor (verified
+	 * against the 6.8 and 6.9 tags of wordpress-develop), where the dedup
+	 * works differently. The memoization is simply harmless there — it is
+	 * kept unconditionally rather than version-gated, because rendering once
+	 * is correct on every version and only its NECESSITY is version-specific.
 	 *
 	 * ScriptModuleGuard checks the same private array before this file's
 	 * first render, turning a hypothetical future collision (another test
@@ -93,10 +100,11 @@ final class AssetsDevModeTest extends WP_UnitTestCase {
 	 * docs/gotchas/three-rounds-of-fixes-means-change-the-approach.md.
 	 */
 	public function test_the_pack_css_is_a_script_module_not_a_stylesheet(): void {
-		AssetMarkup::assert_script_module_with_exact_src(
+		AssetMarkup::assert_script_module_with_id(
 			self::render_front_end_assets(),
+			'woodev-base-style-js-module',
 			'http://localhost:5173/src/css/packs/vega.css',
-			'The dev server serves the CSS entry as a JS module; a plain stylesheet <link> tag would apply nothing.'
+			'The dev server serves the CSS entry as a JS module; a plain stylesheet element would apply nothing.'
 		);
 	}
 

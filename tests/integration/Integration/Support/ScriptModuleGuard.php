@@ -20,6 +20,20 @@ namespace Woodev\Theme\Base\Tests\Integration\Support;
  * `$wp_scripts`/`$wp_styles` but not `$wp_script_modules`, so nothing between
  * test classes clears it.
  *
+ * **That property is WordPress 6.9+.** Verified against the 6.8 and 6.9 tags
+ * of wordpress-develop: 6.8 — our declared floor — declares only
+ * `$registered`, `$enqueued_before_registered` and `$a11y_available`, and
+ * gained `$queue`/`$done` in 6.9. So the reflection below is version-specific
+ * and MUST degrade rather than throw: an unconditional `getProperty( 'done' )`
+ * raises `ReflectionException` on 6.8 and takes the whole integration suite
+ * down with it. It is invisible locally because wp-env runs `core: null`,
+ * i.e. latest.
+ *
+ * Degrading costs nothing. This guard never decides whether a test passes —
+ * it only replaces a confusing assertion failure with an explained one. Where
+ * the property is absent the assertions still fail on a short capture, just
+ * without the diagnosis.
+ *
  * The production PHPUnit config collects every `*Test.php` under
  * `Integration/`, not just one file. If any other test class in that
  * directory ever renders `wp_head`/`wp_footer` before this file's memoized
@@ -49,6 +63,12 @@ final class ScriptModuleGuard {
 	 * @param list<string> $handles Script module handles this test file is about to render and assert on.
 	 */
 	public static function assert_none_already_done( array $handles ): void {
+		// WordPress < 6.9 has no $done property at all (see the class docblock);
+		// there is nothing to inspect and nothing to report.
+		if ( ! \property_exists( \WP_Script_Modules::class, 'done' ) ) {
+			return;
+		}
+
 		$reflection    = new \ReflectionClass( \WP_Script_Modules::class );
 		$done_property = $reflection->getProperty( 'done' );
 		$done_property->setAccessible( true );
