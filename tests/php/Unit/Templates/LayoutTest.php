@@ -44,7 +44,7 @@ final class LayoutTest extends TestCase {
 		Functions\when( 'is_home' )->justReturn( false );
 		Functions\when( 'is_archive' )->justReturn( false );
 		Functions\when( 'is_search' )->justReturn( false );
-		Functions\when( 'is_single' )->justReturn( true );
+		Functions\when( 'is_singular' )->justReturn( true );
 
 		self::assertFalse( Layout::has_sidebar() );
 	}
@@ -59,7 +59,7 @@ final class LayoutTest extends TestCase {
 		Functions\when( 'is_home' )->justReturn( false );
 		Functions\when( 'is_archive' )->justReturn( false );
 		Functions\when( 'is_search' )->justReturn( false );
-		Functions\when( 'is_single' )->justReturn( true );
+		Functions\when( 'is_singular' )->justReturn( true );
 
 		self::assertFalse( Layout::has_sidebar() );
 	}
@@ -75,7 +75,7 @@ final class LayoutTest extends TestCase {
 		Functions\when( 'is_home' )->justReturn( false );
 		Functions\when( 'is_archive' )->justReturn( false );
 		Functions\when( 'is_search' )->justReturn( false );
-		Functions\when( 'is_single' )->justReturn( false );
+		Functions\when( 'is_singular' )->justReturn( false );
 
 		self::assertFalse( Layout::has_sidebar() );
 	}
@@ -86,7 +86,7 @@ final class LayoutTest extends TestCase {
 		Functions\when( 'is_home' )->justReturn( false );
 		Functions\when( 'is_archive' )->justReturn( false );
 		Functions\when( 'is_search' )->justReturn( false );
-		Functions\when( 'is_single' )->justReturn( true );
+		Functions\when( 'is_singular' )->justReturn( true );
 
 		self::assertTrue( Layout::has_sidebar() );
 	}
@@ -128,7 +128,29 @@ final class LayoutTest extends TestCase {
 		Functions\when( 'is_home' )->justReturn( false );
 		Functions\when( 'is_archive' )->justReturn( false );
 		Functions\when( 'is_search' )->justReturn( false );
-		Functions\when( 'is_single' )->justReturn( false );
+		Functions\when( 'is_singular' )->justReturn( false );
+
+		self::assertFalse( Layout::has_sidebar() );
+	}
+
+	/**
+	 * Codex P2 on the M1-04 diff. is_single() is true for attachment queries
+	 * and for every public custom post type, so the "positive allow-list" was
+	 * still letting in exactly what it claimed to exclude. is_singular( 'post' )
+	 * is what actually means "a blog post".
+	 */
+	public function test_an_attachment_or_custom_post_type_never_gets_the_sidebar(): void {
+		Functions\when( 'get_theme_mod' )->justReturn( 'right' );
+		Functions\when( 'is_active_sidebar' )->justReturn( true );
+		Functions\when( 'is_home' )->justReturn( false );
+		Functions\when( 'is_archive' )->justReturn( false );
+		Functions\when( 'is_search' )->justReturn( false );
+
+		// is_singular( 'post' ) is false for an attachment and for a CPT single,
+		// while the old is_single() was true for both.
+		Functions\when( 'is_singular' )->alias(
+			static fn( $type = '' ) => 'post' !== $type
+		);
 
 		self::assertFalse( Layout::has_sidebar() );
 	}
@@ -139,7 +161,7 @@ final class LayoutTest extends TestCase {
 		Functions\when( 'is_home' )->justReturn( false );
 		Functions\when( 'is_archive' )->justReturn( false );
 		Functions\when( 'is_search' )->justReturn( true );
-		Functions\when( 'is_single' )->justReturn( false );
+		Functions\when( 'is_singular' )->justReturn( false );
 
 		self::assertTrue( Layout::has_sidebar() );
 	}

@@ -88,9 +88,14 @@ final class Layout {
 
 		// Spec §7: blog, archive, search results and single posts. A positive
 		// allow-list, not `! is_page()`: the negative form also matched 404s,
-		// attachments and every future singular post type — layouts nobody asked
-		// to put a sidebar on.
-		return is_home() || is_archive() || is_search() || is_single();
+		// attachments and every singular post type a plugin registers — layouts
+		// nobody asked to put a sidebar on.
+		//
+		// is_singular( 'post' ), NOT is_single(): core sets is_single on
+		// attachment queries too, and it is true for every public custom post
+		// type, so is_single() would have let both back in through the very
+		// allow-list meant to keep them out.
+		return is_home() || is_archive() || is_search() || is_singular( 'post' );
 	}
 
 	/**
