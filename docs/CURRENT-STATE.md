@@ -1,6 +1,6 @@
 # Current State — Woodev Base
 
-> Updated: 22.07.2026 (s6)
+> Updated: 22.07.2026 (s7)
 
 ## Phase status
 
@@ -8,13 +8,16 @@
 |---|---|---|
 | Design & decisions | ✅ Done | Spec approved, ADR-001…006 recorded |
 | M0 — Bootstrap | ✅ Done | PR [#1](https://github.com/kalbac/woodev-base-theme/pull/1) merged s3 |
-| M1 — Core theme | 🟡 In progress | 5 plans. M1-01 icons (`96df1db`), M1-02 templates (`f3f5f0a`), M1-03 style packs (`1fd9dd8`), **M1-04 Customizer (PR [#8](https://github.com/kalbac/woodev-base-theme/pull/8), `e480b3a`, s6)** done. **M1-05 in flight** on `feat/m1-05-scheme-switcher` |
-| M2 — WooCommerce layer | ⬜ Not started | |
+| M1 — Core theme | ✅ Done | 5 plans, all merged: icons `96df1db`, templates `f3f5f0a`, style packs `1fd9dd8`, Customizer `e480b3a`, scheme switcher `11ce459` |
+| Dev-mode coverage | ✅ Done | s7, PR [#10](https://github.com/kalbac/woodev-base-theme/pull/10) `e1cf31b` — the s3 debt, closed |
+| M2 — WooCommerce layer | ⬜ Not started | Agreed order (s7): the §7 component tail first, then M2 |
 | M3 — Public release prep | ⬜ Not started | |
 
 ## Known bugs
 
-**None open.** `main` is green, verified on the MERGED commit and not just per-branch: phpcs 0, phpstan L8, unit 128, vitest 23, integration 22, e2e 28, build OK.
+**None open.** `main` is green, verified on the MERGED commit `e1cf31b` and not just per-branch: phpcs 0 · phpstan L8 · unit 141 · vitest 25 · **integration 32** · **integration-dev 4** · e2e 34 · **e2e-dev 2** · build OK.
+
+s7's near-miss is worth carrying: the new `ScriptModuleGuard` reflected on `WP_Script_Modules::$done`, which **exists only from WP 6.9** while the theme declares `Requires at least: 6.8`. Every test using it would have died with `ReflectionException` on the floor we claim to support. Local runs cannot see this — wp-env uses `core: null`, i.e. latest — and neither can CI, which does not matrix the floor. **Nothing in this project currently tests the declared WP floor**; that is now the most valuable untested claim we make.
 
 s5 found and fixed one real defect after merging — the mobile-drawer focus-trap e2e was red on merged `main` while green on each branch alone. Not a product regression: `x-trap` moves focus asynchronously and a premature `Tab` lands on the skip link, outside the nav (`docs/gotchas/x-trap-focus-move-is-async.md`, PR #7 `9dc2f3b`). Codex also caught a would-be **fatal on every front-end request** before merge — `(string) get_theme_mod()` throws `Error` for an object; now fails closed.
 
@@ -34,7 +37,8 @@ s5 found and fixed one real defect after merging — the mobile-drawer focus-tra
 - **Codex: use the DEFAULT profile with MCP disabled.** `codex exec -c 'mcp_servers={}' "…"`. The s3 recipe's clean `CODEX_HOME=~/.codex-review-clean` has its **own** `auth.json`, which goes stale independently — s6 lost an hour to "refresh token already used" there while the default profile was freshly authorised. The 403s that appear alongside come from an **MCP worker**, not the model, which is what `mcp_servers={}` silences. Everything else from the s3 recipe still holds: foreground, prompt inline and **under ~15 KB**, stdin closed, smoke-test with `"Reply with exactly: CODEX_OK"` first (every failure mode exits 0 — `codex-cli-dies-silently.md`), and name the out-of-chunk guards in every chunk prompt (`codex-split-diff-false-positives.md`).
 - **Re-critic the fixes, always.** s6's two re-critic passes each found defects *inside* the fixes written for the previous round — including one in a fix for a finding the critic had just made. See `three-rounds-of-fixes-means-change-the-approach.md`.
 - **Codex reads project files during review.** Tell it explicitly not to read `.claude/skills/**` — one run returned 186 KB.
-- **Line endings, three routes into the same trap**: `.gitattributes` pins `eol=lf`; a Python helper in text mode emits CRLF (s5, twice); Serena writes native endings unless `line_ending: "lf"` is set (s6). All three end in PHPCS failing on line 1.
+- **Line endings, three routes into the same trap**: `.gitattributes` pins `eol=lf`; a Python helper in text mode emits CRLF (s5, twice). **Serena writes CRLF regardless — `line_ending: "lf"` does NOT work** (s6 said it did; measured false in s7 for both `create_text_file` and `replace_symbol_body`, the latter converting the whole file while `git diff` stays clean). Strip CRs after every Serena write and check `git ls-files --eol`. All three end in PHPCS failing on line 1.
+- **Nothing tests the declared WP floor (6.8).** wp-env runs `core: null` and CI does not matrix versions, so a 6.9+ API used anywhere passes every gate we have. s7 nearly shipped exactly that. Cheap fix when someone wants it: one CI job with `core: "WordPress/WordPress#6.8"`.
 - **Serena is required for codebase work** (AGENTS.md). Index scoped to `./woodev-base-theme`, so `find_referencing_symbols` does not see `tests/` — use `search_for_pattern` for test usages.
 - ~~Pin concrete WP floor~~ — resolved s2: **6.8** (`Requires at least`), tested up to **7.0**. Re-check each release.
 - ~~Basecoat pin~~ — resolved s1: exact `1.0.2`. ~~M1 inventory~~ — resolved s1: spec §7. ~~Fonts/icons~~ — s1: system stack, Lucide (ISC). ~~wp-env config shape~~ / ~~PHPUnit 10.5 vs core suite~~ — resolved s3.
@@ -51,12 +55,13 @@ s5 found and fixed one real defect after merging — the mobile-drawer focus-tra
 | M1-04 | Customizer v1 (§6) | ✅ `e480b3a` (s6), PR #8 |
 | M1-05 | Scheme switcher + no-FOUC head script | ✅ `11ce459` (s6), PR #9 |
 
-1. **M2 — the WooCommerce layer** (spec §8). Namespace `Woodev\Theme\Base\Woo`, bootstrapped only when Woo is active, base theme degrades gracefully without it. Needs a design pass before a plan: which templates get overridden, and how the Woo bundle loads conditionally.
-2. **Dev-mode integration coverage** — small, unblocked, and now has a concrete defect to justify it (the dev-mode override limitation above).
-3. **The §7 component tail** — card, badge, alert, tabs, accordion are specced but not yet wired into templates; an adapter pass, deliberately deferred through M1-03/04.
+Dev-mode coverage closed the s3 debt in s7. **Order agreed with Maksim (s7): the §7 component tail, then M2.**
+
+1. **The §7 component tail** — card, badge, alert, tabs, accordion are specced but not yet wired into templates; an adapter pass, deliberately deferred through M1-03/04. Doing it before M2 means the Woo layer builds on a finished component vocabulary instead of inventing CSS it would later have to migrate down into the base theme.
+2. **M2 — the WooCommerce layer** (spec §8). Namespace `Woodev\Theme\Base\Woo`, bootstrapped only when Woo is active, base theme degrades gracefully without it. Needs a design pass before a plan: which templates get overridden, and how the Woo bundle loads conditionally (the multi-entry machinery from M1-03 is the obvious lever).
 
 i18n is cross-cutting — required in every task, `.pot` generation deferred to M3.
 
 ## Last session
 
-s6 (22.07.2026): M1-04 and M1-05 planned, executed subagent-driven and merged; **M1 closed**. Two findings worth carrying: `:not()` contributes its argument's specificity, which silently killed the accent preset on the default config; and three narrowing review rounds on one function meant the approach was wrong, not the code. See SESSION-LOG.
+s7 (22.07.2026): dev-mode coverage designed, planned, executed subagent-driven and merged (PR #10, `e1cf31b`) — the s3 debt is gone. Three things to carry: a guard used a WP **6.9+** API under a **6.8** floor and no gate could see it; the three-rounds rule fired a second time, on `AssetMarkup`, and again the answer was to delete a requirement rather than patch; and the s6 Serena line-ending gotcha was simply wrong. See SESSION-LOG.
