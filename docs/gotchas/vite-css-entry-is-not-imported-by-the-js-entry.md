@@ -30,7 +30,19 @@ So dev mode enqueues it with `wp_enqueue_script_module()`, not `wp_enqueue_style
 ## How to apply here
 
 - `enqueue_dev()` enqueues three modules in order: `@vite/client`, `src/css/app.css`, `src/js/app.js`. Guarded by a unit test that pins all three URLs (`AssetsTest::test_dev_mode_enqueues_vite_client_css_and_js_from_the_dev_server`, isolated process — `WOODEV_BASE_DEV` can't be undefined once set).
-- **Dev mode has no e2e coverage by decision** (s3): it is a developer-only path, and covering it in CI needs a second wp-env environment with the constant plus a live dev server. The unit test pins our side of the contract; the Vite side (CSS-entry-as-JS-module) is external and only a Vite major could move it. Re-verify manually then — recipe in [[wp-env-config-constants-persist]].
+- **Dev mode is covered at all three levels since s7.** The s3 decision to skip
+  everything above unit was reversed: the second environment turned out to cost
+  one JSON file and one entry in Vite's CORS allow-list.
+  - *unit* — `AssetsTest` pins the three URLs with WordPress mocked.
+  - *integration* — `tests/integration/Integration/DevMode/AssetsDevModeTest.php`,
+    run by `npm run test:integration:dev`, asserts what a real WordPress printed,
+    including that the CSS entry is a **script module and not a stylesheet**.
+    Its mirror, `Integration/AssetsProductionTest.php`, asserts the opposite in
+    production mode; neither means much without the other.
+  - *e2e* — `tests/e2e-dev/dev-mode.spec.mjs` (`npm run e2e:dev`, against
+    `.wp-env.dev-mode.json` on :8892) asserts **computed style**, because the
+    failure mode here is a present script tag and absent styles. Markup
+    assertions cannot see this bug; that is the whole point of the file.
 - Do **not** "simplify" this by adding `import './app.css'` to `app.js`: that folds CSS into the JS graph, so production would emit the stylesheet twice (once as the `style` entry, once as the app entry's imported CSS).
 
 ## Related
