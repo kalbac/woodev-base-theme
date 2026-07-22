@@ -20,6 +20,12 @@
 	<testsuites>
 		<testsuite name="integration">
 			<directory suffix="Test.php">./Integration</directory>
+			<!--
+				DevMode/ runs only under phpunit.dev.xml.dist, whose bootstrap
+				defines WOODEV_BASE_DEV. Collected here it would assert dev-server
+				URLs against a production-mode WordPress and fail.
+			-->
+			<exclude>./Integration/DevMode</exclude>
 		</testsuite>
 	</testsuites>
 </phpunit>

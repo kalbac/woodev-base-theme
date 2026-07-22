@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+	The dev-mode half of the integration suite. Same PHPUnit 9.6 schema and the
+	same flags as phpunit.xml.dist; the only differences are the bootstrap (which
+	defines WOODEV_BASE_DEV) and the directory it collects tests from.
+
+	Two configs rather than one because WOODEV_BASE_DEV cannot be undefined once
+	defined, so the two branches of Assets::enqueue() cannot be covered in one
+	PHPUnit process.
+-->
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	bootstrap="bootstrap-dev.php"
+	colors="true"
+	failOnWarning="true"
+	failOnRisky="true"
+	failOnEmptyTestSuite="true"
+	convertDeprecationsToExceptions="true">
+	<testsuites>
+		<testsuite name="integration-dev">
+			<directory suffix="Test.php">./Integration/DevMode</directory>
+		</testsuite>
+	</testsuites>
+</phpunit>
