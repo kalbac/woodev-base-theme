@@ -77,7 +77,7 @@ final class Scheme {
 	 * Whether the front-end switcher control should render at all.
 	 */
 	public static function toggle_enabled(): bool {
-		return self::sanitize_toggle( get_theme_mod( 'color_scheme_toggle', false ) );
+		return self::sanitize_toggle( get_theme_mod( 'color_scheme_toggle', true ) );
 	}
 
 	/**

@@ -120,21 +120,22 @@ final class Customizer {
 		);
 
 		/*
-		 * Registered default is `false`, not the spec's prose "on": it MUST equal
-		 * Scheme::sanitize_toggle( $junk ), because CustomizerTest::
-		 * test_the_sanitize_callbacks_reject_junk() asserts every setting's
-		 * registered default against its own sanitize_callback fed a non-scalar,
-		 * and Scheme::sanitize_toggle() fails closed to false for anything that
-		 * is not `true` or the string '1' (never a legitimate checkbox value).
-		 * Scheme::toggle_enabled() reads the SAME false fallback from
-		 * get_theme_mod(), so the admin UI and the front end agree.
+		 * Spec §6 ships the switcher ON, and that is what is registered here.
+		 *
+		 * Note that this is the ONE setting whose default and whose fail-closed
+		 * value differ: Scheme::sanitize_toggle() returns false for anything that
+		 * is not `true` or the string '1', because a switcher whose stored state
+		 * cannot be read is worse than no switcher. CustomizerTest documents that
+		 * exception explicitly rather than letting the generic
+		 * default-equals-junk-fallback assertion quietly dictate the product
+		 * default — which is what happened on the first pass through this task.
 		 */
 		$this->add_checkbox(
 			$wp_customize,
 			'color_scheme_toggle',
 			'woodev_base_colors',
 			__( 'Show the colour-scheme switcher', 'woodev-base-theme' ),
-			false,
+			true,
 			Scheme::sanitize_toggle( ... ),
 			__( 'Lets a visitor override the default and remembers their choice.', 'woodev-base-theme' )
 		);
