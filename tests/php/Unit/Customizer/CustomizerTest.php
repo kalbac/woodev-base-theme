@@ -18,14 +18,16 @@ final class CustomizerTest extends TestCase {
 	 */
 	public static function expected_settings(): array {
 		return [
-			'style_preset'     => [ 'style_preset', 'vega' ],
-			'primary_preset'   => [ 'primary_preset', 'default' ],
-			'base_font_size'   => [ 'base_font_size', 16 ],
-			'container_width'  => [ 'container_width', 1440 ],
-			'radius_scale'     => [ 'radius_scale', 'md' ],
-			'sidebar_position' => [ 'sidebar_position', 'none' ],
-			'header_variant'   => [ 'header_variant', 'inline' ],
-			'footer_variant'   => [ 'footer_variant', 'simple' ],
+			'style_preset'         => [ 'style_preset', 'vega' ],
+			'primary_preset'       => [ 'primary_preset', 'default' ],
+			'color_scheme_default' => [ 'color_scheme_default', 'system' ],
+			'color_scheme_toggle'  => [ 'color_scheme_toggle', false ],
+			'base_font_size'       => [ 'base_font_size', 16 ],
+			'container_width'      => [ 'container_width', 1440 ],
+			'radius_scale'         => [ 'radius_scale', 'md' ],
+			'sidebar_position'     => [ 'sidebar_position', 'none' ],
+			'header_variant'       => [ 'header_variant', 'inline' ],
+			'footer_variant'       => [ 'footer_variant', 'simple' ],
 		];
 	}
 
