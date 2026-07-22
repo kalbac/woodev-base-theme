@@ -80,55 +80,29 @@
 		<exclude-pattern>tests/*</exclude-pattern>
 	</rule>
 	<!--
-	DEVIATION, scoped to ONE FILE. Customizer\InlineStyles::print_styles() echoes
-	a <style> block built entirely from closed-set values (Settings' clamped
-	ints, its RADIUS_SCALE map, and the oklch-pinned generated preset map).
-	esc_html()/esc_attr() would be wrong there: they encode characters that are
-	syntactically meaningful in CSS — the "esc_attr on a whole stylesheet mangles
-	it" trap. wp_strip_all_tags() is what that output needs: strip any tag markup
-	a value could smuggle in to break out of the <style> element.
+	NOTE on WordPress.Security.EscapeOutput.OutputNotEscaped: this sniff is NOT
+	weakened anywhere in this ruleset, on purpose.
 
-	It is declared as an exclude-pattern rather than as a customEscapingFunctions
-	entry ON PURPOSE. Registering wp_strip_all_tags as an escaping function
-	teaches this sniff, across the WHOLE theme, that its output is safe anywhere
-	— and it is not: it strips tags but leaves quotes intact, so
-	`echo '<div title="' . wp_strip_all_tags( $v ) . '">'` with $v of
-	`" onmouseover=alert(1)` would pass review silently. One file with one echo
-	is a blast radius we can reason about; a redefined function is not.
+	Two places legitimately echo non-HTML — Customizer\InlineStyles::print_styles()
+	(a <style> block) and Scheme::print_head_script() (the one place in the theme
+	that emits executable JS). esc_html()/esc_attr() would corrupt both: they
+	entity-encode characters that are syntactically meaningful in CSS and JS.
 
-	For the record, because it is tempting to claim otherwise — WP core does NOT
-	use wp_strip_all_tags() for inline CSS. wp_add_inline_style() checks for a
-	literal '</style>', warns with _doing_it_wrong(), and unwraps it with a
-	preg_replace; WP_Styles then prints the CSS as-is. Ours is the stricter of
-	the two, and it is the SECOND line of defence: the values are already
-	confined to closed sets before they get here (verified in
-	wp-includes/functions.wp-styles.php, WP 7.0).
+	Earlier versions handled that here, first with a global customEscapingFunctions
+	entry and then with per-file exclude-patterns. Both were wrong, and both were
+	found by review:
+	  - a customEscapingFunctions entry teaches the sniff theme-wide that a
+	    function's output is safe ANYWHERE, which is false — wp_strip_all_tags()
+	    strips tags but leaves quotes, so a title attribute built with wp_strip_all_tags()
+	    would pass silently;
+	  - an exclude-pattern blinds the sniff for the WHOLE FILE, so the next echo
+	    added to it is unlinted — in the one file that emits JavaScript.
+
+	Both now carry a line-scoped phpcs:ignore comment with its reason attached
+	(the sniff name, then the justification), the same mechanism
+	inc/template-tags.php already used. The exception is visible at the line it
+	applies to, and nothing else in either file is exempt.
 	-->
-	<rule ref="WordPress.Security.EscapeOutput.OutputNotEscaped">
-		<exclude-pattern>woodev-base-theme/inc/Customizer/InlineStyles\.php</exclude-pattern>
-	</rule>
-	<!--
-	DEVIATION, scoped to ONE FILE, same shape as the one above. Scheme::
-	print_head_script() echoes a <script> block built by build_head_script()
-	from wp_json_encode() output only (Scheme::SCHEMES is a closed set of
-	scalars) — this is the one place in the theme that emits executable JS.
-	esc_html() would be wrong there: it would entity-encode characters
-	(`&&`, `<`) that are syntactically meaningful in JavaScript, corrupting
-	the script rather than securing it.
-
-	As with InlineStyles.php, this is an exclude-pattern rather than a
-	customEscapingFunctions entry ON PURPOSE — registering wp_json_encode as
-	an escaping function would teach this sniff, theme-wide, that its output
-	is safe to echo raw anywhere, which is not true of a JSON string headed
-	for an HTML attribute rather than a <script> body. One file with one echo
-	is a blast radius we can reason about; a redefined function is not. This
-	scoping (an exclude-pattern per file, never a global customEscapingFunctions
-	entry) is itself a documented Codex finding from M1-04 — see AGENTS.md
-	"WPCS deviations are codified, not ad-hoc" and phpcs.xml.dist history.
-	-->
-	<rule ref="WordPress.Security.EscapeOutput.OutputNotEscaped">
-		<exclude-pattern>woodev-base-theme/inc/Scheme\.php</exclude-pattern>
-	</rule>
 	<rule ref="Universal.Operators.DisallowShortTernary">
 		<exclude-pattern>tests/*</exclude-pattern>
 	</rule>

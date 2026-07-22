@@ -150,14 +150,14 @@ final class Scheme {
 	 * Must run at wp_head priority 1: synchronous and as early as possible,
 	 * because a script painted after the browser's first paint cannot prevent
 	 * the flash it exists to avoid.
+	 *
+	 * The body is assembled by build_head_script() from wp_json_encode() output
+	 * only (a closed-set string, see SCHEMES) — never a raw concatenated value.
+	 * esc_html() would be wrong here: it would entity-encode characters that are
+	 * syntactically meaningful in JS.
 	 */
 	public function print_head_script(): void {
-		// The body is assembled by build_head_script() from wp_json_encode()
-		// output only (a closed-set string, see SCHEMES) — never a raw
-		// concatenated value. esc_html() would be wrong here: it would
-		// entity-encode characters (`&&`, `<`) that are syntactically
-		// meaningful in JS. See phpcs.xml.dist for the scoped deviation this
-		// file carries, matching Customizer\InlineStyles::print_styles().
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JS, not HTML: the only interpolated value is wp_json_encode() of a SCHEMES member; see the docblock.
 		echo '<script id="woodev-base-scheme">' . "\n" . self::build_head_script() . "\n" . '</script>' . "\n";
 	}
 

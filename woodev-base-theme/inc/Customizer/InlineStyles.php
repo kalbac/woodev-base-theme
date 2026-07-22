@@ -56,6 +56,12 @@ final class InlineStyles {
 
 	/**
 	 * Print the block, unless every setting is at its default.
+	 *
+	 * Every value is drawn from a closed set (Settings::RADIUS_SCALE, the clamped
+	 * ints, or the oklch-pinned preset map), so there is nothing to escape;
+	 * wp_strip_all_tags() is the belt to those braces. esc_html()/esc_attr()
+	 * would be wrong here — they encode characters that are syntactically
+	 * meaningful in CSS.
 	 */
 	public function print_styles(): void {
 		$css = self::build_css();
@@ -64,9 +70,7 @@ final class InlineStyles {
 			return;
 		}
 
-		// Every value is drawn from a closed set (Settings::RADIUS_SCALE, the
-		// clamped ints, or the oklch-pinned preset map), so there is nothing to
-		// escape; wp_strip_all_tags is the belt to that braces.
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CSS, not HTML: closed-set values, tag-stripped; see the docblock.
 		echo '<style id="woodev-base-inline">' . "\n" . wp_strip_all_tags( $css ) . '</style>' . "\n";
 	}
 
