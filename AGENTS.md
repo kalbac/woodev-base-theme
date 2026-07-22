@@ -13,6 +13,28 @@ Woodev Base — a universal WordPress theme (optional WooCommerce layer) built o
 - **Critic/reviewer:** Codex — every substantial change gets a Codex review pass before merge. Never self-certify fixes made in response to a review.
 - Architecture-shaping decisions must be surfaced **before** coding (🔴 irreversible vs 🟡 graftable). If a task conflicts with an ADR — stop, surface the conflict, propose alternatives. Never silently override an ADR.
 
+## Autonomy — decide and proceed
+
+**Run this project as autonomously as the task allows.** Maksim is interrupted for
+exactly two things:
+
+1. **UI/UX calls** — anything a visitor sees and that taste, not engineering,
+   decides.
+2. **Architectural forks you genuinely cannot settle yourself** — an ADR conflict,
+   an irreversible 🔴 choice, a scope question with no defensible default.
+
+Everything else is yours: test strategy and depth, file and directory layout,
+naming, tooling and scripts, library choices inside an existing decision, the
+order of work inside an agreed milestone, whether a design pass needs its own
+spec document. Pick the defensible option, state the choice and its reasoning in
+the report, and move on. A decision recorded in the session log can be revisited;
+a question asked mid-flow costs a round-trip every time.
+
+This does **not** relax anything else in this document: the Codex critic gate,
+mutation-tested guards, verifying worker claims yourself, and "merge is Maksim's
+call" all still hold. Autonomy is about not asking permission, never about
+skipping verification.
+
 ## Code navigation and editing — Serena first
 
 **Serena is the required tool for working with this codebase.** The built-in

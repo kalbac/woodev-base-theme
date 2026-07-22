@@ -4,7 +4,13 @@ import js from '@eslint/js';
 export default [
   js.configs.recommended,
   {
-    files: ['src/js/**/*.js', 'scripts/**/*.mjs', 'tests/js/**/*.mjs', 'tests/e2e/**/*.mjs'],
+    files: [
+      'src/js/**/*.js',
+      'scripts/**/*.mjs',
+      'tests/js/**/*.mjs',
+      'tests/e2e/**/*.mjs',
+      'tests/e2e-dev/**/*.mjs',
+    ],
     languageOptions: {
       ecmaVersion: 2024,
       sourceType: 'module',
@@ -16,6 +22,31 @@ export default [
         process: 'readonly',
         getComputedStyle: 'readonly',
         localStorage: 'readonly',
+      },
+    },
+  },
+  {
+    // Root-level *.mjs config files (vite.config.mjs, playwright.config.mjs,
+    // playwright.dev.config.mjs, vitest.config.mjs) run under Node, not a
+    // browser — they must NOT get window/document/localStorage/etc. as
+    // globals. They previously matched the block above via '*.config.mjs',
+    // which meant a stray `document.body` in vite.config.mjs no longer
+    // tripped no-undef. `*.config.mjs` (no `**/` prefix) is anchored to this
+    // file's directory, so this intentionally does not match config files
+    // nested under scripts/ or tests/.
+    // The list is the Node globals these files may legitimately reach for, not
+    // just the one `process` that today's code happens to use — a narrower
+    // whitelist would reject a plain `console.log()` in vite.config.mjs.
+    files: ['*.config.mjs'],
+    languageOptions: {
+      ecmaVersion: 2024,
+      sourceType: 'module',
+      globals: {
+        process: 'readonly',
+        console: 'readonly',
+        URL: 'readonly',
+        Buffer: 'readonly',
+        __dirname: 'readonly',
       },
     },
   },

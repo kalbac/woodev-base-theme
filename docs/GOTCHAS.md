@@ -1,6 +1,6 @@
 # Gotchas Index — Woodev Base
 
-> 17 entries. Each gotcha is a separate file in `docs/gotchas/`.
+> 18 entries. Each gotcha is a separate file in `docs/gotchas/`.
 
 | Gotcha | Area | Summary |
 |---|---|---|
@@ -20,4 +20,5 @@
 | [playwright-browser-newpage-skips-config](gotchas/playwright-browser-newpage-skips-config.md) | Testing/e2e | `browser.newPage()` ignores the project `use` config (baseURL, viewport) — use the `{ page }` fixture. A dark-mode assertion passed alone, failed in-suite; the theme was fine, the test wasn't. Assert visual state via a runtime toggle, not `addInitScript` |
 | [not-selector-carries-its-arguments-specificity](gotchas/not-selector-carries-its-arguments-specificity.md) | CSS | `:not()` (and `:is()`) contribute their argument's specificity, so `:root:not(.light):not(.dark)` is (0,3,0) and outranks every override in the theme — a Customizer accent choice silently did nothing on the commonest config. `:where()` is the zero-cost wrapper |
 | [three-rounds-of-fixes-means-change-the-approach](gotchas/three-rounds-of-fixes-means-change-the-approach.md) | Process | When each review round finds a NARROWER defect in the same function, the approach is wrong, not the code. Regex-parsing HTML attributes lost three times; the fix was to stop parsing and use the asymmetry of the trade |
-| [serena-writes-native-line-endings](gotchas/serena-writes-native-line-endings.md) | Tooling | `line_ending` unset means CRLF on Windows and PHPCS dies on line 1 — the third route into this project's oldest trap. Pin `lf`, and keep `.gitattributes`/Prettier out of `.serena/` |
+| [serena-writes-native-line-endings](gotchas/serena-writes-native-line-endings.md) | Tooling | Serena writes CRLF on Windows and PHPCS dies on line 1 — **and `line_ending: "lf"` does NOT stop it** (s6 claimed it did; measured false in s7 for both `create_text_file` and `replace_symbol_body`, which converts the whole file). Strip CRs after every Serena write and check `git ls-files --eol`; keep `.gitattributes`/Prettier out of `.serena/` |
+| [wp-env-installs-themes-without-activating-them](gotchas/wp-env-installs-themes-without-activating-them.md) | Tooling/wp-env | The `themes` key copies the theme in but leaves a bundled default ACTIVE — the site returns a complete 200 rendered by the wrong theme, so our assertions fail looking like product bugs. Each environment needs its own activation (CI step / `switch_theme()` in the bootstrap / a `globalSetup` that re-reads and throws) |
