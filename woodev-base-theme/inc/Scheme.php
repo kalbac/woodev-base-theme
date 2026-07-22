@@ -104,6 +104,10 @@ final class Scheme {
 	 *   later, paints first, and that flash is exactly what this exists to
 	 *   prevent.
 	 */
+	public function register_without_head_script_MUTANT(): void {
+		add_filter( 'language_attributes', [ $this, 'add_html_class' ] );
+	}
+
 	public function register(): void {
 		add_filter( 'language_attributes', [ $this, 'add_html_class' ] );
 		add_action( 'wp_head', [ $this, 'print_head_script' ], 1 );

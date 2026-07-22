@@ -212,13 +212,33 @@ test.describe.serial('site-global theme_mods', () => {
      * any deferred asset (Vite's module script, async-loaded CSS) gets a
      * chance to paint something else first.
      */
-    test('no flash: the scheme class is present at first paint, not added later', async ({
+    /**
+     * The head script, isolated.
+     *
+     * The obvious version of this test (admin default `dark`, assert `dark` at
+     * DOMContentLoaded) is VACUOUS: with an explicit admin default the SERVER
+     * already renders class="dark" on <html>, so the assertion holds even if
+     * the head script is deleted outright. Adversarial review caught exactly
+     * that.
+     *
+     * So set the server and the stored choice to DISAGREE. The server renders
+     * `light`; only the script can turn that into `dark` before first paint,
+     * and it must have done so by DOMContentLoaded — after that, any change is
+     * the flash this feature exists to prevent.
+     */
+    test('no flash: the head script resolves the stored choice before first paint', async ({
       page,
     }) => {
       wp('theme mod set color_scheme_toggle 1');
-      wp('theme mod set color_scheme_default dark');
+      wp('theme mod set color_scheme_default light');
 
       await page.addInitScript(() => {
+        try {
+          localStorage.setItem('wtb-scheme', 'dark');
+        } catch {
+          /* Storage blocked; the assertion below will catch the consequence. */
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
           window.__wtbClassAtDCL = document.documentElement.className;
         });
@@ -227,7 +247,11 @@ test.describe.serial('site-global theme_mods', () => {
       await page.goto('/');
 
       const classAtDCL = await page.evaluate(() => window.__wtbClassAtDCL);
-      expect(classAtDCL).toContain('dark');
+
+      expect(classAtDCL, 'the stored choice must win before DOMContentLoaded').toContain('dark');
+      expect(classAtDCL, 'the server-rendered class must be gone, not merely joined').not.toContain(
+        'light',
+      );
     });
 
     /**

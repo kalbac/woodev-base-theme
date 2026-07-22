@@ -31,12 +31,15 @@ project_name: "woodev_base_theme"
 # When using multiple languages, the first language server that supports a given file will be used for that file.
 # The first language is the default language and the respective language server will be used as a fallback.
 # Note that when using the JetBrains backend, language servers are not used and this list is correspondingly ignored.
-# Only PHP. The folder indexed below (see ls_workspace_folders) holds 36 PHP
-# files and zero JS — every .mjs in this repo (src/, scripts/, tests/js,
-# tests/e2e) is build tooling that lives OUTSIDE the shipped theme, so a
-# TypeScript language server here would start up and index nothing.
+# PHP is what the indexed folder holds today (36 files, zero JS — every .mjs in
+# this repo is build tooling that lives outside the shipped theme). TypeScript
+# stays registered anyway, deliberately: the theme WILL ship its own JS as the
+# Woo layer and further Alpine modules land, and a language server that indexes
+# nothing costs a startup, whereas noticing months later that JS navigation was
+# silently unavailable costs more.
 languages:
 - php
+- typescript
 
 # the encoding used by text files in the project
 # For a list of possible encodings, see https://docs.python.org/3.11/library/codecs.html#standard-encodings

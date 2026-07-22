@@ -10,7 +10,8 @@
  *
  * Progressive enhancement mirrors template-parts/header/navigation.php: the
  * button starts `hidden` (a safety net that holds even if CSS fails to load)
- * and is only revealed once Alpine marks it `.wtb-scheme-toggle--enhanced` —
+ * and is only revealed once wtbSchemeToggle()'s init() marks it
+ * `.wtb-scheme-toggle--enhanced` —
  * see the matching rule in src/css/adapter/index.css and
  * docs/gotchas/tailwind-v4-layer-precedence.md for why that `display` rule
  * has to live in the adapter layer rather than as a utility class.
@@ -42,7 +43,6 @@ $labels = [
 	class="wtb-scheme-toggle"
 	hidden
 	x-data="wtbSchemeToggle( <?php echo esc_attr( wp_json_encode( $labels ) ); ?> )"
-	x-init="$el.classList.add( 'wtb-scheme-toggle--enhanced' )"
 	x-bind:hidden="false"
 	x-bind:aria-label="label"
 	x-on:click="toggle()"

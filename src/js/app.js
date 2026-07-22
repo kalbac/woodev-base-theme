@@ -16,7 +16,8 @@ import focus from '@alpinejs/focus';
 Alpine.plugin(focus);
 
 // Colour-scheme switcher (M1-05, spec §6). Named component, not inline
-// x-data: it owns a matchMedia listener with a real teardown path, which is
+// x-data: it owns a matchMedia listener whose removal is reachable (see
+// _stopFollowingSystem, called when the visitor chooses explicitly), which is
 // unwieldy to express as one attribute string. Registered BEFORE
 // Alpine.start(), same as the focus plugin above.
 //
