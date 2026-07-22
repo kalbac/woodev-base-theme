@@ -15,6 +15,7 @@ export default [
         fetch: 'readonly',
         process: 'readonly',
         getComputedStyle: 'readonly',
+        localStorage: 'readonly',
       },
     },
   },

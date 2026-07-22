@@ -196,3 +196,41 @@ body {
     border: 0;
   }
 }
+
+/*
+ * Colour-scheme switcher (M1-05, spec §6). Same progressive-enhancement
+ * pattern as .wtb-nav__toggle above: `display: none` is the permanent base
+ * rule here rather than a utility class, because the responsive/enhanced
+ * override below only wins the cascade if it competes with another
+ * adapter-layer rule on equal footing — a `hidden` utility on the element
+ * would sit in the utilities layer and beat this one regardless of
+ * specificity (see docs/gotchas/tailwind-v4-layer-precedence.md). The button
+ * also carries a plain HTML `hidden` attribute removed by Alpine on init, so
+ * a JS-disabled visitor never sees it even before this stylesheet loads.
+ */
+.wtb-scheme-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  color: var(--foreground);
+  background-color: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  cursor: pointer;
+}
+
+/* Unlike .wtb-nav__toggle, this reveal is not viewport-gated: the scheme
+ * switcher is offered on every screen size once Alpine has enhanced it. */
+.wtb-scheme-toggle--enhanced {
+  display: inline-flex;
+}
+
+.wtb-scheme-toggle:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.wtb-scheme-toggle__icon {
+  display: inline-flex;
+}
