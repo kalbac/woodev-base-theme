@@ -15,6 +15,8 @@ const PRESETS = ['neutral', 'blue', 'green', 'red', 'rose', 'orange', 'yellow', 
 const RADII = ['none', 'sm', 'md', 'lg'];
 const SCHEMES = ['system', 'light', 'dark'];
 
+const SIDEBAR_POSITIONS = ['none', 'right'];
+
 /** theme_mod name -> guard, for everything this file touches. */
 const TOUCHED = {
   style_preset: (value) => PACKS.includes(value),
@@ -24,6 +26,7 @@ const TOUCHED = {
   base_font_size: isInteger,
   color_scheme_default: (value) => SCHEMES.includes(value),
   color_scheme_toggle: isToggleValue,
+  sidebar_position: (value) => SIDEBAR_POSITIONS.includes(value),
 };
 
 /** @type {Record<string, string|null>} */
@@ -143,6 +146,30 @@ test.describe.serial('site-global theme_mods', () => {
       .evaluate((node) => node.getBoundingClientRect().width);
 
     expect(Math.round(width)).toBe(1000);
+  });
+
+  // §7 sidebar column cap: Layout::has_sidebar() requires BOTH
+  // sidebar_position=right AND an active sidebar-1 widget. global-setup.mjs
+  // seeds that widget idempotently so this test only has to toggle the
+  // theme_mod, but the precondition is still asserted explicitly below — a
+  // cap test that silently ran on a sidebar-less page would prove nothing.
+  test('a visible sidebar caps the post grid at 2 tracks, not 3', async ({ page }) => {
+    wp('theme mod set sidebar_position right');
+    await page.setViewportSize({ width: 1400, height: 900 });
+    await page.goto('/');
+
+    await expect(
+      page.locator('.wtb-layout--has-sidebar'),
+      'expected .wtb-layout--has-sidebar on the page — is sidebar-1 empty? ' +
+        'global-setup.mjs should have seeded a widget there.',
+    ).toHaveCount(1);
+
+    const trackCount = await page.evaluate(
+      () =>
+        getComputedStyle(document.querySelector('.wtb-post-grid')).gridTemplateColumns.split(' ')
+          .length,
+    );
+    expect(trackCount).toBe(2);
   });
 
   // --radius drives Basecoat's --radius-md/-lg/-xl through calc(), so one

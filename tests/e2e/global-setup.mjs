@@ -17,6 +17,12 @@
 //     actually renders — an archive with one post proves nothing (M1-02
 //     Task 7). All 12 are filed under a known category (slug `wtb-posts`)
 //     so the category-archive view has content too.
+//   - exactly one widget active in `sidebar-1`. Layout::has_sidebar() (§7
+//     sidebar column cap) requires BOTH sidebar_position=right AND
+//     is_active_sidebar('sidebar-1') — the latter is false on a fresh
+//     wp-env with an empty sidebar. Seeding it here means the sidebar-cap
+//     e2e case (tests/e2e/theme-mods.spec.mjs) only has to toggle the
+//     theme_mod and never has to add/remove a widget mid-test.
 //
 // All wp-cli goes through `wp-env run cli wp ...` per the project convention
 // (see package.json's integration scripts).
@@ -79,6 +85,17 @@ function reseedCategory(name, slug) {
   return wp(`term create category "${name}" --slug=${slug} --porcelain`);
 }
 
+/** Delete every widget currently in sidebar-1, then add one fresh block widget. */
+function reseedSidebarWidget() {
+  const existing = JSON.parse(wp('widget list sidebar-1 --format=json'));
+  for (const widget of existing) {
+    wpTry(`widget delete ${widget.id}`);
+  }
+  wp(
+    'widget add block sidebar-1 --content="<!-- wp:paragraph --><p>E2E sidebar widget.</p><!-- /wp:paragraph -->"',
+  );
+}
+
 export default function globalSetup() {
   const log = (...args) => console.log('[e2e:seed]', ...args);
 
@@ -116,6 +133,9 @@ export default function globalSetup() {
   log(
     `posts: ${postIds.length} seeded (wtb-post-1 … wtb-post-${postIds.length}), all in category ${categoryId}`,
   );
+
+  reseedSidebarWidget();
+  log('sidebar-1: reseeded with one block widget');
 
   log('done.');
 }
