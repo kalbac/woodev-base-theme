@@ -78,6 +78,23 @@
 	</rule>
 	<rule ref="WordPress.Security.EscapeOutput">
 		<exclude-pattern>tests/*</exclude-pattern>
+		<!--
+		DEVIATION: Customizer\InlineStyles::print_styles() echoes a <style> block
+		built entirely from closed-set values (Settings' clamped ints, its
+		RADIUS_SCALE map, and the oklch-pinned generated preset map) — there is no
+		HTML to entity-encode, and esc_html()/esc_attr() would be wrong here: they
+		encode characters (quotes, ampersands) that are syntactically meaningful in
+		CSS, which is exactly the "esc_attr on a whole stylesheet mangles it" trap.
+		wp_strip_all_tags() is what this needs — strip any tag markup a value
+		could smuggle in to break out of the <style> element — and it is not a
+		project invention: it is the same function WP core's own
+		wp_add_inline_style() uses to sanitize inline CSS before printing it.
+		-->
+		<properties>
+			<property name="customEscapingFunctions" type="array">
+				<element value="wp_strip_all_tags"/>
+			</property>
+		</properties>
 	</rule>
 	<rule ref="Universal.Operators.DisallowShortTernary">
 		<exclude-pattern>tests/*</exclude-pattern>
