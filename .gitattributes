@@ -7,6 +7,15 @@
 # stays green. `eol=lf` pins the checkout, not just the blob.
 * text=auto eol=lf
 
+# Serena (MCP code-navigation server) rewrites its own config with NATIVE line
+# endings by design — on Windows that means CRLF. Against the `eol=lf` rule
+# above that produces a file git checks out as LF and Serena immediately
+# rewrites as CRLF: permanently dirty, and noise in every `git status`.
+# `-text` opts these out of normalisation entirely, so git stores whatever
+# bytes Serena wrote and stops arguing with it. Nothing here is linted, so the
+# reason `eol=lf` exists in the first place (PHPCS on Windows) does not apply.
+.serena/** -text
+
 # Binary: never touch these.
 *.png binary
 *.jpg binary
