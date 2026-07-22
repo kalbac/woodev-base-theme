@@ -37,6 +37,14 @@ for (const { width, tracks } of GRID_BREAKPOINTS) {
     await page.setViewportSize({ width, height: 800 });
     await page.goto('/');
 
+    // These counts are the NO-sidebar contract; the sidebar cap is a separate
+    // case in theme-mods.spec.mjs. Assert the precondition rather than assume
+    // it: a leftover sidebar_position=right (a killed run in that file never
+    // restored it) would legitimately cap 1400px at 2 tracks, and without this
+    // guard the failure would read as a broken breakpoint rather than a dirty
+    // theme_mod.
+    await expect(page.locator('.wtb-layout--has-sidebar')).toHaveCount(0);
+
     expect(await gridTrackCount(page)).toBe(tracks);
   });
 }
@@ -99,25 +107,31 @@ test('a single post exposes the styled comment form controls', async ({ page }) 
   await expect(page.locator('#submit.btn')).toBeVisible();
 });
 
-test('cards still render under the dark scheme', async ({ page }) => {
-  // Same runtime-toggle approach templates.spec.mjs established for a
-  // read-only dark-mode check: toggle the `.dark` class on <html> directly
-  // via page.evaluate AFTER navigation, rather than depending on the
-  // color_scheme_toggle/color_scheme_default theme_mods (which
-  // theme-mods.spec.mjs may be mutating concurrently in another worker) or
-  // on browser.newPage() (skips project config — see
+test('the card actually restyles under the dark scheme', async ({ page }) => {
+  // Same runtime-toggle approach templates.spec.mjs established for a read-only
+  // dark-mode check: toggle `.dark` on <html> via page.evaluate AFTER
+  // navigation, rather than depending on the color_scheme_* theme_mods (which
+  // theme-mods.spec.mjs may be mutating in another worker) or on
+  // browser.newPage() (skips project config —
   // docs/gotchas/playwright-browser-newpage-skips-config.md).
+  //
+  // Assert a computed colour that MUST change, not DOM structure: the card's
+  // element tree is identical in both schemes, so counting header/section/
+  // footer would stay green with the dark tokens completely broken — the same
+  // vacuous-assertion trap smoke.spec.mjs documents. `.card` paints `bg-card`
+  // (--card), which is near-white in light and near-black in dark, so its
+  // computed background-color is the cheapest value that proves the dark
+  // tokens reached the component.
   await page.goto('/');
+
+  const card = page.locator('.wtb-entry-card.card').first();
+  await expect(card).toBeVisible();
+
+  const readBg = () => card.evaluate((el) => getComputedStyle(el).backgroundColor);
+
+  const light = await readBg();
   await page.evaluate(() => document.documentElement.classList.add('dark'));
+  const dark = await readBg();
 
-  const cards = page.locator('.wtb-entry-card.card');
-  const count = await cards.count();
-  expect(count).toBeGreaterThan(1);
-
-  for (let i = 0; i < count; i += 1) {
-    const card = cards.nth(i);
-    await expect(card.locator('> header')).toHaveCount(1);
-    await expect(card.locator('> section')).toHaveCount(1);
-    await expect(card.locator('> footer')).toHaveCount(1);
-  }
+  expect(light).not.toBe(dark);
 });

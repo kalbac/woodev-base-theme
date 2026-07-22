@@ -19,10 +19,14 @@ if ( post_password_required() ) {
  * so submission keeps working; only `class` is added.
  *
  * Field labels repeat core's own copy ("Name"/"Email"/"Website"/"Comment")
- * verbatim under our own text domain: phpcs's WordPress.WP.I18n.MissingArgDomain
- * sniff requires every __()/_x() call in this theme to declare
- * 'woodev-base-theme', so a domain-less call reusing core's translation
- * catalog is not an option here.
+ * verbatim under our own text domain — phpcs's MissingArgDomain sniff requires
+ * a domain on every call, so a domain-less reuse of core's catalog is not an
+ * option — and go through esc_html__()/esc_html_x(), not bare __()/_x(): the
+ * strings are built here and handed to comment_form(), which prints them as-is,
+ * so escape-on-output is ours to honour. A tampered translation carrying markup
+ * would otherwise reach the page. The required-field indicator is the one value
+ * left unescaped, deliberately: wp_required_field_indicator() returns a safe
+ * <span>, and escaping it would print the tags.
  */
 $woodev_base_commenter = wp_get_current_commenter();
 $woodev_base_req       = (bool) get_option( 'require_name_email' );
@@ -35,7 +39,7 @@ $woodev_base_comment_field = sprintf(
 	'<p class="comment-form-comment">%s %s</p>',
 	sprintf(
 		'<label for="comment">%s%s</label>',
-		_x( 'Comment', 'noun', 'woodev-base-theme' ),
+		esc_html_x( 'Comment', 'noun', 'woodev-base-theme' ),
 		$woodev_base_required_indicator
 	),
 	'<textarea id="comment" name="comment" class="textarea" cols="45" rows="8" maxlength="65525"' . $woodev_base_required_attribute . '></textarea>'
@@ -46,7 +50,7 @@ $woodev_base_fields = [
 		'<p class="comment-form-author">%s %s</p>',
 		sprintf(
 			'<label for="author">%s%s</label>',
-			__( 'Name', 'woodev-base-theme' ),
+			esc_html__( 'Name', 'woodev-base-theme' ),
 			( $woodev_base_req ? $woodev_base_required_indicator : '' )
 		),
 		sprintf(
@@ -59,7 +63,7 @@ $woodev_base_fields = [
 		'<p class="comment-form-email">%s %s</p>',
 		sprintf(
 			'<label for="email">%s%s</label>',
-			__( 'Email', 'woodev-base-theme' ),
+			esc_html__( 'Email', 'woodev-base-theme' ),
 			( $woodev_base_req ? $woodev_base_required_indicator : '' )
 		),
 		sprintf(
@@ -73,7 +77,7 @@ $woodev_base_fields = [
 		'<p class="comment-form-url">%s %s</p>',
 		sprintf(
 			'<label for="url">%s</label>',
-			__( 'Website', 'woodev-base-theme' )
+			esc_html__( 'Website', 'woodev-base-theme' )
 		),
 		sprintf(
 			'<input id="url" name="url" class="input" %s value="%s" size="30" maxlength="200" autocomplete="url" />',

@@ -276,6 +276,17 @@ body {
   flex: 1;
 }
 
+/* Category badges are printed back-to-back (`</a><a>`), so a post with two or
+ * more categories would otherwise have them touching. A flex row with a gap
+ * spaces them and lets them wrap; the margin lifts the row off the meta line
+ * above it. */
+.wtb-entry-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-top: 0.5rem;
+}
+
 /* Featured images arrive at whatever aspect ratio the author uploaded. Without
  * a fixed ratio a row of cards is ragged; `cover` crops rather than distorts. */
 .wtb-entry-card > img:first-child {
