@@ -146,21 +146,40 @@ final class SchemeHeadTest extends TestCase {
 	 * FIRST, so ours would be the one silently dropped.
 	 */
 	public function test_an_existing_class_attribute_is_merged_not_duplicated(): void {
+		$merge = static function ( string $input ): string {
+			return ( new Scheme() )->add_html_class( $input );
+		};
+
 		Functions\when( 'get_theme_mod' )->justReturn( 'dark' );
 		Functions\when( 'esc_attr' )->returnArg();
 		Functions\when( 'is_embed' )->justReturn( false );
 		Functions\when( 'is_admin' )->justReturn( false );
 
-		$output = ( new Scheme() )->add_html_class( 'lang="en-US" class="no-js"' );
+		// The forms a filter or core can realistically hand us. Every one of
+		// these was a defect in an earlier version of the merge, found by the
+		// re-critic pass rather than by imagination.
+		self::assertSame( 'lang="en-US" class="no-js dark"', $merge( 'lang="en-US" class="no-js"' ) );
+		self::assertSame( "lang='en' class=\"no-js dark\"", $merge( "lang='en' class='no-js'" ) );
+		self::assertSame( 'lang="en" class="no-js dark"', $merge( 'lang="en" class=no-js' ) );
+		self::assertSame( 'lang="en" class="no-js dark"', $merge( 'lang="en" class = "no-js"' ) );
+		self::assertSame( 'lang="en" class="no-js dark"', $merge( 'lang="en" CLASS="no-js"' ) );
 
-		self::assertSame( 'lang="en-US" class="no-js dark"', $output );
-		self::assertSame( 1, substr_count( $output, 'class=' ), 'two class attributes is invalid HTML' );
-
-		// Single quotes are equally legal in the attribute WordPress hands us.
+		// A DIFFERENT attribute whose name merely ends in "class" must be left
+		// alone — a word-boundary escape before class= matched this too, because one
+		// sits between the hyphen and the "c".
 		self::assertSame(
-			"lang='en-US' class=\"no-js dark\"",
-			( new Scheme() )->add_html_class( "lang='en-US' class='no-js'" )
+			'lang="en" data-class="card" class="dark"',
+			$merge( 'lang="en" data-class="card"' )
 		);
+
+		// Only the FIRST match is rewritten: str_replace() also rewrote an
+		// identical string sitting inside another attribute's value.
+		self::assertSame(
+			'lang="en" class="no-js dark" data-tpl=\'class="no-js"\'',
+			$merge( 'lang="en" class="no-js" data-tpl=\'class="no-js"\'' )
+		);
+
+		self::assertSame( 1, substr_count( $merge( 'lang="en" class="a"' ), 'class=' ) );
 	}
 
 	/**

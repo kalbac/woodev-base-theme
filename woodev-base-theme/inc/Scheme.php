@@ -130,15 +130,45 @@ final class Scheme {
 			return $output;
 		}
 
-		// MERGE into an existing class attribute rather than appending a second
-		// one. We are not the only filter on this hook, and two class attributes
-		// on one element is invalid HTML where browsers keep the FIRST — so ours
-		// would be the one silently dropped, and the server-side scheme would
-		// not apply at all. Codex found the append-only version.
-		if ( 1 === preg_match( '/\bclass=("|\')(.*?)\1/', $output, $matches ) ) {
-			$merged = trim( $matches[2] . ' ' . $class );
+		/*
+		 * MERGE into an existing class attribute rather than appending a second
+		 * one: we are not the only filter on this hook, and two class attributes
+		 * on one element is invalid HTML where browsers keep the FIRST — so ours
+		 * would be the one silently dropped and the server-side scheme would not
+		 * apply at all.
+		 *
+		 * The pattern is fussy for reasons a re-critic pass demonstrated on the
+		 * naive version, each of which is now a case in SchemeHeadTest:
+		 *
+		 * - `(^|\s)` requires the attribute NAME to start the string or follow
+		 *   whitespace. A `\b` before `class=` is not enough: a word boundary
+		 *   sits between the hyphen and the "c" of `data-class=`, so the naive
+		 *   pattern matched a plugin's own attribute and corrupted its value.
+		 * - `\s*=\s*` because `class = "x"` is legal, and `/i` because `CLASS=`
+		 *   is too.
+		 * - Two value branches, quoted and unquoted: `class=no-js` is legal HTML,
+		 *   and missing it meant appending a second attribute after all.
+		 *
+		 * preg_replace_callback with a limit of 1 rewrites the FIRST match
+		 * positionally. str_replace() rewrote every identical substring in the
+		 * string, including one sitting inside another attribute's value.
+		 */
+		$merged = preg_replace_callback(
+			'/(^|\s)class\s*=\s*(?:(["\'])(.*?)\2|([^\s"\'>]*))/i',
+			static function ( array $matches ) use ( $class ): string {
+				$quoted   = $matches[3] ?? '';
+				$unquoted = $matches[4] ?? '';
+				$existing = '' !== $quoted ? $quoted : $unquoted;
 
-			return str_replace( $matches[0], 'class="' . esc_attr( $merged ) . '"', $output );
+				return $matches[1] . 'class="' . esc_attr( trim( $existing . ' ' . $class ) ) . '"';
+			},
+			$output,
+			1,
+			$count
+		);
+
+		if ( null !== $merged && $count > 0 ) {
+			return $merged;
 		}
 
 		return $output . ' class="' . esc_attr( $class ) . '"';
