@@ -140,13 +140,18 @@ final class SchemeHeadTest extends TestCase {
 	}
 
 	/**
-	 * Codex P2. The embed guard above handles core's own template, but we are
-	 * not the only filter on this hook — a plugin that already added a class
-	 * would leave two class attributes on one element, and browsers keep the
-	 * FIRST, so ours would be the one silently dropped.
+	 * Three review rounds killed the merge-into-the-existing-attribute version
+	 * of this: every regex that looked right was wrong somewhere (a word
+	 * boundary matched `data-class=`; unquoted, spaced and uppercase forms were
+	 * missed; `str_replace()` rewrote identical text inside other attributes; a
+	 * match inside a quoted VALUE won). The function now declines to touch a
+	 * string that mentions a class at all.
+	 *
+	 * What this pins is the SAFETY property, which is the one that matters: we
+	 * never emit a second class attribute and never rewrite anyone else's.
 	 */
-	public function test_an_existing_class_attribute_is_merged_not_duplicated(): void {
-		$merge = static function ( string $input ): string {
+	public function test_an_existing_class_attribute_is_left_alone(): void {
+		$filter = static function ( string $input ): string {
 			return ( new Scheme() )->add_html_class( $input );
 		};
 
@@ -155,31 +160,32 @@ final class SchemeHeadTest extends TestCase {
 		Functions\when( 'is_embed' )->justReturn( false );
 		Functions\when( 'is_admin' )->justReturn( false );
 
-		// The forms a filter or core can realistically hand us. Every one of
-		// these was a defect in an earlier version of the merge, found by the
-		// re-critic pass rather than by imagination.
-		self::assertSame( 'lang="en-US" class="no-js dark"', $merge( 'lang="en-US" class="no-js"' ) );
-		self::assertSame( "lang='en' class=\"no-js dark\"", $merge( "lang='en' class='no-js'" ) );
-		self::assertSame( 'lang="en" class="no-js dark"', $merge( 'lang="en" class=no-js' ) );
-		self::assertSame( 'lang="en" class="no-js dark"', $merge( 'lang="en" class = "no-js"' ) );
-		self::assertSame( 'lang="en" class="no-js dark"', $merge( 'lang="en" CLASS="no-js"' ) );
+		// Every one of these was a way the old merge corrupted the output.
+		foreach (
+			[
+				'lang="en-US" class="no-js"',
+				"lang='en' class='no-js'",
+				'lang="en" class=no-js',
+				'lang="en" class = "no-js"',
+				'lang="en" CLASS="no-js"',
+				'lang="en" data-class="card"',
+				'lang="en" data-note="foo class=bar" class="real"',
+				"lang=\"en\" class=\"foo\nbar\"",
+				'lang="en" class',
+			] as $input
+		) {
+			$output = $filter( $input );
 
-		// A DIFFERENT attribute whose name merely ends in "class" must be left
-		// alone — a word-boundary escape before class= matched this too, because one
-		// sits between the hyphen and the "c".
-		self::assertSame(
-			'lang="en" data-class="card" class="dark"',
-			$merge( 'lang="en" data-class="card"' )
-		);
+			self::assertSame( $input, $output, 'a string that mentions class must come back untouched' );
+			self::assertSame(
+				substr_count( $input, 'class' ),
+				substr_count( $output, 'class' ),
+				'no class token may be added or removed'
+			);
+		}
 
-		// Only the FIRST match is rewritten: str_replace() also rewrote an
-		// identical string sitting inside another attribute's value.
-		self::assertSame(
-			'lang="en" class="no-js dark" data-tpl=\'class="no-js"\'',
-			$merge( 'lang="en" class="no-js" data-tpl=\'class="no-js"\'' )
-		);
-
-		self::assertSame( 1, substr_count( $merge( 'lang="en" class="a"' ), 'class=' ) );
+		// The plain case — nobody else has touched it — still gets the class.
+		self::assertSame( 'lang="en-US" class="dark"', $filter( 'lang="en-US"' ) );
 	}
 
 	/**

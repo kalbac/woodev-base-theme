@@ -131,44 +131,31 @@ final class Scheme {
 		}
 
 		/*
-		 * MERGE into an existing class attribute rather than appending a second
-		 * one: we are not the only filter on this hook, and two class attributes
-		 * on one element is invalid HTML where browsers keep the FIRST — so ours
-		 * would be the one silently dropped and the server-side scheme would not
-		 * apply at all.
+		 * If anything already mentions a class here, LEAVE IT ALONE.
 		 *
-		 * The pattern is fussy for reasons a re-critic pass demonstrated on the
-		 * naive version, each of which is now a case in SchemeHeadTest:
+		 * The obvious alternative — merge our class into the existing attribute
+		 * — was implemented and then dismantled across three review rounds, each
+		 * finding a new way for the regex to be wrong: a word boundary matched
+		 * `data-class=`; `class=no-js`, `class = "x"` and `CLASS=` were all
+		 * missed; str_replace() rewrote identical text inside other attributes;
+		 * `(^|\s)` cannot prove a match is outside quotes, so ` class=bar` in
+		 * `data-note="foo class=bar"` won; a quoted value containing a newline
+		 * fell through to the unquoted branch and matched empty. Parsing HTML
+		 * attributes with a regex loses; the only question is where.
 		 *
-		 * - `(^|\s)` requires the attribute NAME to start the string or follow
-		 *   whitespace. A `\b` before `class=` is not enough: a word boundary
-		 *   sits between the hyphen and the "c" of `data-class=`, so the naive
-		 *   pattern matched a plugin's own attribute and corrupted its value.
-		 * - `\s*=\s*` because `class = "x"` is legal, and `/i` because `CLASS=`
-		 *   is too.
-		 * - Two value branches, quoted and unquoted: `class=no-js` is legal HTML,
-		 *   and missing it meant appending a second attribute after all.
+		 * So do not parse. The cost of skipping is small and bounded: this
+		 * attribute exists ONLY for the visitor with JavaScript disabled — with
+		 * JS, the head script sets the class on documentElement directly, where
+		 * there is a real DOM and no string to misparse. The cost of getting the
+		 * merge wrong is unbounded: a corrupted attribute belonging to someone
+		 * else's plugin.
 		 *
-		 * preg_replace_callback with a limit of 1 rewrites the FIRST match
-		 * positionally. str_replace() rewrote every identical substring in the
-		 * string, including one sitting inside another attribute's value.
+		 * `stripos` rather than a pattern, deliberately: it over-matches (a
+		 * `data-class` or the word inside a value trips it too) and
+		 * over-matching is the safe direction here.
 		 */
-		$merged = preg_replace_callback(
-			'/(^|\s)class\s*=\s*(?:(["\'])(.*?)\2|([^\s"\'>]*))/i',
-			static function ( array $matches ) use ( $class ): string {
-				$quoted   = $matches[3] ?? '';
-				$unquoted = $matches[4] ?? '';
-				$existing = '' !== $quoted ? $quoted : $unquoted;
-
-				return $matches[1] . 'class="' . esc_attr( trim( $existing . ' ' . $class ) ) . '"';
-			},
-			$output,
-			1,
-			$count
-		);
-
-		if ( null !== $merged && $count > 0 ) {
-			return $merged;
+		if ( false !== stripos( $output, 'class' ) ) {
+			return $output;
 		}
 
 		return $output . ' class="' . esc_attr( $class ) . '"';
