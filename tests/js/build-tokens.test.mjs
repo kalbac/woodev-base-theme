@@ -52,6 +52,35 @@ describe('buildTokensCss', () => {
     expect(withoutComments).not.toContain('@layer');
     expect(withoutComments).toContain(':root {');
   });
+
+  // A `system` visitor with JS disabled never gets a .light/.dark class, so
+  // without this block they would be stuck on the :root light values no
+  // matter what their OS says (M1-05 Task 2). The block must stay un-layered
+  // like the rest of this file (docs/gotchas/basecoat-tokens-are-un-layered.md)
+  // and must be excluded the moment an explicit class is present, so it never
+  // fights a decision (admin default or stored visitor choice) that has
+  // already been made.
+  it('falls back to the dark values under prefers-color-scheme for a class-less system visitor', () => {
+    const css = buildTokensCss(tokens);
+
+    expect(css).toContain('@media (prefers-color-scheme: dark)');
+    expect(css).toContain(':root:not(.light):not(.dark) {');
+
+    for (const [slug, value] of Object.entries(tokens.colors.dark)) {
+      expect(css).toContain(`--${slug}: ${value};`);
+    }
+
+    const mediaBlock = css.slice(css.indexOf('@media (prefers-color-scheme: dark)'));
+
+    for (const [slug, value] of Object.entries(tokens.colors.dark)) {
+      expect(mediaBlock).toContain(`--${slug}: ${value};`);
+    }
+  });
+
+  it('still emits no @layer anywhere, including the prefers-color-scheme block', () => {
+    const withoutComments = buildTokensCss(tokens).replace(/\/\*[\s\S]*?\*\//g, '');
+    expect(withoutComments).not.toContain('@layer');
+  });
 });
 
 describe('buildPrimaryPresets', () => {

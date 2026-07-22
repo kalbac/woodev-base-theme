@@ -53,6 +53,15 @@ ${fontVars}
 .dark {
 ${varsBlock(tokens.colors.dark, '  ')}
 }
+
+@media (prefers-color-scheme: dark) {
+  /* JS-disabled \`system\` visitors only. An explicit admin default or a stored
+   * visitor choice puts .light/.dark on <html>, and either one excludes this
+   * block — so it never fights a decision that has already been made. */
+  :root:not(.light):not(.dark) {
+${varsBlock(tokens.colors.dark, '    ')}
+  }
+}
 `;
 }
 
