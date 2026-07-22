@@ -49,6 +49,29 @@ requirement that lets you delete the hard part instead of perfecting it. Note
 also that all three rounds were caught by re-reviewing *the fixes themselves* —
 never self-certify a fix written in response to a review.
 
+## Second occurrence, s7 — and the rule held
+
+`AssetMarkup`, the integration-test helper answering "was this asset printed",
+went through the same shape:
+
+| Round | Finding |
+|---|---|
+| 1 | A lookahead regex accepted `data-type="module"` / `data-src="…"` (`\b` matches after a hyphen) and matched `<scripture` |
+| 2 | Replaced by DOMDocument, but the URL check matched *any* element pointing into `assets/dist`, so deleting the main stylesheet stayed green on the imported-CSS loop |
+| 3 | Anchored on the element id, but the "exact **or** substring" URL parameter had silently downgraded the dev-mode assertion from an exact URL to `str_contains` — `…/vega.css.bak` would have passed |
+
+Each round was narrower than the last and each fix introduced the next defect.
+The requirement deleted in round 3 was **the dual URL semantics**: one optional
+parameter serving both "exact" and "contains" because production could not name
+an exact URL. It could — the Vite manifest holds the hashed file name, and the
+manifest is what that test is about. Reading it in the test made the URL always
+exact, removed the mode flag, and made the assertion *stronger* than any of the
+three previous versions (mutation-verified: a real `assets/dist` file from the
+wrong pack now fails).
+
+Worth noting the rounds were only visible because each fix was re-reviewed. A
+single review pass would have shipped round 1.
+
 ## Related
 
 - [[codex-split-diff-false-positives]] — the other half of using the critic well
