@@ -16,8 +16,8 @@ import focus from '@alpinejs/focus';
 Alpine.plugin(focus);
 
 // Colour-scheme switcher (M1-05, spec §6). Named component, not inline
-// x-data: it owns a matchMedia listener whose removal is reachable (see
-// _stopFollowingSystem, called when the visitor chooses explicitly), which is
+// x-data: it owns a matchMedia listener with a real teardown path (destroy(),
+// plus _stopFollowingSystem() when the visitor chooses explicitly), which is
 // unwieldy to express as one attribute string. Registered BEFORE
 // Alpine.start(), same as the focus plugin above.
 //
@@ -62,6 +62,17 @@ Alpine.data('wtbSchemeToggle', (labels) => ({
       this._onSystemChange = null;
     }
     this.followSystem = false;
+  },
+
+  // Alpine calls this when the component's element leaves the DOM. Releasing
+  // the listener here and not only in toggle() is the difference between a
+  // STATE transition and a LIFECYCLE one: a visitor who never touches the
+  // button stays in `system`, so _stopFollowingSystem() is never reached, and
+  // anything that replaces the header (Customizer selective refresh, an AJAX
+  // swap) would leave the MediaQueryList holding a callback that closes over a
+  // detached component — one leak per replacement. Both critics flagged it.
+  destroy() {
+    this._stopFollowingSystem();
   },
 
   toggle() {

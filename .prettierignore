@@ -16,3 +16,9 @@ woodev-base-theme/theme.json
 # Reformatting them realigns tables for no benefit while mutating approved
 # artifacts and burying real edits in whitespace noise.
 *.md
+
+# Serena's own project state. It rewrites these files itself, with native line
+# endings by design, so Prettier reformatting them would be a standing fight
+# between two tools over a file neither of them owns. .gitattributes exempts
+# the same path from the repo's eol=lf rule for the same reason.
+.serena/
