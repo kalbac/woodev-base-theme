@@ -91,12 +91,16 @@ final class TemplateTagsTest extends TestCase {
 	}
 
 	/**
-	 * Pins escaping on both the URL and the name: a category link comes from
-	 * get_category_link(), which is trusted core output, but the category NAME
-	 * is user-authored content (any user who can create terms) and must be
-	 * esc_html()'d. Feeding a script tag through the name and asserting only
-	 * the escaped form survives is what makes this guard mean something —
-	 * deleting esc_html() must turn this red (mutation-tested; see plan Step 5).
+	 * Pins escaping on the NAME. The category name is user-authored content —
+	 * any user who can create terms — so it must be esc_html()'d. Feeding a
+	 * script tag through it and asserting only the escaped form survives is
+	 * what makes this guard mean something; deleting esc_html() turns this red
+	 * (mutation-verified).
+	 *
+	 * The URL has its own test below. It needs one: `esc_url` is stubbed with
+	 * returnArg() in setUp, so a test that merely asserts the href value cannot
+	 * tell esc_url() from its absence — removing the call left the whole suite
+	 * green until that second test existed.
 	 */
 	public function test_the_category_name_is_escaped(): void {
 		Functions\when( 'esc_html' )->alias(
@@ -111,5 +115,28 @@ final class TemplateTagsTest extends TestCase {
 
 		self::assertStringContainsString( '&lt;script&gt;alert(1)&lt;/script&gt;', $output );
 		self::assertStringNotContainsString( '<script>alert(1)</script>', $output );
+	}
+
+	/**
+	 * Pins that the href actually goes through esc_url().
+	 *
+	 * The stub is given an observable identity rather than returnArg(): the
+	 * point is not what esc_url() does to a value — that is core's business and
+	 * testing it here would assert WordPress rather than us — but THAT the call
+	 * happens at all. A marker prefix is the cheapest way to see the call in
+	 * the output, and it fails for exactly one reason.
+	 */
+	public function test_the_category_link_goes_through_esc_url(): void {
+		Functions\when( 'esc_url' )->alias(
+			static fn( $value ): string => 'esc_url:' . (string) $value
+		);
+		$this->stub_categories( [ self::category( 11, 'News' ) ] );
+		Functions\when( 'get_category_link' )->justReturn( 'https://example.test/category/news/' );
+
+		\ob_start();
+		\woodev_base_category_badges();
+		$output = \ob_get_clean();
+
+		self::assertStringContainsString( 'href="esc_url:https://example.test/category/news/"', $output );
 	}
 }
