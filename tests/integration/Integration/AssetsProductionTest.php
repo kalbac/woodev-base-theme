@@ -89,38 +89,47 @@ final class AssetsProductionTest extends WP_UnitTestCase {
 	 * module enqueue in Assets::enqueue() stayed green because the stylesheet
 	 * still matched, and vice versa.
 	 *
-	 * Both are anchored on the element **id**, not on the URL. A URL check
-	 * would still be too weak to pin either enqueue: Assets::enqueue() also
-	 * enqueues the JS entry's imported CSS in a loop, so deleting the main
-	 * stylesheet leaves other `assets/dist` links standing, and any plugin may
-	 * enqueue from that path too. WordPress derives the id from the handle
+	 * Each requires the element **id** and the **exact** URL. The id pins the
+	 * element to one handle rather than to "something pointing into
+	 * assets/dist" — Assets::enqueue() also enqueues the JS entry's imported
+	 * CSS in a loop, so deleting the main stylesheet leaves other assets/dist
+	 * links standing. WordPress derives the id from the handle
 	 * (`woodev-base-style` → `woodev-base-style-css`, `woodev-base-app` →
-	 * `woodev-base-app-js-module` — read off a real response), so each id
-	 * belongs to exactly one enqueue call. The URL substring is kept as a
-	 * secondary constraint: it is what proves the handle resolved through the
-	 * build directory rather than to some fallback.
+	 * `woodev-base-app-js-module`), read off a real response.
+	 *
+	 * The exact URL is affordable here even though built files carry a content
+	 * hash, because the manifest is what the resolver is being tested against:
+	 * this decodes it independently (plain json_decode, not Assets' own
+	 * reader) and computes the URL the theme should have produced. That makes
+	 * the assertion prove the manifest lookup resolved the RIGHT file, not
+	 * merely that some file from the build directory was printed.
 	 */
 	public function test_built_assets_are_enqueued_from_the_manifest(): void {
-		$manifest = get_template_directory() . '/assets/dist/.vite/manifest.json';
+		$manifest_path = get_template_directory() . '/assets/dist/.vite/manifest.json';
 
-		if ( ! is_file( $manifest ) ) {
+		if ( ! is_file( $manifest_path ) ) {
 			self::markTestSkipped( 'No Vite build present — run `npm run build` to cover this path.' );
 		}
 
-		$html = self::render_front_end_assets();
+		$manifest = json_decode( (string) file_get_contents( $manifest_path ), true );
+		self::assertIsArray( $manifest, 'The Vite manifest is present but did not decode to an array.' );
 
-		AssetMarkup::assert_stylesheet_link_with_id(
+		$dist_uri = get_template_directory_uri() . '/assets/dist';
+		$html     = self::render_front_end_assets();
+
+		// The default style_preset is vega, and this suite never changes it.
+		AssetMarkup::assert_stylesheet_link(
 			$html,
 			'woodev-base-style-css',
-			'assets/dist',
-			'Expected the built stylesheet (wp_enqueue_style( \'woodev-base-style\', … )) to resolve through assets/dist.'
+			$dist_uri . '/' . $manifest['src/css/packs/vega.css']['file'],
+			'Expected wp_enqueue_style( \'woodev-base-style\', … ) to print the exact file the manifest names for the vega pack.'
 		);
 
-		AssetMarkup::assert_script_module_with_id(
+		AssetMarkup::assert_script_module(
 			$html,
 			'woodev-base-app-js-module',
-			'assets/dist',
-			'Expected the built JS entry (wp_enqueue_script_module( \'woodev-base-app\', … )) to resolve through assets/dist.'
+			$dist_uri . '/' . $manifest['src/js/app.js']['file'],
+			'Expected wp_enqueue_script_module( \'woodev-base-app\', … ) to print the exact file the manifest names for the JS entry.'
 		);
 	}
 }

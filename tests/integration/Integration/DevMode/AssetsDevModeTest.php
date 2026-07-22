@@ -100,7 +100,7 @@ final class AssetsDevModeTest extends WP_UnitTestCase {
 	 * docs/gotchas/three-rounds-of-fixes-means-change-the-approach.md.
 	 */
 	public function test_the_pack_css_is_a_script_module_not_a_stylesheet(): void {
-		AssetMarkup::assert_script_module_with_id(
+		AssetMarkup::assert_script_module(
 			self::render_front_end_assets(),
 			'woodev-base-style-js-module',
 			'http://localhost:5173/src/css/packs/vega.css',

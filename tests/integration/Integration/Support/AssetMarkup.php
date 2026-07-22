@@ -22,15 +22,27 @@ namespace Woodev\Theme\Base\Tests\Integration\Support;
  * rounds once. DOMDocument answers the same question exactly instead of
  * approximately.
  *
- * **Every assertion here is anchored on the element id**, never on the URL
- * alone. WordPress derives that id from the enqueue handle
- * (`woodev-base-style` becomes `id="woodev-base-style-css"` for a stylesheet
- * and `id="woodev-base-app-js-module"` for a script module — read off a real
- * response, not assumed), so it identifies exactly one enqueue call. A URL
- * substring does not: `Assets::enqueue()` also enqueues the JS entry's
- * imported CSS in a loop, and any plugin may enqueue from `assets/dist` too,
- * so an assertion matching "some element pointing into assets/dist" would
- * survive the deletion of the very enqueue it was written to pin.
+ * **Every assertion here requires BOTH the element id and an exact URL.**
+ * WordPress derives the id from the enqueue handle (`woodev-base-style`
+ * becomes `id="woodev-base-style-css"` for a stylesheet and
+ * `id="woodev-base-app-js-module"` for a script module — read off a real
+ * response, not assumed), which pins the element to one handle rather than to
+ * "something that happens to point into assets/dist": `Assets::enqueue()`
+ * also enqueues the JS entry's imported CSS in a loop, and any plugin may
+ * enqueue from that path, so a URL-substring assertion would survive the
+ * deletion of the very enqueue it was written to pin. Note the id identifies
+ * the handle's element, not the call site — another caller enqueuing the same
+ * registered handle would produce the same id.
+ *
+ * The URL is compared exactly, with no substring mode, because an earlier
+ * revision offered "exact or substring" through one optional parameter and
+ * that dual semantics silently downgraded the dev-mode assertion from an
+ * exact URL to `str_contains` — a third successive round of narrowing defects
+ * in this one class. Per
+ * docs/gotchas/three-rounds-of-fixes-means-change-the-approach.md the fix was
+ * to delete the requirement rather than patch it again: callers that cannot
+ * name an exact URL are expected to resolve one first (the production test
+ * reads the Vite manifest, which is what it is asserting about anyway).
  *
  * Failure messages below deliberately avoid writing the tags out as literal
  * markup (`<script … src="…">`, `<link rel="stylesheet">`): WordPress.WP.
@@ -48,15 +60,14 @@ final class AssetMarkup {
 	private function __construct() {}
 
 	/**
-	 * Assert a script module with this element id was printed.
+	 * Assert a script module with this element id and exactly this `src` was printed.
 	 *
-	 * @param string $id          The element id WordPress derived from the enqueue handle.
-	 * @param string $src_needle  Substring the `src` must contain; '' means "do not constrain the src".
-	 *                            Built assets carry a Vite content hash, so an exact src is not assertable there.
-	 * @param string $html        The captured wp_head/wp_footer markup.
-	 * @param string $message     Optional assertion failure message.
+	 * @param string $html    The captured wp_head/wp_footer markup.
+	 * @param string $id      The element id WordPress derived from the enqueue handle.
+	 * @param string $src     The exact `src` the element must carry.
+	 * @param string $message Optional assertion failure message.
 	 */
-	public static function assert_script_module_with_id( string $html, string $id, string $src_needle = '', string $message = '' ): void {
+	public static function assert_script_module( string $html, string $id, string $src, string $message = '' ): void {
 		$found = false;
 
 		foreach ( self::parse_fragment( $html )->getElementsByTagName( 'script' ) as $script ) {
@@ -71,30 +82,24 @@ final class AssetMarkup {
 				continue;
 			}
 
-			if ( $id !== $script->getAttribute( 'id' ) ) {
-				continue;
+			if ( $id === $script->getAttribute( 'id' ) && $src === $script->getAttribute( 'src' ) ) {
+				$found = true;
+				break;
 			}
-
-			if ( '' !== $src_needle && ! \str_contains( $script->getAttribute( 'src' ), $src_needle ) ) {
-				continue;
-			}
-
-			$found = true;
-			break;
 		}
 
-		\PHPUnit\Framework\Assert::assertTrue( $found, '' !== $message ? $message : self::describe( 'script module', $id, $src_needle ) );
+		\PHPUnit\Framework\Assert::assertTrue( $found, '' !== $message ? $message : self::describe( 'script module', $id, $src ) );
 	}
 
 	/**
-	 * Assert a stylesheet link element with this element id was printed.
+	 * Assert a stylesheet link element with this element id and exactly this `href` was printed.
 	 *
-	 * @param string $html         The captured wp_head/wp_footer markup.
-	 * @param string $id           The element id WordPress derived from the enqueue handle.
-	 * @param string $href_needle  Substring the `href` must contain; '' means "do not constrain the href".
-	 * @param string $message      Optional assertion failure message.
+	 * @param string $html    The captured wp_head/wp_footer markup.
+	 * @param string $id      The element id WordPress derived from the enqueue handle.
+	 * @param string $href    The exact `href` the element must carry.
+	 * @param string $message Optional assertion failure message.
 	 */
-	public static function assert_stylesheet_link_with_id( string $html, string $id, string $href_needle = '', string $message = '' ): void {
+	public static function assert_stylesheet_link( string $html, string $id, string $href, string $message = '' ): void {
 		$found = false;
 
 		foreach ( self::parse_fragment( $html )->getElementsByTagName( 'link' ) as $link ) {
@@ -102,32 +107,28 @@ final class AssetMarkup {
 				continue;
 			}
 
-			if ( 'stylesheet' !== \strtolower( $link->getAttribute( 'rel' ) ) || $id !== $link->getAttribute( 'id' ) ) {
+			if ( 'stylesheet' !== \strtolower( $link->getAttribute( 'rel' ) ) ) {
 				continue;
 			}
 
-			if ( '' !== $href_needle && ! \str_contains( $link->getAttribute( 'href' ), $href_needle ) ) {
-				continue;
+			if ( $id === $link->getAttribute( 'id' ) && $href === $link->getAttribute( 'href' ) ) {
+				$found = true;
+				break;
 			}
-
-			$found = true;
-			break;
 		}
 
-		\PHPUnit\Framework\Assert::assertTrue( $found, '' !== $message ? $message : self::describe( 'stylesheet element', $id, $href_needle ) );
+		\PHPUnit\Framework\Assert::assertTrue( $found, '' !== $message ? $message : self::describe( 'stylesheet element', $id, $href ) );
 	}
 
 	/**
 	 * Build a default failure message.
 	 *
-	 * @param string $what   Human name of the element kind being looked for.
-	 * @param string $id     The element id that was required.
-	 * @param string $needle The URL substring that was required, if any.
+	 * @param string $what Human name of the element kind being looked for.
+	 * @param string $id   The element id that was required.
+	 * @param string $url  The URL that was required.
 	 */
-	private static function describe( string $what, string $id, string $needle ): string {
-		$url_clause = '' !== $needle ? " whose URL contains \"{$needle}\"" : '';
-
-		return "Expected a {$what} with id \"{$id}\"{$url_clause} in the rendered markup, none found.";
+	private static function describe( string $what, string $id, string $url ): string {
+		return "Expected a {$what} with id \"{$id}\" and URL \"{$url}\" in the rendered markup, none found.";
 	}
 
 	/**
@@ -158,12 +159,12 @@ final class AssetMarkup {
 	 *
 	 * The one input `loadHTML()` genuinely refuses is an empty string, and on
 	 * PHP 8 it throws `ValueError` rather than returning `false` (measured on
-	 * 8.1.34 — the same trap Icons.php hit with `loadXML('')` in s4). It is
-	 * caught and rethrown with context because an empty capture means the
-	 * render produced nothing at all, which is a harness break rather than a
-	 * missing asset, and the two deserve different messages. The `false` check
-	 * is kept as belt-and-braces for a libxml build that reports failure that
-	 * way instead.
+	 * 8.1.34 — the same trap Icons.php hit with `loadXML('')` in s4). Rather
+	 * than catch that, the empty case is rejected *before* the call, so the
+	 * message can say what actually happened: an empty capture means the
+	 * render produced nothing at all, a harness break rather than a missing
+	 * asset. The `false` check below is therefore belt-and-braces for a libxml
+	 * build that reports some other failure that way.
 	 *
 	 * @param string $html The fragment to parse.
 	 */
