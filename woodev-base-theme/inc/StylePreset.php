@@ -13,9 +13,10 @@ namespace Woodev\Theme\Base;
  * The eight standalone Basecoat visual style packs (spec §6).
  *
  * Basecoat forbids combining packs, so the build emits one standalone CSS bundle
- * per case and Assets enqueues exactly the one this resolves to. M1-04 adds the
- * Customizer control that writes `style_preset`; this enum is the single place
- * that validates the stored value and maps it to a Vite build entry.
+ * per case and Assets enqueues exactly the one this resolves to. This enum is
+ * the single place that names the eight packs: Customizer\Customizer builds its
+ * select from choices() and sanitizes with sanitize(), and the same sanitize()
+ * validates the stored value on the front end before it maps to a Vite entry.
  */
 enum StylePreset: string {
 

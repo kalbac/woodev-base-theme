@@ -12,9 +12,11 @@ namespace Woodev\Theme\Base\Templates;
 /**
  * Single source of truth for which layout a view gets.
  *
- * Templates ask this class; they never read theme_mods directly. M1-04 adds the
- * Customizer controls that write the same settings, so the validation here is
- * what keeps a stale or hand-edited value from reaching get_template_part().
+ * Templates ask this class; they never read theme_mods directly. The sanitizers
+ * below are the SAME callbacks Customizer\Customizer registers for these
+ * settings, so the value the admin can store and the value a template can
+ * receive are validated by one piece of code — and a stale or hand-edited
+ * theme_mod still cannot reach get_template_part().
  */
 final class Layout {
 
