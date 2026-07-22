@@ -25,8 +25,16 @@ final class Customizer {
 	 * Labels for the generated accent presets.
 	 *
 	 * The slugs come from the generated map; only the human-readable side lives
-	 * here, because a generated file cannot carry translator context. A slug
-	 * with no label is a bug — CustomizerTest pins it.
+	 * here, because a generated file cannot carry translator context — a
+	 * `__()` call needs a literal string in the source for the .pot scanner to
+	 * find it.
+	 *
+	 * A generated slug with no label here is therefore NOT offered at all. The
+	 * tempting fallback, `ucfirst( $slug )`, would put an untranslated string in
+	 * front of the admin — silently, and in a theme whose i18n policy is
+	 * absolute. Failing closed means the worst case of forgetting a label is a
+	 * missing choice (loud, and caught by CustomizerTest against the real
+	 * generated map) rather than an English word leaking into every locale.
 	 *
 	 * @return array<string, string>
 	 */
@@ -46,7 +54,9 @@ final class Customizer {
 		$choices = [ Settings::PRIMARY_PRESET_DEFAULT => $labels['default'] ];
 
 		foreach ( array_keys( Settings::presets() ) as $slug ) {
-			$choices[ $slug ] = $labels[ $slug ] ?? ucfirst( $slug );
+			if ( isset( $labels[ $slug ] ) ) {
+				$choices[ $slug ] = $labels[ $slug ];
+			}
 		}
 
 		return $choices;

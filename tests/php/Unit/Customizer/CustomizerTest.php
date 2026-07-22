@@ -6,6 +6,7 @@ namespace Woodev\Theme\Base\Tests\Unit\Customizer;
 use Brain\Monkey\Functions;
 use Mockery;
 use Woodev\Theme\Base\Customizer\Customizer;
+use Woodev\Theme\Base\Customizer\Settings;
 use Woodev\Theme\Base\Tests\Unit\TestCase;
 
 final class CustomizerTest extends TestCase {
@@ -38,9 +39,10 @@ final class CustomizerTest extends TestCase {
 		Functions\when( 'get_template_directory' )->justReturn( \dirname( __DIR__, 4 ) . '/woodev-base-theme' );
 
 		$recorded = [
-			'sections' => [],
-			'settings' => [],
-			'controls' => [],
+			'sections'     => [],
+			'settings'     => [],
+			'controls'     => [],
+			'control_args' => [],
 		];
 
 		// Mockery generates the class when WordPress is not loaded, so the real
@@ -58,8 +60,9 @@ final class CustomizerTest extends TestCase {
 			}
 		);
 		$manager->shouldReceive( 'add_control' )->andReturnUsing(
-			static function ( string $id ) use ( &$recorded ) {
-				$recorded['controls'][] = $id;
+			static function ( string $id, array $args ) use ( &$recorded ) {
+				$recorded['controls'][]          = $id;
+				$recorded['control_args'][ $id ] = $args;
 			}
 		);
 
@@ -109,6 +112,31 @@ final class CustomizerTest extends TestCase {
 			$recorded['controls'],
 			'A setting with no control is invisible to the admin'
 		);
+	}
+
+	/**
+	 * Codex P2 on the M1-04 diff. The accent slugs are generated from the token
+	 * source while their labels are hand-written literals (a .pot scanner needs
+	 * literals). Add a preset to src/tokens/tokens.mjs without adding a label
+	 * and the control silently drops it — so this compares the control's choices
+	 * against the REAL generated map, not a copy of the list.
+	 */
+	public function test_every_generated_preset_is_offered_with_a_translated_label(): void {
+		$recorded = $this->capture();
+		$choices  = $recorded['control_args']['primary_preset']['choices'];
+
+		Functions\when( 'get_template_directory' )->justReturn( \dirname( __DIR__, 4 ) . '/woodev-base-theme' );
+
+		foreach ( array_keys( Settings::presets() ) as $slug ) {
+			self::assertArrayHasKey(
+				$slug,
+				$choices,
+				"The generated preset '{$slug}' has no label in Customizer::primary_preset_choices()"
+			);
+		}
+
+		self::assertArrayHasKey( 'default', $choices );
+		self::assertCount( \count( Settings::presets() ) + 1, $choices );
 	}
 
 	/**
