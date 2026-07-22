@@ -9,22 +9,34 @@
 
 declare(strict_types=1);
 ?>
-<article id="post-<?php the_ID(); ?>" <?php post_class( 'wtb-entry wtb-entry--excerpt mb-8' ); ?>>
-	<h2 class="wtb-entry-title text-xl font-semibold">
-		<a href="<?php the_permalink(); ?>"><?php the_title(); ?></a>
-	</h2>
+<article id="post-<?php the_ID(); ?>" <?php post_class( 'wtb-entry wtb-entry--excerpt wtb-entry-card card' ); ?>>
+	<?php
+	// FIRST child on purpose: Basecoat rounds `.card > img:first-child` to the
+	// card's top corners. A wrapping <div> would break that contract.
+	if ( has_post_thumbnail() ) {
+		the_post_thumbnail( 'medium_large', [ 'alt' => '' ] );
+	}
+	?>
 
-	<div class="wtb-entry-meta mt-1 text-sm text-[var(--muted-foreground)]">
-		<time datetime="<?php echo esc_attr( get_the_date( DATE_W3C ) ); ?>">
-			<?php echo esc_html( get_the_date() ); ?>
-		</time>
-	</div>
+	<header>
+		<h2 class="wtb-entry-title">
+			<a href="<?php the_permalink(); ?>"><?php the_title(); ?></a>
+		</h2>
 
-	<div class="wtb-entry-summary mt-2">
+		<p class="wtb-entry-meta">
+			<time datetime="<?php echo esc_attr( get_the_date( DATE_W3C ) ); ?>">
+				<?php echo esc_html( get_the_date() ); ?>
+			</time>
+		</p>
+
+		<?php woodev_base_category_badges(); ?>
+	</header>
+
+	<section class="wtb-entry-summary">
 		<?php the_excerpt(); ?>
-	</div>
+	</section>
 
-	<p class="mt-2">
+	<footer>
 		<a class="wtb-entry-more btn" href="<?php the_permalink(); ?>">
 			<?php esc_html_e( 'Read more', 'woodev-base-theme' ); ?>
 			<span class="sr-only">
@@ -37,5 +49,5 @@ declare(strict_types=1);
 				?>
 			</span>
 		</a>
-	</p>
+	</footer>
 </article>

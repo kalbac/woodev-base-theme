@@ -13,10 +13,14 @@
 declare(strict_types=1);
 
 if ( have_posts() ) {
+	echo '<div class="wtb-post-grid">';
+
 	while ( have_posts() ) {
 		the_post();
 		get_template_part( 'template-parts/content/content-excerpt' );
 	}
+
+	echo '</div>';
 
 	get_template_part( 'template-parts/content/pagination' );
 } else {
