@@ -177,17 +177,17 @@ The script, kept deliberately tiny and dependency-free:
 
 `TOGGLE` and `DEFAULT` are injected from PHP as `wp_json_encode()` output — never string-concatenated. `localStorage` access is wrapped because it **throws**, not returns null, in Safari private mode and when cookies are blocked; an exception here would abort the script and leave the page unstyled-by-class.
 
-- [ ] **Step 1: Write the failing test.** Assert: the printed markup contains `<script`; the values come through `wp_json_encode` (set the default to `dark` and assert `"dark"` appears quoted); with the toggle OFF the script contains no `localStorage` read at all; and the script is hooked at `wp_head` priority 1.
+- [x] **Step 1: Write the failing test.** Assert: the printed markup contains `<script`; the values come through `wp_json_encode` (set the default to `dark` and assert `"dark"` appears quoted); with the toggle OFF the script contains no `localStorage` read at all; and the script is hooked at `wp_head` priority 1.
 
-- [ ] **Step 2: Run it, watch it fail.**
+- [x] **Step 2: Run it, watch it fail.**
 
-- [ ] **Step 3: Implement.** Escape with care: this is a `<script>` block, so `esc_html()` is wrong (it would entity-encode `&&` and `<`). Follow the M1-04 precedent — the values are JSON-encoded closed-set scalars, and `phpcs.xml.dist` already carries a scoped escaping deviation for `InlineStyles.php`; if this file needs the same, **scope it the same way** (an `exclude-pattern` for this file, never a global `customEscapingFunctions` entry — that blinds the sniff theme-wide, which is exactly the finding Codex raised in M1-04).
+- [x] **Step 3: Implement.** Escape with care: this is a `<script>` block, so `esc_html()` is wrong (it would entity-encode `&&` and `<`). Follow the M1-04 precedent — the values are JSON-encoded closed-set scalars, and `phpcs.xml.dist` already carries a scoped escaping deviation for `InlineStyles.php`; if this file needs the same, **scope it the same way** (an `exclude-pattern` for this file, never a global `customEscapingFunctions` entry — that blinds the sniff theme-wide, which is exactly the finding Codex raised in M1-04).
 
-- [ ] **Step 4: Run the tests.**
+- [x] **Step 4: Run the tests.**
 
-- [ ] **Step 5: Mutation.** Remove the `try`/`catch` around `localStorage`. The FACT to observe: no test fails — this is a browser-only failure mode and unit tests cannot see it, so it must be pinned in Task 6's e2e instead. Record that here rather than pretending the unit test covers it.
+- [x] **Step 5: Mutation.** Remove the `try`/`catch` around `localStorage`. The FACT to observe: no test fails — this is a browser-only failure mode and unit tests cannot see it, so it must be pinned in Task 6's e2e instead. Record that here rather than pretending the unit test covers it.
 
-- [ ] **Step 6:** Lint and commit.
+- [x] **Step 6:** Lint and commit.
 
 ---
 

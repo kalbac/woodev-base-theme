@@ -93,4 +93,90 @@ final class Scheme {
 
 		return self::DEFAULT_SCHEME === $scheme ? '' : $scheme;
 	}
+
+	/**
+	 * Hook the scheme resolution into WordPress:
+	 *
+	 * - `language_attributes` gets the server-rendered class, so a no-JS
+	 *   visitor with an explicit admin default still gets it.
+	 * - `wp_head` priority 1 prints the resolver script — before anything
+	 *   else in <head> has a chance to paint. Anything deferred, or printed
+	 *   later, paints first, and that flash is exactly what this exists to
+	 *   prevent.
+	 */
+	public function register(): void {
+		add_filter( 'language_attributes', [ $this, 'add_html_class' ] );
+		add_action( 'wp_head', [ $this, 'print_head_script' ], 1 );
+	}
+
+	/**
+	 * Filter callback for `language_attributes`: appends the resolved class
+	 * to the lang/dir attributes WordPress already built. `system` leaves the
+	 * output untouched — html_class() returns '' for it on purpose.
+	 *
+	 * @param string $output The attribute string WordPress already built.
+	 */
+	public function add_html_class( string $output ): string {
+		$class = self::html_class();
+
+		if ( '' === $class ) {
+			return $output;
+		}
+
+		return $output . ' class="' . esc_attr( $class ) . '"';
+	}
+
+	/**
+	 * Print the resolver script, wrapped in its <script> tag.
+	 *
+	 * Must run at wp_head priority 1: synchronous and as early as possible,
+	 * because a script painted after the browser's first paint cannot prevent
+	 * the flash it exists to avoid.
+	 */
+	public function print_head_script(): void {
+		// The body is assembled by build_head_script() from wp_json_encode()
+		// output only (a closed-set string, see SCHEMES) — never a raw
+		// concatenated value. esc_html() would be wrong here: it would
+		// entity-encode characters (`&&`, `<`) that are syntactically
+		// meaningful in JS. See phpcs.xml.dist for the scoped deviation this
+		// file carries, matching Customizer\InlineStyles::print_styles().
+		echo '<script id="woodev-base-scheme">' . "\n" . self::build_head_script() . "\n" . '</script>' . "\n";
+	}
+
+	/**
+	 * The resolver script body (no wrapping <script> tags).
+	 *
+	 * `localStorage` access THROWS — it does not return null — in Safari
+	 * private mode and whenever cookies/storage are blocked. An uncaught
+	 * exception there would abort the whole script and leave `<html>`
+	 * without its class, so the read is wrapped in try/catch.
+	 *
+	 * That read is only emitted at all when the toggle is on: with the
+	 * toggle off there is no stored visitor choice to honour, and the string
+	 * "localStorage" must not appear in the output — not merely be guarded
+	 * behind a runtime condition that happens to be false.
+	 */
+	public static function build_head_script(): string {
+		$default = wp_json_encode( self::default() );
+
+		$lines = [ '(function () {', "\tvar root = document.documentElement;" ];
+
+		if ( self::toggle_enabled() ) {
+			$lines[] = "\tvar stored = null;";
+			$lines[] = "\ttry {";
+			$lines[] = "\t\tstored = localStorage.getItem( 'wtb-scheme' );";
+			$lines[] = "\t} catch ( e ) {}";
+			$lines[] = "\tvar scheme = stored === 'light' || stored === 'dark' ? stored : {$default};";
+		} else {
+			$lines[] = "\tvar scheme = {$default};";
+		}
+
+		$lines[] = "\troot.classList.remove( 'light', 'dark' );";
+		$lines[] = "\tif ( scheme !== 'system' ) {";
+		$lines[] = "\t\troot.classList.add( scheme );";
+		$lines[] = "\t}";
+		$lines[] = '})();';
+
+		return implode( "\n", $lines );
+	}
 }

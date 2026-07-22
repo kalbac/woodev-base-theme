@@ -107,6 +107,28 @@
 	<rule ref="WordPress.Security.EscapeOutput.OutputNotEscaped">
 		<exclude-pattern>woodev-base-theme/inc/Customizer/InlineStyles\.php</exclude-pattern>
 	</rule>
+	<!--
+	DEVIATION, scoped to ONE FILE, same shape as the one above. Scheme::
+	print_head_script() echoes a <script> block built by build_head_script()
+	from wp_json_encode() output only (Scheme::SCHEMES is a closed set of
+	scalars) — this is the one place in the theme that emits executable JS.
+	esc_html() would be wrong there: it would entity-encode characters
+	(`&&`, `<`) that are syntactically meaningful in JavaScript, corrupting
+	the script rather than securing it.
+
+	As with InlineStyles.php, this is an exclude-pattern rather than a
+	customEscapingFunctions entry ON PURPOSE — registering wp_json_encode as
+	an escaping function would teach this sniff, theme-wide, that its output
+	is safe to echo raw anywhere, which is not true of a JSON string headed
+	for an HTML attribute rather than a <script> body. One file with one echo
+	is a blast radius we can reason about; a redefined function is not. This
+	scoping (an exclude-pattern per file, never a global customEscapingFunctions
+	entry) is itself a documented Codex finding from M1-04 — see AGENTS.md
+	"WPCS deviations are codified, not ad-hoc" and phpcs.xml.dist history.
+	-->
+	<rule ref="WordPress.Security.EscapeOutput.OutputNotEscaped">
+		<exclude-pattern>woodev-base-theme/inc/Scheme\.php</exclude-pattern>
+	</rule>
 	<rule ref="Universal.Operators.DisallowShortTernary">
 		<exclude-pattern>tests/*</exclude-pattern>
 	</rule>
