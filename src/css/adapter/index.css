@@ -34,14 +34,15 @@ body {
 
 /*
  * Centered max-width wrapper shared by the header, footer and main content
- * (replaces the repeated `mx-auto p-4` utility pattern). 90rem = 1440px at the
- * default root size, and the box is border-box, so the cap includes the padding.
- * Spec §6 lists container width as a Customizer setting — this is its default,
- * and M1-04 is where it becomes configurable.
+ * (replaces the repeated `mx-auto p-4` utility pattern). The cap is a
+ * Customizer setting (spec §6, Layout section): Customizer\InlineStyles emits
+ * --wtb-container-max only when it deviates from the 1440px default, so an
+ * untouched site ships zero inline CSS and the fallback below is the default.
+ * The box is border-box, so the cap includes the padding.
  */
 .wtb-container {
   margin-inline: auto;
-  max-width: 90rem;
+  max-width: var(--wtb-container-max, 90rem);
   padding: 1rem;
 }
 

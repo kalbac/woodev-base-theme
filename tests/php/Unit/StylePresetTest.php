@@ -79,4 +79,18 @@ final class StylePresetTest extends TestCase {
 		self::assertCount( 8, StylePreset::cases() );
 		self::assertSame( $entries, array_unique( $entries ) );
 	}
+
+	public function test_sanitize_is_reusable_by_the_customizer(): void {
+		self::assertSame( 'nova', StylePreset::sanitize( 'nova' ) );
+		self::assertSame( 'vega', StylePreset::sanitize( 'bogus' ) );
+		self::assertSame( 'vega', StylePreset::sanitize( new \stdClass() ) );
+	}
+
+	public function test_choices_lists_all_eight_packs(): void {
+		$choices = StylePreset::choices();
+
+		self::assertCount( 8, $choices );
+		self::assertArrayHasKey( 'vega', $choices );
+		self::assertSame( 'Vega', $choices['vega'] );
+	}
 }

@@ -79,6 +79,34 @@
 	<rule ref="WordPress.Security.EscapeOutput">
 		<exclude-pattern>tests/*</exclude-pattern>
 	</rule>
+	<!--
+	DEVIATION, scoped to ONE FILE. Customizer\InlineStyles::print_styles() echoes
+	a <style> block built entirely from closed-set values (Settings' clamped
+	ints, its RADIUS_SCALE map, and the oklch-pinned generated preset map).
+	esc_html()/esc_attr() would be wrong there: they encode characters that are
+	syntactically meaningful in CSS — the "esc_attr on a whole stylesheet mangles
+	it" trap. wp_strip_all_tags() is what that output needs: strip any tag markup
+	a value could smuggle in to break out of the <style> element.
+
+	It is declared as an exclude-pattern rather than as a customEscapingFunctions
+	entry ON PURPOSE. Registering wp_strip_all_tags as an escaping function
+	teaches this sniff, across the WHOLE theme, that its output is safe anywhere
+	— and it is not: it strips tags but leaves quotes intact, so
+	`echo '<div title="' . wp_strip_all_tags( $v ) . '">'` with $v of
+	`" onmouseover=alert(1)` would pass review silently. One file with one echo
+	is a blast radius we can reason about; a redefined function is not.
+
+	For the record, because it is tempting to claim otherwise — WP core does NOT
+	use wp_strip_all_tags() for inline CSS. wp_add_inline_style() checks for a
+	literal '</style>', warns with _doing_it_wrong(), and unwraps it with a
+	preg_replace; WP_Styles then prints the CSS as-is. Ours is the stricter of
+	the two, and it is the SECOND line of defence: the values are already
+	confined to closed sets before they get here (verified in
+	wp-includes/functions.wp-styles.php, WP 7.0).
+	-->
+	<rule ref="WordPress.Security.EscapeOutput.OutputNotEscaped">
+		<exclude-pattern>woodev-base-theme/inc/Customizer/InlineStyles\.php</exclude-pattern>
+	</rule>
 	<rule ref="Universal.Operators.DisallowShortTernary">
 		<exclude-pattern>tests/*</exclude-pattern>
 	</rule>
