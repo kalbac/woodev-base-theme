@@ -57,8 +57,17 @@ ${varsBlock(tokens.colors.dark, '  ')}
 @media (prefers-color-scheme: dark) {
   /* JS-disabled \`system\` visitors only. An explicit admin default or a stored
    * visitor choice puts .light/.dark on <html>, and either one excludes this
-   * block — so it never fights a decision that has already been made. */
-  :root:not(.light):not(.dark) {
+   * block — so it never fights a decision that has already been made.
+   *
+   * The :not() pair MUST stay wrapped in :where(). A bare
+   * \`:root:not(.light):not(.dark)\` is specificity (0,3,0), because :not()
+   * contributes its argument's specificity — which would outrank BOTH the
+   * Customizer's inline \`:root{--primary:…}\` and a site owner's Additional
+   * CSS, silently killing the accent preset for the commonest configuration
+   * there is (default \`system\` + a dark OS). :where() contributes zero, so
+   * this lands at (0,1,0): equal to Basecoat's own :root, which it beats on
+   * source order, and equal to the overrides that come later and beat it. */
+  :root:where(:not(.light):not(.dark)) {
 ${varsBlock(tokens.colors.dark, '    ')}
   }
 }

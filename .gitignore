@@ -30,3 +30,6 @@ Thumbs.db
 src/css/tokens.generated.css
 src/css/packs/
 tests/integration/vendor/
+
+# Serena MCP writes its per-project cache here; it is tooling state, not the project.
+.serena/

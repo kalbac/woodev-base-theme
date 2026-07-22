@@ -64,7 +64,16 @@ describe('buildTokensCss', () => {
     const css = buildTokensCss(tokens);
 
     expect(css).toContain('@media (prefers-color-scheme: dark)');
-    expect(css).toContain(':root:not(.light):not(.dark) {');
+    expect(css).toContain(':root:where(:not(.light):not(.dark)) {');
+
+    // The :where() wrapper is the whole point, not cosmetic. Unwrapped,
+    // :root:not(.light):not(.dark) is (0,3,0) and outranks the Customizer's
+    // inline :root{--primary:…} AND a site owner's Additional CSS — so the
+    // accent preset would silently die for `system` + a dark OS, the single
+    // commonest configuration. Adversarial review found exactly that.
+    // Strip comments first: the generator's own explanation of this trap
+    // contains the very selector we are forbidding.
+    expect(css.replace(/\/\*[\s\S]*?\*\//g, '')).not.toMatch(/:root:not\(/);
 
     for (const [slug, value] of Object.entries(tokens.colors.dark)) {
       expect(css).toContain(`--${slug}: ${value};`);

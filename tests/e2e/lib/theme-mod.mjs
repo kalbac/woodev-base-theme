@@ -39,7 +39,7 @@ export function readThemeMod(name, isValid) {
  * Put a theme_mod back exactly as readThemeMod() found it.
  *
  * @param {string} name     theme_mod name.
- * @param {string|null} previous Value from readThemeMod, or null if never read.
+ * @param {string|boolean|null} previous Value from readThemeMod, or null if never read.
  */
 export function restoreThemeMod(name, previous) {
   // Never read means the prior state is unknown — touching it now would destroy
@@ -50,10 +50,26 @@ export function restoreThemeMod(name, previous) {
 
   if ('' === previous) {
     wp(`theme mod remove ${name}`);
-  } else {
-    wp(`theme mod set ${name} ${previous}`);
+    return;
   }
+
+  // `wp theme mod set` always writes a literal CLI string, unsanitized. A
+  // boolean theme_mod (e.g. a checkbox saved through the real Customizer,
+  // which stores the SANITIZED PHP bool rather than a '1'/'0' string) must be
+  // normalised to the string form its own sanitize_callback actually accepts
+  // as "on" — otherwise the shell would print the word "true"/"false"
+  // verbatim, and a boolean sanitizer that only recognises '1' would read
+  // the restored value back as false regardless of what it was before.
+  const value = 'boolean' === typeof previous ? (previous ? '1' : '0') : previous;
+
+  wp(`theme mod set ${name} ${value}`);
 }
 
 /** Guard for the integer settings. */
 export const isInteger = (value) => /^\d+$/.test(value);
+
+/** Guard for a checkbox theme_mod: either CLI string form or a real PHP bool
+ * (get_theme_mod() returns whatever was actually stored — a Customizer save
+ * stores the sanitized bool, a bare `wp theme mod set` stores the string). */
+export const isToggleValue = (value) =>
+  '1' === value || '0' === value || true === value || false === value;

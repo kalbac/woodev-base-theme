@@ -8,10 +8,12 @@
 // Each test restores what it touched before the next one runs.
 import { expect, test } from '@playwright/test';
 import { PACKS } from '../../scripts/lib/packs-lib.mjs';
-import { isInteger, readThemeMod, restoreThemeMod, wp } from './lib/theme-mod.mjs';
+import { tokens } from '../../src/tokens/tokens.mjs';
+import { isInteger, isToggleValue, readThemeMod, restoreThemeMod, wp } from './lib/theme-mod.mjs';
 
 const PRESETS = ['neutral', 'blue', 'green', 'red', 'rose', 'orange', 'yellow', 'violet'];
 const RADII = ['none', 'sm', 'md', 'lg'];
+const SCHEMES = ['system', 'light', 'dark'];
 
 /** theme_mod name -> guard, for everything this file touches. */
 const TOUCHED = {
@@ -20,6 +22,8 @@ const TOUCHED = {
   container_width: isInteger,
   radius_scale: (value) => RADII.includes(value),
   base_font_size: isInteger,
+  color_scheme_default: (value) => SCHEMES.includes(value),
+  color_scheme_toggle: isToggleValue,
 };
 
 /** @type {Record<string, string|null>} */
@@ -45,6 +49,21 @@ async function readMoreButton(page) {
   await expect(button).toBeVisible();
 
   return button;
+}
+
+/**
+ * Canonicalize a CSS color through the browser's own parser/serializer, so a
+ * comparison is semantic (same resolved color) rather than textual — the
+ * build re-serializes `oklch()` (smoke.spec.mjs documents the same need for
+ * `--font-sans`/`--background`), so a raw string compare would be brittle.
+ */
+function canonicalColor(page, raw) {
+  return page.evaluate((value) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = value;
+    return ctx.fillStyle;
+  }, raw);
 }
 
 test.describe.serial('site-global theme_mods', () => {
@@ -155,5 +174,166 @@ test.describe.serial('site-global theme_mods', () => {
     const rootSize = await page.evaluate(() => getComputedStyle(document.documentElement).fontSize);
 
     expect(rootSize).toBe('20px');
+  });
+
+  // Colour-scheme switcher (M1-05, spec §6): the two settings, the no-FOUC
+  // head script, and the sun/moon control.
+  test.describe('colour-scheme switcher', () => {
+    test('the toggle flips the scheme, persists in localStorage, and sticks across a navigation', async ({
+      page,
+    }) => {
+      wp('theme mod set color_scheme_toggle 1');
+      wp('theme mod set color_scheme_default light');
+
+      await page.goto('/');
+      const button = page.locator('.wtb-scheme-toggle');
+      await expect(button).toBeVisible();
+      await expect(page.locator('html')).toHaveClass(/light/);
+      await expect(page.locator('html')).not.toHaveClass(/dark/);
+
+      await button.click();
+      await expect(page.locator('html')).toHaveClass(/dark/);
+      expect(await page.evaluate(() => localStorage.getItem('wtb-scheme'))).toBe('dark');
+
+      // Sticks across a navigation to a DIFFERENT page: the stored choice is
+      // read by the head script before Alpine even runs, and Alpine's own
+      // init() must not clobber it back to the admin default.
+      await page.goto('/about/');
+      await expect(page.locator('html')).toHaveClass(/dark/);
+      await expect(page.locator('html')).not.toHaveClass(/light/);
+    });
+
+    /**
+     * The class must be present at FIRST PAINT, not added later — that is the
+     * entire point of the Task 3 head script. `addInitScript` runs before any
+     * of the page's own scripts on every subsequent navigation, so recording
+     * the class at `DOMContentLoaded` proves the synchronous, wp_head-priority-1
+     * head script already ran by the time the DOM finished parsing — before
+     * any deferred asset (Vite's module script, async-loaded CSS) gets a
+     * chance to paint something else first.
+     */
+    test('no flash: the scheme class is present at first paint, not added later', async ({
+      page,
+    }) => {
+      wp('theme mod set color_scheme_toggle 1');
+      wp('theme mod set color_scheme_default dark');
+
+      await page.addInitScript(() => {
+        document.addEventListener('DOMContentLoaded', () => {
+          window.__wtbClassAtDCL = document.documentElement.className;
+        });
+      });
+
+      await page.goto('/');
+
+      const classAtDCL = await page.evaluate(() => window.__wtbClassAtDCL);
+      expect(classAtDCL).toContain('dark');
+    });
+
+    /**
+     * `system` follows the OS. Emulating `colorScheme` as a context option
+     * (via `test.use`, never `browser.newPage()`) applies BEFORE the initial
+     * navigation, so this is read by the browser's native
+     * `prefers-color-scheme` media query in the generated token CSS — the
+     * mechanism that resolves `system`'s colours, independent of any JS.
+     *
+     * This deliberately does NOT attempt to prove LIVE re-following (flipping
+     * the OS preference after load and expecting the button to react):
+     * `page.emulateMedia()` updates `matchMedia().matches` but does not
+     * dispatch a `change` event to already-registered listeners in this
+     * Chromium/CDP combination, so that half of spec §6 cannot be pinned
+     * through Playwright's media emulation. Recorded here rather than papered
+     * over with a test that would pass for the wrong reason.
+     */
+    test.describe('system follows the OS: dark', () => {
+      test.use({ colorScheme: 'dark' });
+
+      test('a dark OS preference resolves the dark tokens under the system default', async ({
+        page,
+      }) => {
+        wp('theme mod set color_scheme_default system');
+        wp('theme mod set color_scheme_toggle 1');
+
+        await page.goto('/');
+
+        await expect(page.locator('html')).not.toHaveClass(/light/);
+        await expect(page.locator('html')).not.toHaveClass(/dark/);
+
+        const background = await canonicalColor(page, await rootVar(page, '--background'));
+        expect(background).toBe(await canonicalColor(page, tokens.colors.dark.background));
+      });
+    });
+
+    test.describe('system follows the OS: light', () => {
+      test.use({ colorScheme: 'light' });
+
+      test('a light OS preference resolves the light tokens under the system default', async ({
+        page,
+      }) => {
+        wp('theme mod set color_scheme_default system');
+        wp('theme mod set color_scheme_toggle 1');
+
+        await page.goto('/');
+
+        await expect(page.locator('html')).not.toHaveClass(/light/);
+        await expect(page.locator('html')).not.toHaveClass(/dark/);
+
+        const background = await canonicalColor(page, await rootVar(page, '--background'));
+        expect(background).toBe(await canonicalColor(page, tokens.colors.light.background));
+      });
+    });
+
+    test('the toggle off renders no control, and a stored visitor choice is not honoured', async ({
+      page,
+    }) => {
+      wp('theme mod set color_scheme_toggle 0');
+      wp('theme mod set color_scheme_default light');
+
+      // A visitor who chose dark before the admin turned the switcher off.
+      await page.addInitScript(() => {
+        try {
+          localStorage.setItem('wtb-scheme', 'dark');
+        } catch {
+          // Nothing to simulate if storage is unavailable in this browser.
+        }
+      });
+
+      await page.goto('/');
+
+      await expect(page.locator('.wtb-scheme-toggle')).toHaveCount(0);
+      // The admin default wins outright: with the toggle off,
+      // Scheme::build_head_script() never even reads localStorage, so the
+      // stored 'dark' cannot surface no matter what it holds.
+      await expect(page.locator('html')).toHaveClass(/light/);
+      await expect(page.locator('html')).not.toHaveClass(/dark/);
+    });
+
+    /**
+     * `localStorage.getItem` THROWS (not returns null) in Safari private mode
+     * and whenever storage/cookies are blocked. Scheme::build_head_script()
+     * wraps the read in try/catch for exactly this. Task 3's Step 5 mutation
+     * (removing that try/catch) has no unit-test-visible effect — a caught
+     * throw always falls back to a value the server already rendered, so
+     * removing the catch is only observable as an UNCAUGHT exception, never
+     * as a different `<html>` class. That is what this test actually checks.
+     */
+    test('a throwing localStorage.getItem does not break scheme resolution', async ({ page }) => {
+      wp('theme mod set color_scheme_toggle 1');
+      wp('theme mod set color_scheme_default light');
+
+      const pageErrors = [];
+      page.on('pageerror', (error) => pageErrors.push(error));
+
+      await page.addInitScript(() => {
+        window.Storage.prototype.getItem = function () {
+          throw new Error('blocked');
+        };
+      });
+
+      await page.goto('/');
+
+      await expect(page.locator('html')).toHaveClass(/light/);
+      expect(pageErrors).toEqual([]);
+    });
   });
 });

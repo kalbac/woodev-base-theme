@@ -96,14 +96,46 @@ final class SchemeHeadTest extends TestCase {
 	}
 
 	public function test_an_explicit_scheme_appends_a_class_to_language_attributes(): void {
+		Functions\when( 'is_embed' )->justReturn( false );
+		Functions\when( 'is_admin' )->justReturn( false );
 		$this->stub_mods( [ 'color_scheme_default' => 'dark' ] );
 
 		self::assertSame( 'lang="en-US" class="dark"', ( new Scheme() )->add_html_class( 'lang="en-US"' ) );
 	}
 
 	public function test_system_leaves_language_attributes_untouched(): void {
+		Functions\when( 'is_embed' )->justReturn( false );
+		Functions\when( 'is_admin' )->justReturn( false );
 		$this->stub_mods( [ 'color_scheme_default' => 'system' ] );
 
 		self::assertSame( 'lang="en-US"', ( new Scheme() )->add_html_class( 'lang="en-US"' ) );
+	}
+
+	/**
+	 * Adversarial-review P2. language_attributes() is not ours alone: core's
+	 * oEmbed header template opens the html element with language_attributes()
+	 * followed by a literal class="no-js", so appending a class yields TWO
+	 * class attributes on
+	 * one element — invalid markup, and browsers keep the first, dropping core's
+	 * own marker. Verified against wp-includes/theme-compat/header-embed.php.
+	 */
+	public function test_the_class_is_not_appended_in_an_embed_or_in_admin(): void {
+		Functions\when( 'get_theme_mod' )->justReturn( 'dark' );
+		Functions\when( 'esc_attr' )->returnArg();
+
+		Functions\when( 'is_embed' )->justReturn( true );
+		Functions\when( 'is_admin' )->justReturn( false );
+		self::assertSame( 'lang="en-US"', ( new Scheme() )->add_html_class( 'lang="en-US"' ) );
+
+		Functions\when( 'is_embed' )->justReturn( false );
+		Functions\when( 'is_admin' )->justReturn( true );
+		self::assertSame( 'lang="en-US"', ( new Scheme() )->add_html_class( 'lang="en-US"' ) );
+
+		Functions\when( 'is_embed' )->justReturn( false );
+		Functions\when( 'is_admin' )->justReturn( false );
+		self::assertSame(
+			'lang="en-US" class="dark"',
+			( new Scheme() )->add_html_class( 'lang="en-US"' )
+		);
 	}
 }

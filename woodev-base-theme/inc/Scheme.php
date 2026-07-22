@@ -117,6 +117,20 @@ final class Scheme {
 	 * @param string $output The attribute string WordPress already built.
 	 */
 	public function add_html_class( string $output ): string {
+		// language_attributes() is not ours alone. Core's oEmbed header template
+		// (wp-includes/theme-compat/header-embed.php:19) opens the html element
+		// with language_attributes() followed by a literal class="no-js"
+		// attribute — appending our own class there produces TWO class
+		// attributes on one element: invalid
+		// markup, a wp.org Theme Review exposure, and browsers keep the first,
+		// so core's own no-js marker is the one that gets dropped. The embed
+		// iframe loads none of this theme's CSS either, so the class would do
+		// nothing even if it were valid. Verified against the shipped core file,
+		// not assumed. Same reasoning for admin screens.
+		if ( is_embed() || is_admin() ) {
+			return $output;
+		}
+
 		$class = self::html_class();
 
 		if ( '' === $class ) {
