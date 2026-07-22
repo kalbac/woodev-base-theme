@@ -85,10 +85,16 @@
 		HTML to entity-encode, and esc_html()/esc_attr() would be wrong here: they
 		encode characters (quotes, ampersands) that are syntactically meaningful in
 		CSS, which is exactly the "esc_attr on a whole stylesheet mangles it" trap.
-		wp_strip_all_tags() is what this needs — strip any tag markup a value
-		could smuggle in to break out of the <style> element — and it is not a
-		project invention: it is the same function WP core's own
-		wp_add_inline_style() uses to sanitize inline CSS before printing it.
+		wp_strip_all_tags() is what this needs: strip any tag markup a value could
+		smuggle in to break out of the <style> element.
+
+		For the record, because it is tempting to claim otherwise — WP core does
+		NOT use wp_strip_all_tags() for inline CSS. wp_add_inline_style() checks
+		for a literal '</style>', warns with _doing_it_wrong(), and unwraps it
+		with a preg_replace; WP_Styles then prints the CSS as-is. Ours is the
+		stricter of the two, and it is the SECOND line of defence: the values are
+		already confined to closed sets before they get here (verified in
+		wp-includes/functions.wp-styles.php, WP 7.0).
 		-->
 		<properties>
 			<property name="customEscapingFunctions" type="array">
