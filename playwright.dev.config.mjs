@@ -20,7 +20,18 @@ export default defineConfig({
     command: 'npm run dev',
     // @vite/client is served by the dev server itself and needs no build.
     url: 'http://localhost:5173/@vite/client',
-    reuseExistingServer: !process.env.CI,
+    // Always false, even locally: reuseExistingServer only checks that SOME
+    // server answers the probe URL, not that it is THIS checkout's server —
+    // a Vite left running from before a vite.config.mjs change (e.g. the CORS
+    // fix), or from another worktree, answers the same @vite/client URL, so
+    // `npm run dev` would never start and the spec would fail against a
+    // foreign module graph while this checkout is perfectly fine.
+    // vite.config.mjs sets strictPort: true, so with reuseExistingServer
+    // false a foreign server already on :5173 now makes the run fail loudly
+    // with a port conflict instead of silently reusing the wrong assets —
+    // the desired outcome. If you see that conflict, stop whatever `npm run
+    // dev` you have running elsewhere before `npm run e2e:dev`.
+    reuseExistingServer: false,
     timeout: 120_000,
   },
 });

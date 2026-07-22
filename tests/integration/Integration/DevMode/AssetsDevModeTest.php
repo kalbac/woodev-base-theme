@@ -14,6 +14,8 @@ declare(strict_types=1);
 namespace Woodev\Theme\Base\Tests\Integration\DevMode;
 
 use WP_UnitTestCase;
+use Woodev\Theme\Base\Tests\Integration\Support\AssetMarkup;
+use Woodev\Theme\Base\Tests\Integration\Support\ScriptModuleGuard;
 
 final class AssetsDevModeTest extends WP_UnitTestCase {
 
@@ -49,11 +51,18 @@ final class AssetsDevModeTest extends WP_UnitTestCase {
 	 * same handles but print none of them — not a regex bug, an empty second
 	 * render. Rendering once and sharing the string across test methods avoids
 	 * that trap entirely.
+	 *
+	 * ScriptModuleGuard checks the same private array before this file's
+	 * first render, turning a hypothetical future collision (another test
+	 * class rendering wp_head/wp_footer first) into a loud failure instead of
+	 * a silently short capture. See ScriptModuleGuard's docblock.
 	 */
 	private static function render_front_end_assets(): string {
 		static $html = null;
 
 		if ( null === $html ) {
+			ScriptModuleGuard::assert_none_already_done( [ 'woodev-base-vite-client', 'woodev-base-style', 'woodev-base-app' ] );
+
 			ob_start();
 			do_action( 'wp_head' );
 			do_action( 'wp_footer' );
@@ -77,18 +86,16 @@ final class AssetsDevModeTest extends WP_UnitTestCase {
 	 * with working JavaScript and no Tailwind, Basecoat or tokens at all.
 	 * See docs/gotchas/vite-css-entry-is-not-imported-by-the-js-entry.md.
 	 *
-	 * Two lookaheads rather than a fixed attribute order: core's actual markup
-	 * is `<script id="..." src="..." type="module">` (id, then src, then type
-	 * — measured, not assumed), so a pattern requiring type before src would
-	 * never match real output. Both lookaheads anchor on `<script`, so this can
-	 * never match a `<link rel=stylesheet>` no matter the attribute order.
+	 * Parsed with AssetMarkup (DOMDocument), not a regex: an earlier version
+	 * of this test used a lookahead-based pattern that accepted
+	 * `data-type="module"` / `data-src="…"` (a `\b` matches after a hyphen)
+	 * and matched `<scripture` on the tag name. See
+	 * docs/gotchas/three-rounds-of-fixes-means-change-the-approach.md.
 	 */
 	public function test_the_pack_css_is_a_script_module_not_a_stylesheet(): void {
-		$html = self::render_front_end_assets();
-
-		self::assertMatchesRegularExpression(
-			'#<script(?=[^>]*\btype=["\']module["\'])(?=[^>]*\bsrc=["\']http://localhost:5173/src/css/packs/vega\.css["\'])[^>]*>#',
-			$html,
+		AssetMarkup::assert_script_module_with_exact_src(
+			self::render_front_end_assets(),
+			'http://localhost:5173/src/css/packs/vega.css',
 			'The dev server serves the CSS entry as a JS module; a plain stylesheet <link> tag would apply nothing.'
 		);
 	}

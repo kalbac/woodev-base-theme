@@ -10,7 +10,6 @@ export default [
       'tests/js/**/*.mjs',
       'tests/e2e/**/*.mjs',
       'tests/e2e-dev/**/*.mjs',
-      '*.config.mjs',
     ],
     languageOptions: {
       ecmaVersion: 2024,
@@ -23,6 +22,24 @@ export default [
         process: 'readonly',
         getComputedStyle: 'readonly',
         localStorage: 'readonly',
+      },
+    },
+  },
+  {
+    // Root-level *.mjs config files (vite.config.mjs, playwright.config.mjs,
+    // playwright.dev.config.mjs, vitest.config.mjs) run under Node, not a
+    // browser — they must NOT get window/document/localStorage/etc. as
+    // globals. They previously matched the block above via '*.config.mjs',
+    // which meant a stray `document.body` in vite.config.mjs no longer
+    // tripped no-undef. `*.config.mjs` (no `**/` prefix) is anchored to this
+    // file's directory, so this intentionally does not match config files
+    // nested under scripts/ or tests/.
+    files: ['*.config.mjs'],
+    languageOptions: {
+      ecmaVersion: 2024,
+      sourceType: 'module',
+      globals: {
+        process: 'readonly',
       },
     },
   },

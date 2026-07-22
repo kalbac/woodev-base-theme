@@ -15,14 +15,17 @@
 import { expect, test } from '@playwright/test';
 import { tokens } from '../../src/tokens/tokens.mjs';
 
-test('the dev-mode site really is in dev mode', async ({ page }) => {
-  // A harness guard, not a product assertion. Without it, a misconfigured
-  // environment (wrong port, WOODEV_BASE_DEV not actually set, wp-env
-  // pointed at the wrong config) would silently run test 2's real
-  // assertions against an ordinary PRODUCTION page instead — and they would
-  // mostly still pass there too, because the built CSS produces the same
-  // computed values as the dev-server CSS. This test is what tells them
-  // apart before that can happen.
+// A harness guard, not a product assertion, run before EVERY test in this
+// file — including via a focused `--grep` run of a single test. Without it,
+// a misconfigured environment (wrong port, WOODEV_BASE_DEV not actually set,
+// wp-env pointed at the wrong config) would silently let a test's real
+// assertions run against an ordinary PRODUCTION page instead — and they
+// would mostly still pass there too, because the built CSS produces the same
+// computed values as the dev-server CSS. This is what tells them apart
+// before that can happen. It used to live only inside the first test, so
+// `npx playwright test --grep "dev server actually styles"` skipped it
+// entirely and would have passed against a production page.
+test.beforeEach(async ({ page }) => {
   const response = await page.goto('/');
   expect(response.status()).toBe(200);
 
@@ -36,9 +39,19 @@ test('the dev-mode site really is in dev mode', async ({ page }) => {
   await expect(devPackModule).toHaveCount(1);
 });
 
-test('the dev server actually styles the page', async ({ page }) => {
-  await page.goto('/');
+test('the dev-mode site really is in dev mode', async ({ page }) => {
+  // The guard itself runs in beforeEach above, for every test in this file.
+  // This test restates it explicitly, under its own name, so the guard
+  // reads as a real, documented assertion rather than implicit setup that
+  // happens to run before something else.
+  const distStylesheet = page.locator('link[rel="stylesheet"][href*="assets/dist"]');
+  await expect(distStylesheet).toHaveCount(0);
 
+  const devPackModule = page.locator('script[src*="localhost:5173/src/css/packs/"]');
+  await expect(devPackModule).toHaveCount(1);
+});
+
+test('the dev server actually styles the page', async ({ page }) => {
   // In dev mode, Vite's CSS-as-a-JS-module injects its <style> tag when the
   // module EXECUTES, not at first paint — so --font-sans is absent until that
   // script has run. Poll instead of asserting immediately after goto().
