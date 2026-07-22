@@ -138,4 +138,46 @@ final class SchemeHeadTest extends TestCase {
 			( new Scheme() )->add_html_class( 'lang="en-US"' )
 		);
 	}
+
+	/**
+	 * Codex P2. The embed guard above handles core's own template, but we are
+	 * not the only filter on this hook — a plugin that already added a class
+	 * would leave two class attributes on one element, and browsers keep the
+	 * FIRST, so ours would be the one silently dropped.
+	 */
+	public function test_an_existing_class_attribute_is_merged_not_duplicated(): void {
+		Functions\when( 'get_theme_mod' )->justReturn( 'dark' );
+		Functions\when( 'esc_attr' )->returnArg();
+		Functions\when( 'is_embed' )->justReturn( false );
+		Functions\when( 'is_admin' )->justReturn( false );
+
+		$output = ( new Scheme() )->add_html_class( 'lang="en-US" class="no-js"' );
+
+		self::assertSame( 'lang="en-US" class="no-js dark"', $output );
+		self::assertSame( 1, substr_count( $output, 'class=' ), 'two class attributes is invalid HTML' );
+
+		// Single quotes are equally legal in the attribute WordPress hands us.
+		self::assertSame(
+			"lang='en-US' class=\"no-js dark\"",
+			( new Scheme() )->add_html_class( "lang='en-US' class='no-js'" )
+		);
+	}
+
+	/**
+	 * Codex P3. Asserting that the string "dark" appears does not prove the
+	 * value went through wp_json_encode() — a hand-rolled '"' . $x . '"' emits
+	 * byte-identical output for every value sanitize_default() can return, so
+	 * the closed set hides the difference.
+	 *
+	 * Pin the ORIGIN of the string instead: make wp_json_encode() return a
+	 * sentinel and require it in the script. Only a value that actually came
+	 * from the encoder can carry it, so hand-rolling the quotes turns this red
+	 * even though the real output would look the same.
+	 */
+	public function test_the_default_reaches_the_script_through_wp_json_encode(): void {
+		$this->stub_mods( [ 'color_scheme_default' => 'dark' ] );
+		Functions\when( 'wp_json_encode' )->justReturn( '"__ENCODED__"' );
+
+		self::assertStringContainsString( '"__ENCODED__"', Scheme::build_head_script() );
+	}
 }

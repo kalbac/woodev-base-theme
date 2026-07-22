@@ -61,7 +61,14 @@ activation_command_timeout: 180.0
 # line ending convention to use when writing source files.
 # Possible values: unset (use global setting), "lf", "crlf", or "native" (platform default)
 # This does not affect Serena's own files (e.g. memories and configuration files), which always use native line endings.
-line_ending:
+#
+# MUST be "lf". Left unset this defaults to native, i.e. CRLF on Windows, and
+# the first Serena edit to a PHP file then fails `composer phpcs` on line 1 with
+# Generic.Files.LineEndings.InvalidEOLChar before the sniffs ever reach the code
+# — the local QA gate becomes unrunnable while CI (Linux, LF) stays green.
+# .gitattributes pins eol=lf for exactly this reason; this makes the editor
+# agree with it. Observed, not theoretical: it bit on the first symbol edit.
+line_ending: "lf"
 
 # The language backend to use for this project.
 # If not set, the global setting from serena_config.yml is used.

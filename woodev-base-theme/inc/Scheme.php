@@ -95,42 +95,31 @@ final class Scheme {
 	}
 
 	/**
-	 * Hook the scheme resolution into WordPress:
+	 * Hook the two front-end surfaces into WordPress.
 	 *
-	 * - `language_attributes` gets the server-rendered class, so a no-JS
-	 *   visitor with an explicit admin default still gets it.
-	 * - `wp_head` priority 1 prints the resolver script — before anything
-	 *   else in <head> has a chance to paint. Anything deferred, or printed
-	 *   later, paints first, and that flash is exactly what this exists to
-	 *   prevent.
+	 * The class goes on `<html>` server-side so a JS-disabled visitor still
+	 * gets the admin's choice; the head script refines it from the visitor's
+	 * stored choice before first paint.
 	 */
-	public function register_without_head_script_MUTANT(): void {
-		add_filter( 'language_attributes', [ $this, 'add_html_class' ] );
-	}
-
 	public function register(): void {
 		add_filter( 'language_attributes', [ $this, 'add_html_class' ] );
 		add_action( 'wp_head', [ $this, 'print_head_script' ], 1 );
 	}
 
 	/**
-	 * Filter callback for `language_attributes`: appends the resolved class
-	 * to the lang/dir attributes WordPress already built. `system` leaves the
-	 * output untouched — html_class() returns '' for it on purpose.
+	 * Filter callback for `language_attributes`: puts the resolved class on the
+	 * attribute string WordPress already built. `system` leaves the output
+	 * untouched — html_class() returns '' for it on purpose.
 	 *
 	 * @param string $output The attribute string WordPress already built.
 	 */
 	public function add_html_class( string $output ): string {
-		// language_attributes() is not ours alone. Core's oEmbed header template
-		// (wp-includes/theme-compat/header-embed.php:19) opens the html element
-		// with language_attributes() followed by a literal class="no-js"
-		// attribute — appending our own class there produces TWO class
-		// attributes on one element: invalid
-		// markup, a wp.org Theme Review exposure, and browsers keep the first,
-		// so core's own no-js marker is the one that gets dropped. The embed
-		// iframe loads none of this theme's CSS either, so the class would do
-		// nothing even if it were valid. Verified against the shipped core file,
-		// not assumed. Same reasoning for admin screens.
+		// Core's oEmbed header template opens the html element with
+		// language_attributes() followed by a literal class="no-js" attribute
+		// (wp-includes/theme-compat/header-embed.php:19, checked in the shipped
+		// file rather than assumed). That iframe loads none of this theme's CSS,
+		// so the class would do nothing there even if it were valid. Same for
+		// admin screens.
 		if ( is_embed() || is_admin() ) {
 			return $output;
 		}
@@ -139,6 +128,17 @@ final class Scheme {
 
 		if ( '' === $class ) {
 			return $output;
+		}
+
+		// MERGE into an existing class attribute rather than appending a second
+		// one. We are not the only filter on this hook, and two class attributes
+		// on one element is invalid HTML where browsers keep the FIRST — so ours
+		// would be the one silently dropped, and the server-side scheme would
+		// not apply at all. Codex found the append-only version.
+		if ( 1 === preg_match( '/\bclass=("|\')(.*?)\1/', $output, $matches ) ) {
+			$merged = trim( $matches[2] . ' ' . $class );
+
+			return str_replace( $matches[0], 'class="' . esc_attr( $merged ) . '"', $output );
 		}
 
 		return $output . ' class="' . esc_attr( $class ) . '"';

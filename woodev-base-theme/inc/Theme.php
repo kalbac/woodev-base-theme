@@ -22,7 +22,6 @@ final class Theme {
 		( new Assets() )->register();
 		( new Customizer\Customizer() )->register();
 		( new Customizer\InlineStyles() )->register();
-		// MUTATION
-		( new Scheme() )->register_without_head_script_MUTANT();
+		( new Scheme() )->register();
 	}
 }
