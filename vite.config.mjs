@@ -24,6 +24,7 @@ export default defineConfig({
     // Only the local wp-env origins may pull dev-server assets. `cors: true`
     // would reflect any origin, letting any site a developer visits read this
     // server's source over CORS while it runs.
-    cors: { origin: ['http://localhost:8888', 'http://localhost:8889'] },
+    // 8892 is the dev-mode e2e environment (.wp-env.dev-mode.json).
+    cors: { origin: ['http://localhost:8888', 'http://localhost:8889', 'http://localhost:8892'] },
   },
 });

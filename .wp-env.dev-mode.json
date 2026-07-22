@@ -1,0 +1,10 @@
+{
+  "core": null,
+  "phpVersion": "8.1",
+  "themes": ["./woodev-base-theme"],
+  "testsEnvironment": false,
+  "port": 8892,
+  "config": {
+    "WOODEV_BASE_DEV": true
+  }
+}

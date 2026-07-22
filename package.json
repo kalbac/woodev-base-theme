@@ -18,6 +18,8 @@
     "wp:stop": "wp-env stop",
     "wp:test:start": "wp-env start --config=.wp-env.test.json",
     "wp:test:stop": "wp-env stop --config=.wp-env.test.json",
+    "wp:dev-mode:start": "wp-env start --config=.wp-env.dev-mode.json",
+    "wp:dev-mode:stop": "wp-env stop --config=.wp-env.dev-mode.json",
     "test:integration:install": "wp-env run cli --config=.wp-env.test.json --env-cwd=wp-content/woodev-tests composer install",
     "test:integration": "wp-env run cli --config=.wp-env.test.json --env-cwd=wp-content/woodev-tests vendor/bin/phpunit -c phpunit.xml.dist",
     "test:integration:dev": "wp-env run cli --config=.wp-env.test.json --env-cwd=wp-content/woodev-tests vendor/bin/phpunit -c phpunit.dev.xml.dist"
