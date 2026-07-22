@@ -53,7 +53,11 @@ export const tokens = {
     blue: { light: 'oklch(54.6% 0.245 262.881)', dark: 'oklch(70.7% 0.165 254.624)' },
     green: { light: 'oklch(62.7% 0.194 149.214)', dark: 'oklch(79.2% 0.209 151.711)' },
     red: { light: 'oklch(57.7% 0.245 27.325)', dark: 'oklch(70.4% 0.191 22.216)' },
-    rose: { light: 'oklch(58.6% 0.253 17.585)', dark: 'oklch(71.2% 0.194 13.428)' },
+    // The one exception to the -600 rule: rose-600 measures 4.32:1 against
+    // near-white and 4.39:1 against near-black, so NEITHER neutral reaches AA
+    // on it. rose-700 does (5.80:1). The generator refuses to emit a pair below
+    // 4.5:1, so this is enforced, not just documented.
+    rose: { light: 'oklch(51.4% 0.222 16.935)', dark: 'oklch(71.2% 0.194 13.428)' },
     orange: { light: 'oklch(64.6% 0.222 41.116)', dark: 'oklch(75% 0.183 55.934)' },
     yellow: { light: 'oklch(68.1% 0.162 75.834)', dark: 'oklch(85.2% 0.199 91.936)' },
     violet: { light: 'oklch(54.1% 0.281 293.009)', dark: 'oklch(70.2% 0.183 293.541)' },

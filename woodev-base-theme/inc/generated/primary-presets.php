@@ -62,9 +62,9 @@ return [
 	],
 	'rose'    => [
 		'light' => [
-			'--primary'            => 'oklch(58.6% 0.253 17.585)',
+			'--primary'            => 'oklch(51.4% 0.222 16.935)',
 			'--primary-foreground' => 'oklch(0.985 0 0)',
-			'--ring'               => 'oklch(58.6% 0.253 17.585)',
+			'--ring'               => 'oklch(51.4% 0.222 16.935)',
 		],
 		'dark'  => [
 			'--primary'            => 'oklch(71.2% 0.194 13.428)',
