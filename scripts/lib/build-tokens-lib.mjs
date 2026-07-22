@@ -142,23 +142,33 @@ export function lightnessOf(color) {
  * oklch -> oklab -> LMS -> linear sRGB (Björn Ottosson's published matrices),
  * then the sRGB luminance coefficients.
  *
- * Out-of-gamut colours are GAMUT-MAPPED, not per-channel clamped, and that
- * distinction is load-bearing here: 11 of the 16 palette values fall outside
- * sRGB (Tailwind's oklch palette reaches past it), and clamping channels
- * inflates their luminance. Measured on rose-700 the clamped estimate is
- * 5.80:1 while the mapped one is 6.05:1 — the error runs in BOTH directions
- * depending on hue, so a clamped gate can report a pass for a pair a browser
- * would render below AA. CSS Color 4 §13 leaves the exact algorithm to the UA
- * but describes chroma reduction at constant lightness and hue, which is what
- * this does by bisection.
+ * Out-of-gamut handling is load-bearing here: 11 of the 16 palette values fall
+ * outside sRGB (Tailwind's oklch palette reaches past it), and how they are
+ * brought back in changes the answer by a quarter of a ratio point. There is no
+ * single right answer to reproduce — CSS Color 4 §14 lets a UA pick among
+ * several algorithms, and its own Binary Search with Local MINDE is not what
+ * this bisection computes.
+ *
+ * So do not pretend to know: contrastRatio() measures BOTH the naive
+ * per-channel clamp and this chroma reduction, and keeps the WORSE of the two.
+ * On rose-600 that is 4.32:1 rather than the 4.53:1 chroma reduction alone
+ * reports — the same call MINDE makes, reached without implementing it.
+ *
+ * This function is the chroma-reduction half: hold lightness and hue, bisect
+ * chroma down to the gamut boundary.
  */
-function luminanceOf(color) {
+function mappedLuminance(color) {
   const { l, c, h } = parseOklch(color);
   let channels = linearChannels({ l, c, h });
 
   if (!insideSrgb(channels)) {
     let low = 0;
-    let high = c;
+    // Cap the bracket: no sRGB colour has chroma anywhere near 1, and a
+    // parseable-but-absurd chroma (10^298 is finite) would leave 32 halvings
+    // still astronomically above the boundary, so `low` would stay 0 and the
+    // colour would be measured as a neutral grey — passing the gate on a
+    // luminance it never had.
+    let high = Math.min(c, 1);
 
     for (let step = 0; step < 32; step += 1) {
       const middle = (low + high) / 2;
@@ -179,12 +189,36 @@ function luminanceOf(color) {
 }
 
 /**
- * WCAG contrast ratio between two oklch() colours, 1…21.
+ * WCAG relative luminance with out-of-gamut channels simply clamped.
+ *
+ * The naive reading. Kept precisely because it disagrees with the chroma
+ * reduction above, and the disagreement is the uncertainty we refuse to
+ * gamble on.
  */
-export function contrastRatio(one, other) {
-  const [lighter, darker] = [luminanceOf(one), luminanceOf(other)].sort((x, y) => y - x);
+function clampedLuminance(color) {
+  const [red, green, blue] = linearChannels(parseOklch(color)).map((channel) =>
+    Math.min(1, Math.max(0, channel)),
+  );
+
+  return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+}
+
+const ratioFrom = (luminance, one, other) => {
+  const [lighter, darker] = [luminance(one), luminance(other)].sort((x, y) => y - x);
 
   return (lighter + 0.05) / (darker + 0.05);
+};
+
+/**
+ * WCAG contrast ratio between two oklch() colours, 1…21 — the PESSIMISTIC of
+ * the two out-of-gamut readings.
+ *
+ * Which one a given browser matches depends on the gamut-mapping algorithm it
+ * chose, and CSS Color 4 §14 permits several. Taking the lower value means the
+ * gate can only ever be stricter than what ships, never laxer.
+ */
+export function contrastRatio(one, other) {
+  return Math.min(ratioFrom(mappedLuminance, one, other), ratioFrom(clampedLuminance, one, other));
 }
 
 /**

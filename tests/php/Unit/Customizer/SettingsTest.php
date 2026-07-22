@@ -67,9 +67,9 @@ final class SettingsTest extends TestCase {
 
 	/**
 	 * Overflowing literals slip past is_numeric(): (float) '1e309' is INF, and
-	 * casting INF to int both emits a PHP warning on a front-end request and
-	 * yields 0 — so the LARGEST possible input would clamp to the MINIMUM.
-	 * Codex P2 on the M1-04 diff; reproduced before it was fixed.
+	 * casting INF to int yields 0 — so the LARGEST possible input would clamp
+	 * to the MINIMUM. Codex P2 on the M1-04 diff; reproduced before it was
+	 * fixed. Silent on PHP 8.1 (the declared floor), a warning on 8.5.
 	 */
 	public function test_an_overflowing_numeric_string_takes_the_documented_fallback(): void {
 		self::assertSame( 1440, Settings::sanitize_container_width( '1e309' ) );
@@ -81,10 +81,9 @@ final class SettingsTest extends TestCase {
 	/**
 	 * Re-critic finding on my own is_finite() fix: it closed INF but not a
 	 * FINITE value outside the integer range. '1e100' passes both guards, and
-	 * casting it emits "The float 1.0E+100 is not representable as an int" —
-	 * again a PHP warning on a front-end request — then yields 0, clamping the
-	 * largest possible input to the MINIMUM. Clamping before the cast is what
-	 * fixes it.
+	 * casting it is undefined behaviour that yields 0, clamping the largest
+	 * possible input to the MINIMUM. Clamping before the cast is what fixes it.
+	 * Verified on both PHP 8.1.34 (the floor: silent) and 8.5.1 (warns).
 	 */
 	public function test_a_finite_value_beyond_the_integer_range_clamps_to_the_maximum(): void {
 		self::assertSame( 1920, Settings::sanitize_container_width( '1e100' ) );

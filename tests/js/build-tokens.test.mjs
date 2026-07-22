@@ -139,10 +139,30 @@ describe('buildPrimaryPresets', () => {
   });
 
   // 11 of the 16 palette values fall outside sRGB, so how the gate handles
-  // out-of-gamut colours decides its answers. Per-channel clamping inflated
-  // rose-700 to 5.80:1 where chroma reduction gives 6.05:1.
-  it('gamut-maps rather than clamping out-of-gamut colours', () => {
-    expect(contrastRatio('oklch(51.4% 0.222 16.935)', 'oklch(0.985 0 0)')).toBeCloseTo(6.05, 1);
+  // them decides its answers — and CSS Color 4 §14 lets a UA choose among
+  // several mappings. The gate keeps the WORSE of the naive clamp (5.80 for
+  // rose-700) and chroma reduction (6.05), so it can only be stricter than
+  // what ships.
+  it('takes the pessimistic of the two out-of-gamut readings', () => {
+    expect(contrastRatio('oklch(51.4% 0.222 16.935)', 'oklch(0.985 0 0)')).toBeCloseTo(5.8, 1);
+
+    // rose-600 measures 4.53:1 under chroma reduction alone — a pass. The
+    // clamped reading says 4.32:1, and that is the one that counts.
+    expect(contrastRatio('oklch(58.6% 0.253 17.585)', 'oklch(0.985 0 0)')).toBeLessThan(4.5);
+  });
+
+  // A finite but absurd chroma used to leave the bisection bracket
+  // astronomically wide, so 32 halvings never reached the gamut boundary and
+  // the colour was measured as a neutral grey.
+  it('refuses a colour whose contrast cannot be measured', () => {
+    const absurd = {
+      ...tokens,
+      primaryPalette: {
+        wild: { light: `oklch(0.541 ${'9'.repeat(298)} 142)`, dark: 'oklch(0.2 0 0)' },
+      },
+    };
+
+    expect(() => buildPrimaryPresets(absurd)).toThrow(/cannot reach WCAG AA/);
   });
 
   it('rejects malformed and exotic oklch spellings', () => {

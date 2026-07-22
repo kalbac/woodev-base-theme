@@ -216,11 +216,15 @@ final class Settings {
 	 * collapse the layout.
 	 *
 	 * is_numeric() is necessary but NOT sufficient: it accepts overflowing
-	 * literals like '1e309', which become INF as a float. Casting INF to int
-	 * emits "The float INF is not representable as an int" — a PHP warning on a
-	 * front-end request — and yields 0, so an absurdly LARGE value would clamp
-	 * to the MINIMUM. is_finite() is what turns that into the documented
-	 * fallback. NAN takes the same path.
+	 * literals like '1e309', which become INF as a float. Casting a float
+	 * outside the integer range is undefined in PHP and yields 0 in practice,
+	 * so an absurdly LARGE value would clamp to the MINIMUM. is_finite() is what
+	 * turns that into the documented fallback; NAN takes the same path.
+	 *
+	 * Version note, because it decides how visible the bug is: PHP 8.5 warns
+	 * ("The float 1.0E+100 is not representable as an int, cast occurred"), but
+	 * PHP 8.1 — this theme's declared floor, and what the test containers run —
+	 * is SILENT. On the floor it is a wrong layout with nothing in the log.
 	 *
 	 * @param mixed $value    Raw value.
 	 * @param int   $min      Lower bound.

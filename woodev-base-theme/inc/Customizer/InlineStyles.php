@@ -20,14 +20,22 @@ namespace Woodev\Theme\Base\Customizer;
  * stylesheet WordPress itself printed.
  *
  * The selectors are a plain `:root` and `.dark` — specificity (0,1,0), the same
- * as Basecoat's and our own token defaults — so this block wins on SOURCE
- * ORDER, and anything a site owner adds later still wins over it. That is
- * deliberate, and it was briefly the other way: doubling to `:root:root` made
- * the settings unbeatable, which also broke the documented way to restyle a
- * theme token (a child theme stylesheet, or Appearance -> Customize ->
- * Additional CSS, both of which load after this and legitimately expect a plain
- * `:root { --primary: … }` to take effect). A theme that can only be overridden
- * with `!important` is a worse theme.
+ * as Basecoat's and our own token defaults — so the cascade is decided by
+ * source order alone. Where each thing lands, precisely:
+ *
+ * - Enqueued stylesheets, including a CHILD THEME's, print at wp_head 8, i.e.
+ *   BEFORE this block. The admin's Customizer choice therefore beats them,
+ *   which is the point of the setting existing.
+ * - Additional CSS (Appearance -> Customize -> Additional CSS) prints at
+ *   wp_head 101, AFTER this block, so a site owner's `:root { --primary: … }`
+ *   still wins with no `!important` and no knowledge of our internals.
+ *
+ * That second line is why the selectors are not doubled. They briefly were
+ * (`:root:root`), which made the settings unbeatable by anything short of
+ * `!important` — including the one override path WordPress puts in the UI.
+ * A child theme that wants to beat a Customizer setting has to be explicit
+ * about it (higher specificity, or an enqueue after wp_head 20); that is the
+ * correct outcome, since otherwise the setting could never do anything.
  *
  * KNOWN LIMITATION, dev mode only: under WOODEV_BASE_DEV the pack CSS is served
  * by Vite as a JS module that injects its <style> when the module EXECUTES,
