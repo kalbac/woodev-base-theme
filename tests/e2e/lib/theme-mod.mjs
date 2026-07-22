@@ -53,16 +53,19 @@ export function restoreThemeMod(name, previous) {
     return;
   }
 
-  // `wp theme mod set` always writes a literal CLI string, unsanitized. A
-  // boolean theme_mod (e.g. a checkbox saved through the real Customizer,
-  // which stores the SANITIZED PHP bool rather than a '1'/'0' string) must be
-  // normalised to the string form its own sanitize_callback actually accepts
-  // as "on" — otherwise the shell would print the word "true"/"false"
-  // verbatim, and a boolean sanitizer that only recognises '1' would read
-  // the restored value back as false regardless of what it was before.
-  const value = 'boolean' === typeof previous ? (previous ? '1' : '0') : previous;
+  // A boolean came from a real Customizer save, and `wp theme mod set` can only
+  // write STRINGS — restoring `true` as '1' silently changes the stored TYPE of
+  // a setting this helper promises to put back untouched, which any
+  // `true === get_theme_mod(…)` comparison would then read differently. Go
+  // through PHP so the literal boolean survives. The name is a key of the
+  // spec's own TOUCHED map, never a database value, so it is safe to embed.
+  if ('boolean' === typeof previous) {
+    wp(`eval "set_theme_mod( '${name}', ${previous ? 'true' : 'false'} );"`);
 
-  wp(`theme mod set ${name} ${value}`);
+    return;
+  }
+
+  wp(`theme mod set ${name} ${previous}`);
 }
 
 /** Guard for the integer settings. */
