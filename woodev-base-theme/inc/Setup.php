@@ -20,6 +20,7 @@ final class Setup {
 	public function register(): void {
 		add_action( 'after_setup_theme', [ $this, 'setup' ] );
 		add_action( 'widgets_init', [ $this, 'register_widget_areas' ] );
+		add_filter( 'the_password_form', [ $this, 'wrap_password_form' ] );
 	}
 
 	/**
@@ -73,5 +74,23 @@ final class Setup {
 				]
 			);
 		}
+	}
+
+	/**
+	 * Wrap core's password-protected post form in an alert.
+	 *
+	 * `$output` is the complete, already-escaped form HTML `get_the_password_form()`
+	 * builds — it is wrapped here, not rebuilt, so any markup core changes between
+	 * releases keeps working. Only our own strings are escaped.
+	 *
+	 * @param string $output Core's password form markup.
+	 * @return string The form wrapped in a `.alert`.
+	 */
+	public function wrap_password_form( string $output ): string {
+		return sprintf(
+			'<div class="wtb-password-protected alert"><h2>%1$s</h2><section>%2$s</section></div>',
+			esc_html__( 'This content is password protected', 'woodev-base-theme' ),
+			$output // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- core's own, already-escaped form HTML; see the docblock.
+		);
 	}
 }
