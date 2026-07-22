@@ -89,7 +89,7 @@ final class AssetsDevModeTest extends WP_UnitTestCase {
 		self::assertMatchesRegularExpression(
 			'#<script(?=[^>]*\btype=["\']module["\'])(?=[^>]*\bsrc=["\']http://localhost:5173/src/css/packs/vega\.css["\'])[^>]*>#',
 			$html,
-			'The dev server serves the CSS entry as a JS module; a <link rel=stylesheet> would apply nothing.'
+			'The dev server serves the CSS entry as a JS module; a plain stylesheet <link> tag would apply nothing.'
 		);
 	}
 
