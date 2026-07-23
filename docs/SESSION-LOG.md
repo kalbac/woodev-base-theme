@@ -1,5 +1,33 @@
 # Session Log — Woodev Base
 
+## s7 — 22–23.07.2026 — dev-mode coverage and the §7 component tail merged
+
+**Done:** two features, both designed → planned → subagent-driven → Codex-critic → merged. [#10](https://github.com/kalbac/woodev-base-theme/pull/10) dev-mode coverage (`e1cf31b`) and [#11](https://github.com/kalbac/woodev-base-theme/pull/11) the §7 component tail (`6dfac28`). Order this session: dev-mode → §7 → (M2 next), agreed with Maksim.
+
+**Gate on merged `main` (`6dfac28`):** phpcs 0 · phpstan L8 · unit **146** · vitest 25 · integration **35** · integration-dev **4** · e2e **44** · e2e-dev **2** · build OK.
+
+**AGENTS.md** gained an explicit **Autonomy** section: Maksim is interrupted only for UI/UX calls and architectural forks that cannot be settled from the docs; everything else is the agent's call, recorded in the report. Verification gates unchanged.
+
+**Dev-mode coverage (PR #10)** — closed a Codex P2 open since s3. A second PHPUnit config whose bootstrap **defines** `WOODEV_BASE_DEV` (never wp-env's `config` key — it leaks into both environments and persists), asserting the real `wp_head`+`wp_footer` output; mirrored by a production test so neither passes vacuously. Plus one browser spec on a third permanently-dev wp-env (:8892) asserting **computed style**, because the defect class it guards has the script tag present and the styles absent.
+
+- **The near-miss worth remembering.** The `ScriptModuleGuard` reflected on `WP_Script_Modules::$done` — a property that **exists only from WP 6.9**, while the theme declares `Requires at least: 6.8`. On 6.8 every test using it dies with `ReflectionException`. Invisible locally and in CI: both run `core: null` = latest. Caught by Codex reading the real 6.8/6.9 core, verified against the wordpress-develop tags, fixed with `property_exists()`. **Nothing in this project tests the declared WP floor** — logged as the most valuable untested claim we make; cheap fix is one CI job pinned to 6.8.
+- **`AssetMarkup` hit the three-rounds rule a second time** (after s6's `add_html_class`). Round 1 a lookahead regex accepted `data-type=`; round 2 a DOM query matched any `assets/dist` URL; round 3 a dual "exact or substring" URL parameter had silently downgraded the dev assertion to `str_contains`. The fix was again to **delete the requirement** — the URL is always exact now, the production test reading the hashed name from the manifest it asserts about. Gotcha updated with the second occurrence.
+- **Three false explanatory comments**, this project's recurring defect class: `loadHTML()` promised to fail on malformed markup (it recovers; measured on PHP 8.1.34 in-container, where `''` throws `ValueError` — the s4 Icons trap); a comment credited Vite's `strictPort` for a loud port failure that Playwright actually raises itself before starting Vite (measured with a foreign listener). Each corrected against the real thing.
+- **Corrected the s6 Serena gotcha** — `line_ending: "lf"` does NOT stop the CRLF writes; measured false for both write paths, the symbol edit converting the whole file while `git diff` stays clean. New gotcha: wp-env's `themes` key installs without activating.
+
+**§7 component tail (PR #11)** — card, badge, alert and the comment-form controls wired into real templates; the inventory now renders rather than merely builds (and the 8 packs are visibly distinguishable at last — cards are the first place their geometry shows). **tabs and accordion deferred to M2**, where the single-product page is their real home rather than a page invented to display a component. Post excerpts became Basecoat cards in a `.wtb-post-grid` (1→2→3 cols, capped at 2 with a sidebar); categories are secondary badges; empty/404/password states are alerts; the comment form is styled through `comment_form()`'s own args.
+
+- **The escaping hole phpcs could not see.** The comment-form labels were built with bare `__()`/`_x()`, assigned to a variable, and handed to `comment_form()`, which echoes them. `WordPress.Security.EscapeOutput` flags `echo __()` but not a translation that travels through a variable into a WP function — so phpcs was green while a tampered translation could reach the page. Now `esc_html__()`/`esc_html_x()`. New gotcha `phpcs-misses-unescaped-output-through-a-variable`.
+- **A vacuous dark-mode e2e**, again: it asserted DOM structure identical in both schemes, so the dark tokens could break green. Fixed to read the card's computed `background-color` (`oklch(1 0 0)` vs `oklch(0.205 0 0)`) — the same lesson `smoke.spec.mjs` carries.
+- **A grid breakpoint test with no precondition** — a leftover `sidebar_position=right` would cap 1400px at 2 tracks and read as a broken breakpoint; now asserts `.wtb-layout--has-sidebar` absent first, mirroring how the cap test asserts it present.
+- Own finding while verifying T2: the badge helper's `esc_url` guard was un-testable (its stub was `returnArg`), so removing `esc_url` stayed green. Added a stub with an observable identity.
+
+**Process notes:** a worker terminated mid-task on an API 403 (fixes for the re-critic) and another returned while "waiting for a background task"; both times I took over in the main loop rather than re-dispatching, since the context was small and mine. One e2e timeout flake (the scheme-switcher toggle-off test) under heavy concurrent local load passed in isolation and clean on CI (5 min vs my 23) — confirmed load-only.
+
+**Gotchas:** +3 (`wp-env-installs-themes-without-activating-them`, `phpcs-misses-unescaped-output-through-a-variable`, plus the s6 Serena and vite-css corrections), index now **19**.
+
+**Next:** M2 — the WooCommerce layer, with a design pass before a plan.
+
 ## s6 — 22.07.2026 — M1-04 Customizer and M1-05 scheme switcher merged; **M1 complete**
 
 **Done:** two PRs merged to `main` — [#8](https://github.com/kalbac/woodev-base-theme/pull/8) M1-04 Customizer v1 (`e480b3a`) and [#9](https://github.com/kalbac/woodev-base-theme/pull/9) M1-05 colour-scheme switcher (`11ce459`). Both planned first, executed subagent-driven (Sonnet workers, Opus orchestration and verification), Codex `gpt-5.6-sol` critic in focused chunks plus re-critic passes.

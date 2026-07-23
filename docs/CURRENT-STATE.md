@@ -10,12 +10,13 @@
 | M0 — Bootstrap | ✅ Done | PR [#1](https://github.com/kalbac/woodev-base-theme/pull/1) merged s3 |
 | M1 — Core theme | ✅ Done | 5 plans, all merged: icons `96df1db`, templates `f3f5f0a`, style packs `1fd9dd8`, Customizer `e480b3a`, scheme switcher `11ce459` |
 | Dev-mode coverage | ✅ Done | s7, PR [#10](https://github.com/kalbac/woodev-base-theme/pull/10) `e1cf31b` — the s3 debt, closed |
-| M2 — WooCommerce layer | ⬜ Not started | Agreed order (s7): the §7 component tail first, then M2 |
+| §7 component tail | ✅ Done | s7, PR [#11](https://github.com/kalbac/woodev-base-theme/pull/11) `6dfac28` — card/badge/alert/comment-form. tabs+accordion deferred to M2 |
+| M2 — WooCommerce layer | ⬜ Not started | Next up. Needs a design pass before a plan |
 | M3 — Public release prep | ⬜ Not started | |
 
 ## Known bugs
 
-**None open.** `main` is green, verified on the MERGED commit `e1cf31b` and not just per-branch: phpcs 0 · phpstan L8 · unit 141 · vitest 25 · **integration 32** · **integration-dev 4** · e2e 34 · **e2e-dev 2** · build OK.
+**None open.** `main` is green, verified on the MERGED commit `6dfac28` and not just per-branch: phpcs 0 · phpstan L8 · unit **146** · vitest 25 · integration **35** · integration-dev 4 · e2e **44** · e2e-dev 2 · build OK.
 
 s7's near-miss is worth carrying: the new `ScriptModuleGuard` reflected on `WP_Script_Modules::$done`, which **exists only from WP 6.9** while the theme declares `Requires at least: 6.8`. Every test using it would have died with `ReflectionException` on the floor we claim to support. Local runs cannot see this — wp-env uses `core: null`, i.e. latest — and neither can CI, which does not matrix the floor. **Nothing in this project currently tests the declared WP floor**; that is now the most valuable untested claim we make.
 
@@ -45,7 +46,7 @@ s5 found and fixed one real defect after merging — the mobile-drawer focus-tra
 
 ## Next actions
 
-**M1 is complete.** All five plans merged:
+**M1 complete, plus two s7 follow-ups.** All merged:
 
 | # | Plan | State |
 |---|---|---|
@@ -54,14 +55,15 @@ s5 found and fixed one real defect after merging — the mobile-drawer focus-tra
 | M1-03 | 8 Basecoat style-pack bundles + adapter | ✅ `1fd9dd8` (s5) |
 | M1-04 | Customizer v1 (§6) | ✅ `e480b3a` (s6), PR #8 |
 | M1-05 | Scheme switcher + no-FOUC head script | ✅ `11ce459` (s6), PR #9 |
+| Dev-mode coverage | ✅ `e1cf31b` (s7), PR #10 |
+| §7 component tail | ✅ `6dfac28` (s7), PR #11 |
 
-Dev-mode coverage closed the s3 debt in s7. **Order agreed with Maksim (s7): the §7 component tail, then M2.**
+Dev-mode coverage and the §7 component tail both closed in s7.
 
-1. **The §7 component tail** — card, badge, alert, tabs, accordion are specced but not yet wired into templates; an adapter pass, deliberately deferred through M1-03/04. Doing it before M2 means the Woo layer builds on a finished component vocabulary instead of inventing CSS it would later have to migrate down into the base theme.
-2. **M2 — the WooCommerce layer** (spec §8). Namespace `Woodev\Theme\Base\Woo`, bootstrapped only when Woo is active, base theme degrades gracefully without it. Needs a design pass before a plan: which templates get overridden, and how the Woo bundle loads conditionally (the multi-entry machinery from M1-03 is the obvious lever).
+1. **M2 — the WooCommerce layer** (spec §8) — next up. Namespace `Woodev\Theme\Base\Woo`, bootstrapped only when Woo is active, base theme degrades gracefully without it. Needs a design pass before a plan: which templates get overridden (every override is a maintenance liability across Woo releases), and how the Woo bundle loads conditionally (the M1-03 multi-entry machinery is the obvious lever). **tabs and accordion land here** — the single-product page is their real home; the base theme ships them as adapter CSS only when M2 wires them.
 
 i18n is cross-cutting — required in every task, `.pot` generation deferred to M3.
 
 ## Last session
 
-s7 (22.07.2026): dev-mode coverage designed, planned, executed subagent-driven and merged (PR #10, `e1cf31b`) — the s3 debt is gone. Three things to carry: a guard used a WP **6.9+** API under a **6.8** floor and no gate could see it; the three-rounds rule fired a second time, on `AssetMarkup`, and again the answer was to delete a requirement rather than patch; and the s6 Serena line-ending gotcha was simply wrong. See SESSION-LOG.
+s7 (22–23.07.2026): two features designed, planned, executed subagent-driven and merged — dev-mode coverage (PR #10, `e1cf31b`, the s3 debt gone) and the §7 component tail (PR #11, `6dfac28`). Things to carry: a guard used a WP **6.9+** API under a **6.8** floor and no gate could see it; the three-rounds rule fired a second time (on `AssetMarkup`) and again the answer was to delete a requirement; the s6 Serena line-ending gotcha was simply wrong; and phpcs missed unescaped `__()` output because the strings passed through a variable into `comment_form()` rather than being echoed. See SESSION-LOG.

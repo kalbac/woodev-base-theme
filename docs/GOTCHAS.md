@@ -1,6 +1,6 @@
 # Gotchas Index — Woodev Base
 
-> 18 entries. Each gotcha is a separate file in `docs/gotchas/`.
+> 19 entries. Each gotcha is a separate file in `docs/gotchas/`.
 
 | Gotcha | Area | Summary |
 |---|---|---|
@@ -22,3 +22,4 @@
 | [three-rounds-of-fixes-means-change-the-approach](gotchas/three-rounds-of-fixes-means-change-the-approach.md) | Process | When each review round finds a NARROWER defect in the same function, the approach is wrong, not the code. Regex-parsing HTML attributes lost three times; the fix was to stop parsing and use the asymmetry of the trade |
 | [serena-writes-native-line-endings](gotchas/serena-writes-native-line-endings.md) | Tooling | Serena writes CRLF on Windows and PHPCS dies on line 1 — **and `line_ending: "lf"` does NOT stop it** (s6 claimed it did; measured false in s7 for both `create_text_file` and `replace_symbol_body`, which converts the whole file). Strip CRs after every Serena write and check `git ls-files --eol`; keep `.gitattributes`/Prettier out of `.serena/` |
 | [wp-env-installs-themes-without-activating-them](gotchas/wp-env-installs-themes-without-activating-them.md) | Tooling/wp-env | The `themes` key copies the theme in but leaves a bundled default ACTIVE — the site returns a complete 200 rendered by the wrong theme, so our assertions fail looking like product bugs. Each environment needs its own activation (CI step / `switch_theme()` in the bootstrap / a `globalSetup` that re-reads and throws) |
+| [phpcs-misses-unescaped-output-through-a-variable](gotchas/phpcs-misses-unescaped-output-through-a-variable.md) | Tooling/QA | `WordPress.Security.EscapeOutput` flags `echo __()` but NOT a translation assigned to a variable that a WP function (`comment_form()`, `the_password_form`, widget args) later echoes. A green phpcs is no proof translated output was escaped — use `esc_html__()` at the point the string is built and trace the data-flow yourself |
