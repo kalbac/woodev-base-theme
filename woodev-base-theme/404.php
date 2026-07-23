@@ -15,13 +15,15 @@ get_header();
 ?>
 <div class="wtb-layout">
 	<div class="wtb-layout__content">
-		<h1 class="wtb-archive-title text-3xl font-semibold tracking-tight">
-			<?php esc_html_e( 'Page not found', 'woodev-base-theme' ); ?>
-		</h1>
-
-		<p class="mt-2 text-[var(--muted-foreground)]">
-			<?php esc_html_e( 'The page you were looking for could not be found. Try a search instead.', 'woodev-base-theme' ); ?>
-		</p>
+		<div class="wtb-no-results alert">
+			<?php woodev_base_icon( 'search' ); ?>
+			<h1 class="wtb-archive-title" data-title>
+				<?php esc_html_e( 'Page not found', 'woodev-base-theme' ); ?>
+			</h1>
+			<section>
+				<p><?php esc_html_e( 'The page you were looking for could not be found. Try a search instead.', 'woodev-base-theme' ); ?></p>
+			</section>
+		</div>
 
 		<div class="mt-4">
 			<?php get_search_form(); ?>

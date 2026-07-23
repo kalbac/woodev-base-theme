@@ -10,6 +10,82 @@ declare(strict_types=1);
 if ( post_password_required() ) {
 	return;
 }
+
+/*
+ * comment_form()'s own argument array is the canonical lever for styling its
+ * controls: it survives core reshaping the surrounding markup between
+ * releases, unlike filtering the finished HTML. The id/name/required
+ * attributes below are copied verbatim from wp-includes/comment-template.php
+ * so submission keeps working; only `class` is added.
+ *
+ * Field labels repeat core's own copy ("Name"/"Email"/"Website"/"Comment")
+ * verbatim under our own text domain — phpcs's MissingArgDomain sniff requires
+ * a domain on every call, so a domain-less reuse of core's catalog is not an
+ * option — and go through esc_html__()/esc_html_x(), not bare __()/_x(): the
+ * strings are built here and handed to comment_form(), which prints them as-is,
+ * so escape-on-output is ours to honour. A tampered translation carrying markup
+ * would otherwise reach the page. The required-field indicator is the one value
+ * left unescaped, deliberately: wp_required_field_indicator() returns a safe
+ * <span>, and escaping it would print the tags.
+ */
+$woodev_base_commenter = wp_get_current_commenter();
+$woodev_base_req       = (bool) get_option( 'require_name_email' );
+$woodev_base_html5     = (bool) current_theme_supports( 'html5', 'comment-form' );
+
+$woodev_base_required_attribute = $woodev_base_html5 ? ' required' : ' required="required"';
+$woodev_base_required_indicator = ' ' . wp_required_field_indicator();
+
+$woodev_base_comment_field = sprintf(
+	'<p class="comment-form-comment">%s %s</p>',
+	sprintf(
+		'<label for="comment">%s%s</label>',
+		esc_html_x( 'Comment', 'noun', 'woodev-base-theme' ),
+		$woodev_base_required_indicator
+	),
+	'<textarea id="comment" name="comment" class="textarea" cols="45" rows="8" maxlength="65525"' . $woodev_base_required_attribute . '></textarea>'
+);
+
+$woodev_base_fields = [
+	'author' => sprintf(
+		'<p class="comment-form-author">%s %s</p>',
+		sprintf(
+			'<label for="author">%s%s</label>',
+			esc_html__( 'Name', 'woodev-base-theme' ),
+			( $woodev_base_req ? $woodev_base_required_indicator : '' )
+		),
+		sprintf(
+			'<input id="author" name="author" class="input" type="text" value="%s" size="30" maxlength="245" autocomplete="name"%s />',
+			esc_attr( $woodev_base_commenter['comment_author'] ),
+			( $woodev_base_req ? $woodev_base_required_attribute : '' )
+		)
+	),
+	'email'  => sprintf(
+		'<p class="comment-form-email">%s %s</p>',
+		sprintf(
+			'<label for="email">%s%s</label>',
+			esc_html__( 'Email', 'woodev-base-theme' ),
+			( $woodev_base_req ? $woodev_base_required_indicator : '' )
+		),
+		sprintf(
+			'<input id="email" name="email" class="input" %s value="%s" size="30" maxlength="100" aria-describedby="email-notes" autocomplete="email"%s />',
+			( $woodev_base_html5 ? 'type="email"' : 'type="text"' ),
+			esc_attr( $woodev_base_commenter['comment_author_email'] ),
+			( $woodev_base_req ? $woodev_base_required_attribute : '' )
+		)
+	),
+	'url'    => sprintf(
+		'<p class="comment-form-url">%s %s</p>',
+		sprintf(
+			'<label for="url">%s</label>',
+			esc_html__( 'Website', 'woodev-base-theme' )
+		),
+		sprintf(
+			'<input id="url" name="url" class="input" %s value="%s" size="30" maxlength="200" autocomplete="url" />',
+			( $woodev_base_html5 ? 'type="url"' : 'type="text"' ),
+			esc_attr( $woodev_base_commenter['comment_author_url'] )
+		)
+	),
+];
 ?>
 <div id="comments" class="wtb-comments mt-12">
 	<?php if ( have_comments() ) : ?>
@@ -32,5 +108,13 @@ if ( post_password_required() ) {
 		<?php the_comments_pagination(); ?>
 	<?php endif; ?>
 
-	<?php comment_form(); ?>
+	<?php
+	comment_form(
+		[
+			'comment_field' => $woodev_base_comment_field,
+			'fields'        => $woodev_base_fields,
+			'class_submit'  => 'btn',
+		]
+	);
+	?>
 </div>

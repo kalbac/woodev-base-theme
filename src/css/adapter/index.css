@@ -234,3 +234,89 @@ body {
 .wtb-scheme-toggle__icon {
   display: inline-flex;
 }
+
+/*
+ * Post grid (§7 card tail). Explicit breakpoints rather than
+ * `repeat(auto-fill, minmax(…))`: an intrinsic grid adapts to the sidebar for
+ * free, but its column count at a given width becomes an emergent property of
+ * the container, which an unrelated padding change can silently alter. The
+ * counts below are the contract and e2e asserts them.
+ */
+.wtb-post-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 48rem) {
+  .wtb-post-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 80rem) {
+  .wtb-post-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  /* The content column is ~18rem narrower with a sidebar, so cap at 2. This is
+   * (0,2,0) against the rule above's (0,1,0), so it wins on specificity and
+   * does not depend on source order — but it must live INSIDE this query, or
+   * it would also cap the 2-column band above at 2 (harmless) and, more to the
+   * point, would not be scoped to the case it is about. */
+  .wtb-layout--has-sidebar .wtb-post-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Cards are flex columns and grid items stretch to equal height, so giving the
+ * body the free space is all that is needed to align footers across a row of
+ * posts with excerpts of different lengths. */
+.wtb-entry-card > section {
+  flex: 1;
+}
+
+/* Category badges are printed back-to-back (`</a><a>`), so a post with two or
+ * more categories would otherwise have them touching. A flex row with a gap
+ * spaces them and lets them wrap; the margin lifts the row off the meta line
+ * above it. */
+.wtb-entry-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-top: 0.5rem;
+}
+
+/* Featured images arrive at whatever aspect ratio the author uploaded. Without
+ * a fixed ratio a row of cards is ragged; `cover` crops rather than distorts. */
+.wtb-entry-card > img:first-child {
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  object-fit: cover;
+}
+
+/*
+ * Core's wp_list_comments() walker emits <p class="comment-awaiting-moderation">
+ * for a held comment. Mapping it onto the alert look here is the adapter layer
+ * doing its job — styling what a third party rendered. Replacing the walker to
+ * change one paragraph would be a much larger surface to maintain across WP
+ * releases for the same result.
+ */
+.comment-awaiting-moderation {
+  display: block;
+  margin-top: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 0.5rem);
+  padding: 0.75rem 1rem;
+  background-color: var(--card);
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+
+/* The comment form's cookie-consent row: core emits the checkbox and its label
+ * as siblings inside .comment-form-cookies-consent. */
+.comment-form-cookies-consent {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
