@@ -1,0 +1,8 @@
+{
+  "core": null,
+  "phpVersion": "8.1",
+  "themes": ["./woodev-base-theme"],
+  "plugins": ["https://downloads.wordpress.org/plugin/woocommerce.10.9.4.zip"],
+  "testsEnvironment": false,
+  "port": 8891
+}
