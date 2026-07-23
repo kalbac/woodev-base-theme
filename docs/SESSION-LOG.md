@@ -26,7 +26,9 @@
 
 **Gotchas:** +3 (`wp-env-installs-themes-without-activating-them`, `phpcs-misses-unescaped-output-through-a-variable`, plus the s6 Serena and vite-css corrections), index now **19**.
 
-**Next:** M2 — the WooCommerce layer, with a design pass before a plan.
+**M2a designed and planned (not built).** Brainstormed the WooCommerce layer with Maksim; four decisions settled: slice foundation+storefront now (M2a) with cart/checkout/account as M2b; **surgical-minimum overrides**; include the product gallery; a separate Woo e2e environment so the base stays Woo-free. Then — critically — **installed WooCommerce 10.9.4 into the container and read the real templates** rather than planning against remembered markup: the product loop's fixed `<li>` + single-`<a>`-wrapping hooks confirm the product card is the one override; single product and tabs are hook+CSS only; Woo's tabs already carry `role=tablist/tab/tabpanel` so they restyle rather than get reimplemented; the page shell routes through `before/after_main_content`. Woo 10.9 requires WP 6.9 (base floor stays 6.8, layer is optional). Removed Woo from `:8888` afterward so the base env stays clean. Spec + plan committed to `main` (`bbe67e0`, `a586049`); the feature branch was fast-forwarded into `main` and deleted since it held only docs — **next session creates a fresh branch and executes the plan from Task 1**.
+
+**Next:** execute M2a (subagent-driven), then M2b.
 
 ## s6 — 22.07.2026 — M1-04 Customizer and M1-05 scheme switcher merged; **M1 complete**
 

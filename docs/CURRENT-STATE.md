@@ -11,7 +11,8 @@
 | M1 — Core theme | ✅ Done | 5 plans, all merged: icons `96df1db`, templates `f3f5f0a`, style packs `1fd9dd8`, Customizer `e480b3a`, scheme switcher `11ce459` |
 | Dev-mode coverage | ✅ Done | s7, PR [#10](https://github.com/kalbac/woodev-base-theme/pull/10) `e1cf31b` — the s3 debt, closed |
 | §7 component tail | ✅ Done | s7, PR [#11](https://github.com/kalbac/woodev-base-theme/pull/11) `6dfac28` — card/badge/alert/comment-form. tabs+accordion deferred to M2 |
-| M2 — WooCommerce layer | ⬜ Not started | Next up. Needs a design pass before a plan |
+| M2a — Woo storefront | 🟡 Design+plan done, unbuilt | s7: [spec](specs/2026-07-23-m2a-woo-storefront-design.md) + [plan](plans/2026-07-23-m2a-woo-storefront.md) on `main` (`bbe67e0`,`a586049`). **Next session executes** — create a fresh branch, start at plan Task 1 |
+| M2b — Woo checkout flow | ⬜ Not started | cart/checkout/account/store-notices + Woo Customizer section |
 | M3 — Public release prep | ⬜ Not started | |
 
 ## Known bugs
@@ -58,9 +59,10 @@ s5 found and fixed one real defect after merging — the mobile-drawer focus-tra
 | Dev-mode coverage | ✅ `e1cf31b` (s7), PR #10 |
 | §7 component tail | ✅ `6dfac28` (s7), PR #11 |
 
-Dev-mode coverage and the §7 component tail both closed in s7.
+Dev-mode coverage, the §7 component tail, and the M2a design+plan all landed in s7.
 
-1. **M2 — the WooCommerce layer** (spec §8) — next up. Namespace `Woodev\Theme\Base\Woo`, bootstrapped only when Woo is active, base theme degrades gracefully without it. Needs a design pass before a plan: which templates get overridden (every override is a maintenance liability across Woo releases), and how the Woo bundle loads conditionally (the M1-03 multi-entry machinery is the obvious lever). **tabs and accordion land here** — the single-product page is their real home; the base theme ships them as adapter CSS only when M2 wires them.
+1. **Execute M2a** — the plan is written and on `main` (`docs/plans/2026-07-23-m2a-woo-storefront.md`), built on WooCommerce 10.9.4 contracts already read from the installed plugin. Start at Task 1 (stand up `.wp-env.woo.json`, seed the demo store). Subagent-driven. The storefront: shop grid of cards + single product with gallery/summary/tabs; one template override (the product card); Woo bundle on Woo contexts only; separate Woo e2e so the base stays Woo-free.
+2. **Then M2b** — cart/checkout/account/store-notices + the Woo Customizer section (spec §8). **tabs/accordion** land in M2a as restyled native Woo tabs, not a separate component.
 
 i18n is cross-cutting — required in every task, `.pot` generation deferred to M3.
 
