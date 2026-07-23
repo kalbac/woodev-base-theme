@@ -1,6 +1,6 @@
 # Gotchas Index — Woodev Base
 
-> 19 entries. Each gotcha is a separate file in `docs/gotchas/`.
+> 20 entries. Each gotcha is a separate file in `docs/gotchas/`.
 
 | Gotcha | Area | Summary |
 |---|---|---|
@@ -23,3 +23,4 @@
 | [serena-writes-native-line-endings](gotchas/serena-writes-native-line-endings.md) | Tooling | Serena writes CRLF on Windows and PHPCS dies on line 1 — **and `line_ending: "lf"` does NOT stop it** (s6 claimed it did; measured false in s7 for both `create_text_file` and `replace_symbol_body`, which converts the whole file). Strip CRs after every Serena write and check `git ls-files --eol`; keep `.gitattributes`/Prettier out of `.serena/` |
 | [wp-env-installs-themes-without-activating-them](gotchas/wp-env-installs-themes-without-activating-them.md) | Tooling/wp-env | The `themes` key copies the theme in but leaves a bundled default ACTIVE — the site returns a complete 200 rendered by the wrong theme, so our assertions fail looking like product bugs. Each environment needs its own activation (CI step / `switch_theme()` in the bootstrap / a `globalSetup` that re-reads and throws) |
 | [phpcs-misses-unescaped-output-through-a-variable](gotchas/phpcs-misses-unescaped-output-through-a-variable.md) | Tooling/QA | `WordPress.Security.EscapeOutput` flags `echo __()` but NOT a translation assigned to a variable that a WP function (`comment_form()`, `the_password_form`, widget args) later echoes. A green phpcs is no proof translated output was escaped — use `esc_html__()` at the point the string is built and trace the data-flow yourself |
+| [wp-org-plugin-zip-unversioned-serves-beta](gotchas/wp-org-plugin-zip-unversioned-serves-beta.md) | Tooling/wp-env | `downloads.wordpress.org/plugin/<slug>.zip` (unversioned) can serve a pre-release, not the latest stable — s8 got Woo `11.0.0-beta.2` while `10.9.4` was current stable. Always pin the versioned URL (`<slug>.<version>.zip`) in wp-env `plugins` |

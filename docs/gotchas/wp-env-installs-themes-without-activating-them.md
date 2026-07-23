@@ -6,7 +6,9 @@
 
 `.wp-env.json`'s `themes` array reads like "use this theme". It is not — it only
 **copies the theme into the environment**. The active theme stays whichever
-bundled default WordPress installed.
+bundled default WordPress installed. The `plugins` array behaves the same way
+(confirmed s8 on `.wp-env.woo.json`: right after `wp-env start`, `wp plugin
+list` reported `woocommerce inactive` even though it was in the config).
 
 Measured right after `wp-env start --config=.wp-env.dev-mode.json`:
 
@@ -19,7 +21,7 @@ woodev-base-theme   inactive   none    0.1.0
 The failure it causes is silent and confusing: the site returns 200, renders a
 complete page, and every assertion about *our* markup or styles fails for reasons
 that look like bugs in our code. Nothing anywhere says "you are looking at a
-different theme".
+different theme" (or "the plugin you thought was live is off").
 
 ## Who does the activation, per environment
 
@@ -30,6 +32,7 @@ Each environment needs its own answer. There is no shared mechanism:
 | `:8888` main dev (`.wp-env.json`) | `.github/workflows/ci.yml` — an explicit `wp theme activate` step. Locally: by hand, once. |
 | `:8890` integration (`.wp-env.test.json`) | `tests/integration/bootstrap.php` — a `switch_theme()` on the `setup_theme` filter. It has to be a filter: the core suite reinstalls the database each run and would undo a wp-cli activation. |
 | `:8892` dev-mode e2e (`.wp-env.dev-mode.json`) | `tests/e2e-dev/global-setup.mjs` — activates, then **re-reads the active theme and throws** if it is not ours. |
+| `:8891` Woo e2e (`.wp-env.woo.json`) | `tests/e2e-woo/global-setup.mjs` — activates the theme AND WooCommerce, then re-reads both and throws if either did not take. Same assert-it-took pattern applied to two things. |
 
 The third is the pattern to copy for any new environment: activate, then assert
 the activation took. An activation that silently no-ops makes every downstream
@@ -51,3 +54,4 @@ prevent.
 
 - [[wp-env-config-constants-persist]] — the other wp-env config key that does not mean what it looks like
 - [[vite-css-entry-is-not-imported-by-the-js-entry]] — what the :8892 environment exists to guard
+- [[wp-org-plugin-zip-unversioned-serves-beta]] — the OTHER trap when a `plugins` array points at wp.org: the wrong VERSION

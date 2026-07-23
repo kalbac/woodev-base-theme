@@ -1,5 +1,25 @@
 # Session Log — Woodev Base
 
+## s8 — 24.07.2026 — M2a Task 1 committed, stream stall, session saved early
+
+**Short one, salvage session.** The AI SDK stream stalled ("no event for 60000ms") right at the point I was about to delegate Task 2 to a Sonnet worker. Maksim caught it ("ты завис?"), I re-oriented, we agreed to stop and save rather than risk letting a new instance drive over half-committed work.
+
+**What actually landed:** Task 1 of the M2a plan is committed as `79b2c96` on `feat/m2a-woo-storefront` — `.wp-env.woo.json` on :8891, `playwright.woo.config.mjs`, `tests/e2e-woo/global-setup.mjs` (theme+Woo activation with re-read asserts, `wc tool run install_pages`, three seeded products simple/sale/oos, idempotent delete-by-slug), `tests/e2e-woo/_placeholder.spec.mjs`, `wp:woo:start/stop` + `e2e:woo` npm scripts. Git author is Maksim (global git config), but the work is the previous instance's worker output. **Reviewed line-by-line this session and matches the plan's Task 1 contract.**
+
+**One planned-time deviation, documented in the commit body:** WooCommerce pinned to `10.9.4` in the plugin URL (`woocommerce.10.9.4.zip`) instead of the plan's unversioned `woocommerce.zip`, because the unversioned URL was serving `11.0.0-beta.2` today. New gotcha `wp-org-plugin-zip-unversioned-serves-beta`. Plan's verified template contracts (`content-product.php @version 9.4.0`, `content-single-product.php @version 3.6.0`, `tabs.php @version 9.8.0`) re-read from the pinned 10.9.4 and identical — the pin shifts no plan assumption.
+
+**What was NOT done, and why the next session must do it before anything else:** Task 1 was NEVER personally verified by the orchestrator. `npm run wp:woo:start` never ran, the global-setup never actually executed, `curl /shop/` was never issued, `wp plugin list` on :8891 was never checked, `git ls-files --eol` on the 5 new files was never checked (worker CRLF-on-Windows risk). The commit passes read-review, not live-fire. Per AGENTS.md "verify worker claims yourself", the next session's very first action is to bring the env up and confirm it actually works before flipping Task 1 to done and moving on.
+
+**Engineering decision recorded for Task 2/Task 3.** Plan's Task 2 Step 1 asks a unit test to pin the registration of `open_wrapper`/`close_wrapper`, whose bodies are Task 3. That creates a halfway-state commit with methods registered but empty. Fixed split: **Task 2 = declared support (`add_theme_support('woocommerce')` + the three gallery supports) + `Theme::boot()` guard, nothing else.** All wrapper work (removal of Woo's default output-content-wrapper actions, `open_wrapper`/`close_wrapper` bodies, their registration, their unit tests) moves into Task 3 as one coherent piece. Each task lands green and self-contained.
+
+**Also worth carrying:** `wp-env`'s `plugins` key behaves exactly like `themes` — installs, does not activate (`wp plugin list` right after `wp-env start` reported `woocommerce inactive`). The existing `wp-env-installs-themes-without-activating-them` gotcha extended to cover it, plus the `:8891` row in its activation table. And two wc-cli seed pitfalls the global-setup already comments (`--field=id` rejected as "Invalid field: id."; `--fields=id --format=ids` prints ids but emits a live `foreach() argument must be of type array|object` warning from `class-wc-cli-rest-command.php:444`) — settled by parsing `--format=json` in JS.
+
+**Gotchas:** +1 new (`wp-org-plugin-zip-unversioned-serves-beta`), +1 update (`wp-env-installs-themes-without-activating-them` — plugins key + :8891 row). Index now **20**.
+
+**Nothing merged.** PR not opened. `main` untouched at `27edbd6`.
+
+**Next:** verify Task 1 end-to-end (checklist in `next-session-promt.md`), then Task 2 with the fixed split.
+
 ## s7 — 22–23.07.2026 — dev-mode coverage and the §7 component tail merged
 
 **Done:** two features, both designed → planned → subagent-driven → Codex-critic → merged. [#10](https://github.com/kalbac/woodev-base-theme/pull/10) dev-mode coverage (`e1cf31b`) and [#11](https://github.com/kalbac/woodev-base-theme/pull/11) the §7 component tail (`6dfac28`). Order this session: dev-mode → §7 → (M2 next), agreed with Maksim.

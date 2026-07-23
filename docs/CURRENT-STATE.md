@@ -1,6 +1,6 @@
 # Current State — Woodev Base
 
-> Updated: 22.07.2026 (s7)
+> Updated: 24.07.2026 (s8)
 
 ## Phase status
 
