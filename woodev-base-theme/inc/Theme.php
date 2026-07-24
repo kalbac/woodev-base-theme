@@ -23,5 +23,9 @@ final class Theme {
 		( new Customizer\Customizer() )->register();
 		( new Customizer\InlineStyles() )->register();
 		( new Scheme() )->register();
+
+		if ( class_exists( 'WooCommerce' ) ) {
+			( new Woo\Woo() )->register();
+		}
 	}
 }
