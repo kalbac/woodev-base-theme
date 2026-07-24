@@ -29,6 +29,12 @@ final class Support {
 		remove_action( 'woocommerce_after_main_content', 'woocommerce_output_content_wrapper_end', 10 );
 		add_action( 'woocommerce_before_main_content', [ $this, 'open_wrapper' ], 10 );
 		add_action( 'woocommerce_after_main_content', [ $this, 'close_wrapper' ], 10 );
+
+		// v1 storefront is full-width by design (see open_wrapper()): drop Woo's
+		// default sidebar so no widget column renders and `get_sidebar( 'shop' )`
+		// is never called — the latter also silences the core "Theme without
+		// sidebar.php is deprecated" notice a sidebar-less classic theme triggers.
+		remove_action( 'woocommerce_sidebar', 'woocommerce_get_sidebar', 10 );
 	}
 
 	/**

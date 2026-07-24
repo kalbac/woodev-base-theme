@@ -2,32 +2,170 @@
 @source "../../woodev-base-theme/**/*.php";
 
 /*
- * Storefront adapter styles (spec §8). This bundle is enqueued SEPARATELY and
- * layers ON TOP of the active pack bundle already on the page, so it inherits
- * that pack's design tokens (`--primary`, `--card`, `--radius`, …), Basecoat
- * components (`.card`, `.badge`, `.btn`) and the `@layer` order
- * (theme, base, components, adapter, utilities). Every rule below lives in
- * `@layer adapter` so it composes with the base adapter layer (index.css) and
- * obeys the same precedence — adapter loses to utilities, exactly like the blog
- * card rules it mirrors. Nothing here hardcodes a colour; everything is
- * expressed against pack tokens.
+ * Storefront styles (spec §8). This bundle is enqueued SEPARATELY and layers
+ * ON TOP of the active pack bundle already on the page, so it inherits that
+ * pack's design tokens (`--primary`, `--card`, `--radius`, …) and Basecoat
+ * components (`.card`, `.badge`).
+ *
+ * WHY THIS FILE IS UNLAYERED (unlike the base adapter styles).
+ * WooCommerce ships three UN-LAYERED stylesheets (woocommerce-layout,
+ * woocommerce-smallscreen, woocommerce.css). In the cascade, un-layered normal
+ * declarations beat ANY `@layer` — so storefront rules parked in `@layer
+ * adapter` (as the first scaffold did) lose to Woo REGARDLESS of specificity,
+ * and the product grid stays a floated mess. To override Woo we must (a) be
+ * un-layered too and (b) match Woo's selector specificity, then win on source
+ * order (our bundle enqueues last). This mirrors `states.css`, which the base
+ * theme also keeps outside all layers for exactly this "must beat un-layered /
+ * utility" reason. See docs/gotchas.
+ *
+ * Every rule is scoped under `.woocommerce` (present on the body of every Woo
+ * page) so it ties Woo's own `.woocommerce …` specificity; where Woo reaches
+ * deeper (`ul.products li.product .onsale`, `div.product .woocommerce-tabs
+ * ul.tabs li a`) we mirror that depth. Nothing hardcodes a colour: surfaces and
+ * text come from pack tokens; depth cues are `color-mix()` of `--foreground`,
+ * the same technique Basecoat uses for dark-mode elevation, so a light theme
+ * gets a soft dark shadow and a dark theme a soft light halo automatically.
+ *
+ * One signature interaction, applied consistently: the product image gently
+ * zooms inside its clipped card while the card lifts. Everything else stays
+ * quiet. Motion is opt-out under `prefers-reduced-motion`.
  */
 
-@layer adapter {
-  /* ------------------------------------------------------------------ *
-   * Product loop grid (shop / archive)
-   * Reuse the SAME responsive contract as `.wtb-post-grid`: 1 col → 2 at
-   * ≥48rem → 3 at ≥80rem. Woo ships `ul.products` as a real list, so reset
-   * its margin / padding / bullets before turning it into a grid. CSS-only:
-   * we style the container directly rather than adding a class to it.
-   * ------------------------------------------------------------------ */
+/* Adapter-scoped design tokens: the elevation/timing recipe defined once and
+ * reused, derived from pack tokens rather than literal colours. */
+.woocommerce,
+.woocommerce-page {
+  --wtb-shop-gap: 1.5rem;
+  --wtb-lift: -4px;
+  --wtb-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --wtb-shadow-hover:
+    0 1px 2px color-mix(in oklab, var(--foreground) 8%, transparent),
+    0 12px 24px -8px color-mix(in oklab, var(--foreground) 18%, transparent);
+  --wtb-hairline: color-mix(in oklab, var(--foreground) 10%, transparent);
+}
+
+.woocommerce {
+  /* ================================================================== *
+   * Shop header + result/ordering toolbar
+   * ================================================================== */
+  .woocommerce-products-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .woocommerce-products-header__title.page-title {
+    margin: 0;
+    font-size: clamp(1.75rem, 1.4rem + 1.4vw, 2.25rem);
+    font-weight: 650;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    color: var(--foreground);
+  }
+
+  /* Woo floats the count left and the orderby form right onto one toolbar row;
+   * we keep that (canonical) and rule it off from the grid below. */
+  .woocommerce-result-count {
+    float: left;
+    margin: 0;
+    padding: 0.5rem 0 0.75rem;
+    font-size: 0.8125rem;
+    color: var(--muted-foreground);
+  }
+
+  .woocommerce-ordering {
+    position: relative;
+    float: right;
+    margin: 0 0 1.25rem;
+  }
+
+  /* Native <select> restyled to the theme's input look. The chevron is a
+   * currentColor-masked layer on the wrapper (not a fixed-colour data-URI on the
+   * control) so it tracks the token colour in light/dark. */
+  .woocommerce-ordering select.orderby {
+    -webkit-appearance: none;
+    appearance: none;
+    padding: 0.5rem 2.25rem 0.5rem 0.875rem;
+    font: inherit;
+    color: var(--foreground);
+    background-color: var(--background);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+  }
+
+  .woocommerce-ordering::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 0.75rem;
+    width: 1rem;
+    height: 1rem;
+    transform: translateY(-50%);
+    pointer-events: none;
+    background-color: var(--muted-foreground);
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
+      center / contain no-repeat;
+  }
+
+  .woocommerce-ordering select.orderby:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  /* ================================================================== *
+   * Breadcrumb
+   * ================================================================== */
+  .woocommerce-breadcrumb {
+    margin-bottom: 1.25rem;
+    font-size: 0.8125rem;
+    color: var(--muted-foreground);
+
+    a {
+      color: var(--muted-foreground);
+      text-decoration: none;
+    }
+
+    a:hover {
+      color: var(--foreground);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+  }
+
+  /* ================================================================== *
+   * Product loop grid (shop / archive / related)
+   * SAME responsive contract as `.wtb-post-grid`: 1 → 2 (≥48rem) → 3 (≥80rem).
+   * Woo's layout/smallscreen sheets float each `li.product` to a % width; the
+   * two resets below tie Woo's base (0,3,0) and columns/smallscreen (0,4,2)
+   * selectors so the float is neutralised and grid placement wins.
+   * ================================================================== */
   ul.products {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 1.5rem;
+    gap: var(--wtb-shop-gap);
+    margin: 0;
+    padding: 1.5rem 0 0;
+    list-style: none;
+    clear: both;
+    border-top: 1px solid var(--wtb-hairline);
+
+    /* Woo adds a `::before`/`::after` clearfix (`content:" "; display:table`).
+     * In a grid container those pseudo-elements become grid ITEMS and steal the
+     * first/last cells, shunting the real products off their tracks. Remove
+     * them. */
+    &::before,
+    &::after {
+      display: none;
+    }
+  }
+
+  ul.products li.product,
+  ul.products[class*='columns-'] li.product {
+    width: auto;
     margin: 0;
     padding: 0;
-    list-style: none;
+    float: none;
+    clear: none;
+    text-align: left;
   }
 
   @media (min-width: 48rem) {
@@ -40,239 +178,595 @@
     ul.products {
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
+
+    /* With the optional sidebar the content column is ~18rem narrower — cap at
+     * 2, mirroring `.wtb-post-grid`. */
+    .wtb-layout--has-sidebar ul.products {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
   }
 
-  /* ------------------------------------------------------------------ *
+  /* ================================================================== *
    * Product card (the <li>, already carrying `.card`)
-   * `.card` gives us a flex column, the rounded/overflow-hidden shell and
-   * vertical padding. We drop the top padding so the thumbnail bleeds to the
-   * top edge (clipped to the card's rounded corners by `overflow: hidden`,
-   * the same look as `.wtb-entry-card`), and collapse the card gap so the
-   * card manages its own internal spacing.
-   * ------------------------------------------------------------------ */
-  .wtb-product-card {
+   * `.card` gives the flex column, big rounded shell, overflow-hidden clip and
+   * padding. Drop the top padding so the media bleeds up, tighten the bottom,
+   * collapse the gap, add the lift-on-hover.
+   * ================================================================== */
+  ul.products li.product.wtb-product-card {
     position: relative;
     gap: 0;
     padding-top: 0;
+    padding-bottom: 1.25rem;
+    transition:
+      transform 0.3s var(--wtb-ease),
+      box-shadow 0.3s var(--wtb-ease);
   }
 
-  /* The Woo loop-product anchor wraps the sale flash, thumbnail and body.
-   * Turn it into the card's main column and strip the link chrome so the
-   * whole upper card reads as one tap target without looking like a link. */
+  ul.products li.product.wtb-product-card:hover {
+    transform: translateY(var(--wtb-lift));
+    box-shadow: var(--wtb-shadow-hover);
+  }
+
+  /* The Woo loop anchor wraps media + body. Make it the card's main column and
+   * strip link chrome; `flex: 1` lets the body fill so the add-to-cart button
+   * (a sibling below) aligns to the card bottom across a row. */
   .wtb-product-card .woocommerce-loop-product__link {
-    display: block;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
     color: inherit;
     text-decoration: none;
   }
 
-  /* Thumbnail: a uniform square with a cover crop, mirroring the technique of
-   * `.wtb-entry-card > img:first-child`. Square (not 16/9) reads better in a
-   * product grid; Maksim reviews the ratio live at Task 7. */
+  /* Media: a uniform square, cover-cropped, on a muted plate. The gentle zoom
+   * is the card's signature; it is clipped at the top/sides by the card's
+   * `overflow: hidden` and hidden at the bottom by the opaque body above it. */
   .wtb-product-card .woocommerce-loop-product__link img {
     display: block;
     width: 100%;
     aspect-ratio: 1 / 1;
     object-fit: cover;
+    background-color: var(--muted);
+    transition: transform 0.5s var(--wtb-ease);
   }
 
-  /* Title + rating + price wrapper. Supplies the horizontal padding the card
-   * shell omits (so the image can stay full-bleed) plus a little rhythm. */
+  .wtb-product-card:hover .woocommerce-loop-product__link img {
+    transform: scale(1.05);
+  }
+
+  /* Title + rating + price. Opaque (`--card`) and lifted above the media so a
+   * zooming image slides UNDER it; supplies the padding the full-bleed media
+   * omits. */
   .wtb-product-card__body {
+    position: relative;
+    z-index: 1;
     display: flex;
+    flex: 1;
     flex-direction: column;
-    gap: 0.5rem;
-    padding: 1rem 1.25rem;
+    gap: 0.375rem;
+    padding: 1rem 1.25rem 0;
+    background-color: var(--card);
   }
 
   .wtb-product-card__body .woocommerce-loop-product__title {
     margin: 0;
-    font-size: 1rem;
+    padding: 0;
+    font-size: 0.9375rem;
     font-weight: 500;
-    line-height: 1.3;
+    line-height: 1.35;
     color: var(--card-foreground);
   }
 
-  .wtb-product-card__body .price {
+  .wtb-product-card .star-rating {
+    margin: 0.125rem 0 0;
+    font-size: 0.8rem;
+    color: var(--muted-foreground);
+  }
+
+  /* Price pinned to the body's bottom so prices align on a baseline across the
+   * row even when titles wrap differently. */
+  ul.products li.product .price {
+    margin: auto 0 0;
+    padding-top: 0.5rem;
     font-size: 1rem;
-    font-weight: 600;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
     color: var(--foreground);
   }
 
-  /* Woo strikes the regular price and shows the sale price in a nested <ins>;
-   * mute the original so the active price leads. */
-  .wtb-product-card__body .price del {
+  ul.products li.product .price del {
     margin-inline-end: 0.375rem;
     color: var(--muted-foreground);
     font-weight: 400;
   }
 
-  .wtb-product-card__body .price ins {
+  ul.products li.product .price ins {
     text-decoration: none;
+    background: none;
   }
 
-  /* Add-to-cart button: styled as a Basecoat `.btn` and pushed to the card
-   * bottom (`margin-top: auto`) so buttons align across a row of cards whose
-   * titles wrap to different heights. Horizontal + bottom margins inset it to
-   * match the body padding, since the card shell has no horizontal padding. */
-  .wtb-product-card .button.add_to_cart_button,
-  .wtb-product-card .added_to_cart {
-    display: inline-flex;
+  /* ------------------------------------------------------------------ *
+   * Card call-to-action (add-to-cart / read-more / view-cart)
+   * A sibling AFTER the anchor → a full card-width control pinned to the
+   * bottom. Solid primary lead; the post-ajax "View cart" reads as a quieter
+   * outline. Mirrors Woo's `ul.products li.product a.button` depth (0,4,2).
+   * ------------------------------------------------------------------ */
+  ul.products li.product a.button {
+    display: flex;
     align-items: center;
     justify-content: center;
-    margin: auto 1.25rem 0;
+    margin: 0.875rem 1.25rem 0;
     padding: 0.5rem 1rem;
+    border: 1px solid transparent;
     border-radius: var(--radius);
     background-color: var(--primary);
     color: var(--primary-foreground);
+    font-size: 0.875rem;
     font-weight: 500;
+    line-height: 1.4;
     text-align: center;
     text-decoration: none;
+    transition:
+      background-color 0.2s var(--wtb-ease),
+      opacity 0.2s var(--wtb-ease);
   }
 
-  .wtb-product-card .added_to_cart {
+  ul.products li.product a.button:hover {
+    opacity: 0.9;
+  }
+
+  ul.products li.product a.added_to_cart {
     margin-top: 0.5rem;
-    background-color: var(--secondary);
-    color: var(--secondary-foreground);
-  }
-
-  /* ------------------------------------------------------------------ *
-   * Sale flash & out-of-stock badges
-   * Both float over the thumbnail; the card is `position: relative` above.
-   * ------------------------------------------------------------------ */
-  .wtb-product-card .onsale {
-    position: absolute;
-    top: 0.5rem;
-    left: 0.5rem;
-    z-index: 1;
-    margin: 0;
-    padding: 0.25rem 0.5rem;
-    border-radius: var(--radius-lg, 0.5rem);
-    background-color: var(--primary);
-    color: var(--primary-foreground);
-    font-size: 0.75rem;
-    font-weight: 600;
-    line-height: 1;
-  }
-
-  /* `.wtb-stock-badge` already carries `.badge` (primary look); override it to
-   * a muted variant so "out of stock" reads as unavailable, and pin it to the
-   * top-right so it never collides with a sale flash on the left. */
-  .wtb-product-card .wtb-stock-badge {
-    position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
-    z-index: 1;
-    background-color: var(--muted);
-    color: var(--muted-foreground);
+    background-color: transparent;
+    color: var(--foreground);
     border-color: var(--border);
   }
 
+  ul.products li.product a.added_to_cart:hover {
+    background-color: var(--muted);
+    opacity: 1;
+  }
+
+  ul.products li.product a.button:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
   /* ------------------------------------------------------------------ *
-   * Single product summary (single-product page — CSS only, not overridden)
+   * Sale flash & out-of-stock badges — pills floating over the media.
    * ------------------------------------------------------------------ */
-  .single-product div.product {
+  ul.products li.product .onsale,
+  .wtb-product-card .wtb-stock-badge {
+    position: absolute;
+    top: 0.75rem;
+    z-index: 2;
+    min-height: 0;
+    margin: 0;
+    padding: 0.25rem 0.625rem;
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+  }
+
+  ul.products li.product .onsale {
+    left: 0.75rem;
+    right: auto;
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+  }
+
+  /* `.wtb-stock-badge` already carries `.badge`; recast it as a muted glass pill
+   * pinned top-right so it never collides with a sale flash on the left. */
+  .wtb-product-card .wtb-stock-badge {
+    right: 0.75rem;
+    background-color: color-mix(in oklab, var(--card) 80%, transparent);
+    color: var(--muted-foreground);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(4px);
+  }
+
+  /* ================================================================== *
+   * Single product (CSS only — not template-overridden)
+   * ================================================================== */
+  div.product {
     display: grid;
     gap: 2rem;
   }
 
-  /* A simple two-column split at desktop: native gallery beside the summary.
-   * Kept deliberately modest — Task 7 reviews the gallery treatment. */
   @media (min-width: 64rem) {
-    .single-product div.product {
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    div.product {
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+      gap: 3rem 3rem;
       align-items: start;
+    }
+
+    /* Only the gallery + summary share the two-column split. Everything else
+     * that Woo prints as a direct child of `div.product` (tabs, related,
+     * upsells) must span the full width below it — otherwise they drop into the
+     * grid's second row as half-width columns. */
+    div.product > .woocommerce-tabs,
+    div.product > .related.products,
+    div.product > .upsells.products {
+      grid-column: 1 / -1;
     }
   }
 
-  .single-product div.product .woocommerce-product-gallery {
-    min-width: 0;
+  /* Neutralise Woo's 48% float on the two columns so the grid lays them out. */
+  div.product div.images,
+  div.product div.woocommerce-product-gallery,
+  div.product .summary {
+    width: auto;
+    float: none;
+    margin: 0;
   }
 
-  .single-product .summary.entry-summary {
+  /* Gallery: a bordered, rounded, muted-plate frame so imagery sits in a
+   * deliberate container rather than floating on the page background. */
+  div.product .woocommerce-product-gallery {
+    position: relative;
+    min-width: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg, 0.75rem);
+    background-color: var(--muted);
+    overflow: hidden;
+  }
+
+  div.product .woocommerce-product-gallery__image img {
+    border-radius: inherit;
+  }
+
+  /* Sale flash on the gallery → the same pill as the loop. */
+  div.product .onsale {
+    position: absolute;
+    top: 0.75rem;
+    left: 0.75rem;
+    right: auto;
+    z-index: 2;
+    min-height: 0;
+    margin: 0;
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  div.product .summary.entry-summary {
     display: flex;
     flex-direction: column;
     gap: 1rem;
     min-width: 0;
   }
 
-  .single-product .summary.entry-summary .price {
-    font-size: 1.5rem;
-    font-weight: 600;
+  div.product .summary .product_title {
+    margin: 0;
+    padding: 0;
+    font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2rem);
+    font-weight: 650;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
     color: var(--foreground);
   }
 
-  .single-product .summary.entry-summary .price del {
+  div.product .summary p.price {
+    margin: 0;
+    font-size: 1.625rem;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+    color: var(--foreground);
+  }
+
+  div.product .summary p.price del {
     margin-inline-end: 0.5rem;
+    font-size: 1.25rem;
     color: var(--muted-foreground);
     font-weight: 400;
   }
 
-  .single-product .summary.entry-summary .price ins {
+  div.product .summary p.price ins {
     text-decoration: none;
+    background: none;
   }
 
-  /* Add-to-cart on the single page → Basecoat button look. */
-  .single-product .single_add_to_cart_button {
+  div.product .summary .woocommerce-product-details__short-description {
+    color: var(--muted-foreground);
+    line-height: 1.6;
+  }
+
+  div.product .summary .stock {
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  div.product .summary .stock.out-of-stock {
+    color: var(--destructive);
+  }
+
+  /* Add-to-cart row: quantity stepper beside a prominent primary button. */
+  div.product form.cart {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 0.75rem;
+    margin: 0.5rem 0 0;
+  }
+
+  div.product form.cart .quantity .qty {
+    width: 4.5rem;
+    height: 100%;
+    min-height: 2.75rem;
+    padding: 0 0.5rem;
+    color: var(--foreground);
+    background-color: var(--background);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+
+  div.product form.cart .single_add_to_cart_button {
     display: inline-flex;
+    flex: 1 1 auto;
     align-items: center;
     justify-content: center;
-    padding: 0.625rem 1.25rem;
+    min-height: 2.75rem;
+    padding: 0.625rem 1.75rem;
+    border: 1px solid transparent;
     border-radius: var(--radius);
     background-color: var(--primary);
     color: var(--primary-foreground);
-    font-weight: 500;
+    font-size: 0.9375rem;
+    font-weight: 550;
     text-decoration: none;
+    transition: opacity 0.2s var(--wtb-ease);
   }
 
-  /* ------------------------------------------------------------------ *
-   * Product tabs — PRESENTATION ONLY. The aria wiring and Woo's `wc-tabs`
-   * JS are already present; we only restyle the native markup to read as
-   * Basecoat tabs. No interaction, no template override.
-   * ------------------------------------------------------------------ */
-  .woocommerce-tabs ul.wc-tabs {
+  div.product form.cart .single_add_to_cart_button:hover {
+    opacity: 0.9;
+  }
+
+  div.product form.cart .single_add_to_cart_button:focus-visible,
+  div.product form.cart .quantity .qty:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  /* Product meta (SKU / category / tags) → quiet, ruled off from the buy box. */
+  div.product .product_meta {
+    margin-top: 0.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--wtb-hairline);
+    font-size: 0.8125rem;
+    color: var(--muted-foreground);
+
+    a {
+      color: var(--foreground);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+  }
+
+  /* ================================================================== *
+   * Product tabs — PRESENTATION ONLY. The aria wiring and `wc-tabs` JS are
+   * already present; we only restyle the native markup as segmented tabs over a
+   * panel. Mirrors Woo's `div.product .woocommerce-tabs ul.tabs …` depth.
+   * ================================================================== */
+  div.product .woocommerce-tabs {
+    margin-top: 3rem;
+  }
+
+  div.product .woocommerce-tabs ul.tabs {
     display: flex;
     flex-wrap: wrap;
     gap: 0.25rem;
     margin: 0 0 1.5rem;
-    padding: 0.25rem;
+    padding: 0.3rem;
     list-style: none;
-    border-radius: var(--radius-lg, 0.5rem);
+    border: 0;
+    border-radius: var(--radius-lg, 0.75rem);
     background-color: var(--muted);
+
+    &::before,
+    &::after {
+      display: none;
+    }
   }
 
-  .woocommerce-tabs ul.wc-tabs li {
+  div.product .woocommerce-tabs ul.tabs li {
     margin: 0;
     padding: 0;
     border: 0;
     background: none;
+
+    &::before,
+    &::after {
+      display: none;
+    }
   }
 
-  .woocommerce-tabs ul.wc-tabs li a {
+  div.product .woocommerce-tabs ul.tabs li a {
     display: inline-block;
-    padding: 0.375rem 0.875rem;
-    border-radius: var(--radius-sm, 0.375rem);
+    padding: 0.4rem 0.9rem;
+    border-radius: var(--radius-sm, 0.5rem);
     color: var(--muted-foreground);
+    font-size: 0.875rem;
     font-weight: 500;
     text-decoration: none;
+    transition:
+      background-color 0.2s var(--wtb-ease),
+      color 0.2s var(--wtb-ease);
   }
 
-  /* Active tab: lifted onto a card-coloured pill, mirroring Basecoat's
-   * segmented-tab active state. */
-  .woocommerce-tabs ul.wc-tabs li.active a {
-    background-color: var(--background);
+  div.product .woocommerce-tabs ul.tabs li a:hover {
     color: var(--foreground);
   }
 
-  .woocommerce-tabs ul.wc-tabs li a:focus-visible {
-    outline: 2px solid var(--primary);
+  /* Active tab: a card-coloured pill with a soft elevation. */
+  div.product .woocommerce-tabs ul.tabs li.active a {
+    background-color: var(--background);
+    color: var(--foreground);
+    box-shadow: 0 1px 2px color-mix(in oklab, var(--foreground) 12%, transparent);
+  }
+
+  div.product .woocommerce-tabs ul.tabs li a:focus-visible {
+    outline: 2px solid var(--ring);
     outline-offset: 2px;
   }
 
-  .woocommerce-tabs .wc-tab {
+  div.product .woocommerce-tabs .panel {
+    color: var(--foreground);
+    line-height: 1.65;
+
+    h2:first-child {
+      margin-top: 0;
+      font-size: 1.25rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+  }
+
+  /* ================================================================== *
+   * Related / upsell sections — their own `ul.products` reuse the grid+card
+   * rules above; we only set the heading rhythm and a separating rule.
+   * ================================================================== */
+  div.product .related.products,
+  div.product .upsells.products {
+    margin-top: 3.5rem;
+    padding-top: 2.5rem;
+    border-top: 1px solid var(--wtb-hairline);
+  }
+
+  div.product .related.products > h2,
+  div.product .upsells.products > h2 {
+    margin: 0 0 1.5rem;
+    font-size: 1.375rem;
+    font-weight: 650;
+    letter-spacing: -0.01em;
     color: var(--foreground);
   }
 
-  .woocommerce-tabs .wc-tab > h2:first-child {
-    margin-top: 0;
+  /* ================================================================== *
+   * Shop pagination — Woo prints `nav.woocommerce-pagination > ul.page-numbers`
+   * as a bordered strip of floated links. Recast it as a centred row of pill
+   * buttons; mirror Woo's `nav.woocommerce-pagination ul li a` depth to win.
+   * ================================================================== */
+  nav.woocommerce-pagination {
+    margin-top: 2.5rem;
+    text-align: center;
+  }
+
+  nav.woocommerce-pagination ul {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    list-style: none;
+  }
+
+  nav.woocommerce-pagination ul li {
+    margin: 0;
+    border: 0;
+    overflow: visible;
+  }
+
+  nav.woocommerce-pagination ul li a,
+  nav.woocommerce-pagination ul li span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.5rem;
+    height: 2.5rem;
+    padding: 0 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--foreground);
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-decoration: none;
+    background-color: var(--background);
+    transition: background-color 0.2s var(--wtb-ease);
+  }
+
+  nav.woocommerce-pagination ul li a:hover {
+    background-color: var(--muted);
+  }
+
+  nav.woocommerce-pagination ul li span.current {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+    border-color: var(--primary);
+  }
+
+  nav.woocommerce-pagination ul li a:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  /* ================================================================== *
+   * Store notices (add-to-cart confirmation, errors)
+   * ================================================================== */
+  .woocommerce-message,
+  .woocommerce-info,
+  .woocommerce-error {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 1.5rem;
+    padding: 0.875rem 1.125rem;
+    border: 1px solid var(--border);
+    border-left-width: 1px;
+    border-radius: var(--radius-lg, 0.75rem);
+    background-color: var(--card);
+    color: var(--foreground);
+    font-size: 0.875rem;
+    list-style: none;
+  }
+
+  .woocommerce-message::before,
+  .woocommerce-info::before,
+  .woocommerce-error::before {
+    content: none;
+  }
+
+  .woocommerce-message a,
+  .woocommerce-info a {
+    color: var(--primary);
+    font-weight: 500;
+  }
+
+  .woocommerce-error {
+    border-color: color-mix(in oklab, var(--destructive) 40%, var(--border));
+    color: var(--destructive);
+  }
+}
+
+/* ================================================================== *
+ * Reduced motion — collapse the signature zoom and all transitions.
+ * ================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .woocommerce ul.products li.product.wtb-product-card,
+  .woocommerce .wtb-product-card .woocommerce-loop-product__link img,
+  .woocommerce ul.products li.product a.button,
+  .woocommerce div.product .woocommerce-tabs ul.tabs li a,
+  .woocommerce div.product form.cart .single_add_to_cart_button {
+    transition: none;
+  }
+
+  .woocommerce ul.products li.product.wtb-product-card:hover {
+    transform: none;
+  }
+
+  .woocommerce .wtb-product-card:hover .woocommerce-loop-product__link img {
+    transform: none;
   }
 }
