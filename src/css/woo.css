@@ -1,0 +1,6 @@
+@import 'tailwindcss';
+@source "../../woodev-base-theme/**/*.php";
+/* Storefront adapter styles (spec §8) — a placeholder for now; the real rules
+ * land with the product card and single-product work. Tokens come from the
+ * active pack bundle already on the page, so this layers on top and needs no
+ * pack of its own. */

@@ -12,6 +12,8 @@ export default defineConfig({
     rollupOptions: {
       input: {
         app: 'src/js/app.js',
+        // Storefront bundle; Woo\Assets.php enqueues it only on Woo contexts.
+        woo: 'src/css/woo.css',
         // One standalone CSS bundle per Basecoat style pack; Assets.php enqueues
         // only the one the style_preset theme_mod selects (default vega).
         ...Object.fromEntries(PACKS.map((pack) => [`style-${pack}`, `src/css/packs/${pack}.css`])),

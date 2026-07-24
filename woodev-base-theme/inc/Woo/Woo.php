@@ -19,5 +19,6 @@ final class Woo {
 	 */
 	public function register(): void {
 		( new Support() )->register();
+		( new Assets() )->register();
 	}
 }
