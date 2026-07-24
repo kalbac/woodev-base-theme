@@ -50,4 +50,39 @@ final class SupportTest extends TestCase {
 		// No feature was registered twice and silently overwritten above.
 		self::assertSame( $calls, \count( $supports ) );
 	}
+
+	public function test_register_swaps_woo_content_wrapper_actions(): void {
+		Functions\expect( 'remove_action' )
+			->once()
+			->with( 'woocommerce_before_main_content', 'woocommerce_output_content_wrapper', 10 );
+		Functions\expect( 'remove_action' )
+			->once()
+			->with( 'woocommerce_after_main_content', 'woocommerce_output_content_wrapper_end', 10 );
+
+		$support = new Support();
+		$support->register();
+
+		self::assertNotFalse( \has_action( 'woocommerce_before_main_content', [ $support, 'open_wrapper' ] ) );
+		self::assertNotFalse( \has_action( 'woocommerce_after_main_content', [ $support, 'close_wrapper' ] ) );
+	}
+
+	public function test_open_wrapper_emits_the_theme_layout_shell(): void {
+		$support = new Support();
+
+		ob_start();
+		$support->open_wrapper();
+		$output = ob_get_clean();
+
+		self::assertSame( '<div class="wtb-layout"><div class="wtb-layout__content">', $output );
+	}
+
+	public function test_close_wrapper_emits_the_closing_markup(): void {
+		$support = new Support();
+
+		ob_start();
+		$support->close_wrapper();
+		$output = ob_get_clean();
+
+		self::assertSame( '</div></div>', $output );
+	}
 }
