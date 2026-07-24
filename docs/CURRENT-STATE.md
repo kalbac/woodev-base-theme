@@ -1,6 +1,6 @@
 # Current State — Woodev Base
 
-> Updated: 24.07.2026 (s8)
+> Updated: 24.07.2026 (s9)
 
 ## Phase status
 
@@ -11,13 +11,15 @@
 | M1 — Core theme | ✅ Done | 5 plans, all merged: icons `96df1db`, templates `f3f5f0a`, style packs `1fd9dd8`, Customizer `e480b3a`, scheme switcher `11ce459` |
 | Dev-mode coverage | ✅ Done | s7, PR [#10](https://github.com/kalbac/woodev-base-theme/pull/10) `e1cf31b` — the s3 debt, closed |
 | §7 component tail | ✅ Done | s7, PR [#11](https://github.com/kalbac/woodev-base-theme/pull/11) `6dfac28` — card/badge/alert/comment-form. tabs+accordion deferred to M2 |
-| M2a — Woo storefront | 🟡 Design+plan done, unbuilt | s7: [spec](specs/2026-07-23-m2a-woo-storefront-design.md) + [plan](plans/2026-07-23-m2a-woo-storefront.md) on `main` (`bbe67e0`,`a586049`). **Next session executes** — create a fresh branch, start at plan Task 1 |
+| M2a — Woo storefront | 🟡 Tasks 1–6 built on branch, Task 7 pending, NOT merged | s9: Tasks 1–6 done + reviewed on `feat/m2a-woo-storefront` (`820605d`). **UI is a scaffold, not final** (Maksim, 24.07.2026 — [#12](https://github.com/kalbac/woodev-base-theme/issues/12)). Remaining: Task 7 = full gate + Codex critic + PR, done AFTER the UI redesign. Merge is deferred |
 | M2b — Woo checkout flow | ⬜ Not started | cart/checkout/account/store-notices + Woo Customizer section |
 | M3 — Public release prep | ⬜ Not started | |
 
 ## Known bugs
 
 **None open.** `main` is green, verified on the MERGED commit `6dfac28` and not just per-branch: phpcs 0 · phpstan L8 · unit **146** · vitest 25 · integration **35** · integration-dev 4 · e2e **44** · e2e-dev 2 · build OK.
+
+**M2a branch caveat (`feat/m2a-woo-storefront`):** each M2a task was self-verified at its own level (s9 end: unit **156** · phpcs 72/72 · integration **36** (Woo `BootstrapTest` skips w/o Woo) · e2e-woo **9** green, grid guard mutation-verified · build OK), but the branch has **not** had the full merged-tree battery (no phpstan / vitest / base-isolation e2e / e2e-dev this session) and **no Codex critic** — that is Task 7, deliberately deferred until after the UI redesign. Treat the branch as unproven at the merge bar until Task 7 runs.
 
 s7's near-miss is worth carrying: the new `ScriptModuleGuard` reflected on `WP_Script_Modules::$done`, which **exists only from WP 6.9** while the theme declares `Requires at least: 6.8`. Every test using it would have died with `ReflectionException` on the floor we claim to support. Local runs cannot see this — wp-env uses `core: null`, i.e. latest — and neither can CI, which does not matrix the floor. **Nothing in this project currently tests the declared WP floor**; that is now the most valuable untested claim we make.
 
@@ -59,13 +61,15 @@ s5 found and fixed one real defect after merging — the mobile-drawer focus-tra
 | Dev-mode coverage | ✅ `e1cf31b` (s7), PR #10 |
 | §7 component tail | ✅ `6dfac28` (s7), PR #11 |
 
-Dev-mode coverage, the §7 component tail, and the M2a design+plan all landed in s7.
+M2a Tasks 1–6 are built and reviewed on `feat/m2a-woo-storefront` (see SESSION-LOG s9). What remains, in order:
 
-1. **Execute M2a** — the plan is written and on `main` (`docs/plans/2026-07-23-m2a-woo-storefront.md`), built on WooCommerce 10.9.4 contracts already read from the installed plugin. Start at Task 1 (stand up `.wp-env.woo.json`, seed the demo store). Subagent-driven. The storefront: shop grid of cards + single product with gallery/summary/tabs; one template override (the product card); Woo bundle on Woo contexts only; separate Woo e2e so the base stays Woo-free.
-2. **Then M2b** — cart/checkout/account/store-notices + the Woo Customizer section (spec §8). **tabs/accordion** land in M2a as restyled native Woo tabs, not a separate component.
+1. **UI redesign of the storefront** ([#12](https://github.com/kalbac/woodev-base-theme/issues/12)) — the current `woo.css` is a scaffold; do a real design pass (card, badges, single-product layout, gallery, tabs). The PHP layer / hooks / override / tests are reusable as-is; this reworks the visual layer only. Do this **before** Task 7.
+2. **Fold in the Customizer options** ([#13](https://github.com/kalbac/woodev-base-theme/issues/13) + the new AGENTS rule) — UI forks with ≥2 options ship as Customizer settings, starting with the thumbnail ratio (1:1 / 16:9). This seeds the Woo Customizer section (spec §8, otherwise M2b).
+3. **Task 7 — the M2a gate + merge** — full battery (phpcs · phpstan L8 · unit · vitest · build · integration · integration-dev · **base-isolation `npm run e2e` on :8888** · e2e-dev · e2e-woo), then Codex critic + re-critic, then push + PR. **base-isolation e2e was deferred from Task 6 into here** — the default env (:8888) must be recreated (`npm run wp:start`) first. Merge is Maksim's call.
+4. **Then M2b** — cart/checkout/account/store-notices + the rest of the Woo Customizer section.
 
 i18n is cross-cutting — required in every task, `.pot` generation deferred to M3.
 
 ## Last session
 
-s7 (22–23.07.2026): two features designed, planned, executed subagent-driven and merged — dev-mode coverage (PR #10, `e1cf31b`, the s3 debt gone) and the §7 component tail (PR #11, `6dfac28`). Things to carry: a guard used a WP **6.9+** API under a **6.8** floor and no gate could see it; the three-rounds rule fired a second time (on `AssetMarkup`) and again the answer was to delete a requirement; the s6 Serena line-ending gotcha was simply wrong; and phpcs missed unescaped `__()` output because the strings passed through a variable into `comment_form()` rather than being echoed. See SESSION-LOG.
+s9 (24.07.2026): verified M2a Task 1 live (all 7 checklist steps green), then built Tasks 2–6 subagent-driven — each self-verified + two-stage reviewed, committed on `feat/m2a-woo-storefront`. Docker cleaned to one Woo env. Maksim's verdict on the storefront UI: **scaffold-quality, not final** — engineering caravan is solid, the visual layer (Task 5 `woo.css`) needs a real redesign before merge ([#12](https://github.com/kalbac/woodev-base-theme/issues/12)). New AGENTS rule: UI forks with ≥2 options become Customizer settings, not questions (`24b9805`); first instance = thumbnail ratio ([#13](https://github.com/kalbac/woodev-base-theme/issues/13)). Nothing merged; branch is 6 M2a commits ahead of `main`. See SESSION-LOG.

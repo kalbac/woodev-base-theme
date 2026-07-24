@@ -1,5 +1,30 @@
 # Session Log — Woodev Base
 
+## s9 — 24.07.2026 — M2a Tasks 1–6 built on branch, UI judged scaffold, not merged
+
+**Docker cleanup first.** Prior sessions left 4 wp-env instances (15 containers) for this project. Kept only the Woo env (`.wp-env.woo.json`, :8891, needed for M2a); `wp-env destroy`'d the default / test / dev-mode envs (all recreate on demand). Other projects' old containers untouched.
+
+**Task 1 verified live** (the s8 debt). All 7 checklist steps green: `/shop/` 200, woocommerce + theme active on :8891, three seeded products (simple/sale instock, oos outofstock), 5 files `w/lf`. The unverified s8 commit was honest — no fix needed.
+
+**Tasks 2–6 built subagent-driven** (Sonnet workers, Opus for Task 5), each self-verified by me and put through the two-stage review (spec compliance, then code quality), each committed on `feat/m2a-woo-storefront`:
+- **T2** `82e4735` — Woo layer bootstrap + declared support (`add_theme_support('woocommerce')` + 3 gallery supports, `Theme::boot()` `class_exists` guard). Declared-support-ONLY per the s8 split; wrappers held for T3.
+- **T3** `4477875` — page shell: `Support::register()` swaps Woo's `content_wrapper` actions for `open_wrapper`/`close_wrapper` emitting `.wtb-layout`/`.wtb-layout__content` (full-width, no sidebar — v1 decision). Header.php already opens `.wtb-container`, so the wrappers only add the inner region.
+- **T4** `c427a3e` — conditional asset loading: `Woo\Assets` enqueues the `woo` bundle only on `is_woocommerce()||is_cart()||is_checkout()||is_account_page()`, via the base `Assets` static manifest resolver; both guard directions mutation-verified. New Vite `woo` input.
+- **T5** `a487085` — the one template override (`content-product.php`) + storefront CSS. **The anchor-nesting trap** (new gotcha): Woo's loop `<a>` spans the card hooks, so a header/footer crossing it is invalid HTML — solved with a body-div inside the anchor. OOS badge is a real translatable element. CSS in `@layer adapter`, pack tokens.
+- **T6** `820605d` — Woo storefront e2e (9 green: grid tracks 1/2/3, card vocabulary, sale/oos badges, single gallery/add-to-cart/tabs, add-to-cart works, dark restyle); grid guard mutation-verified. Base-isolation `npm run e2e` (:8888) **deferred into Task 7** to avoid a duplicate 25-min run.
+
+**Review nits applied in-line** (each amended into its task commit): T2 asserted all 4 gallery supports in the integration test; T3 gained a timing comment; T4 dropped a task-number from a CSS comment; **T5's `woo.css` shipped tab-indented — reformatted to 2-space** (new gotcha: `.editorconfig` is 2-space for CSS/JS, no gate catches a violation; my worker prompt wrongly said "tabs").
+
+**Maksim's UI verdict:** the storefront is **scaffold-quality, not final** ("сейчас ужасно; как каркас пойдёт"). The engineering caravan (PHP, hooks, override, tests) is reusable; the visual layer needs a real redesign → [#12](https://github.com/kalbac/woodev-base-theme/issues/12). Do the redesign **before** Task 7.
+
+**New AGENTS rule** (`24b9805`): a UI/UX fork with ≥2 workable options ships as a **Customizer setting** with a default, not a question to Maksim; interrupt only when there is no viable option. First instance = product thumbnail ratio (1:1 / 16:9) → [#13](https://github.com/kalbac/woodev-base-theme/issues/13).
+
+**Gotchas:** +2 (`woo-loop-anchor-spans-the-card-hooks`, `editorconfig-css-indent-is-spaces-and-no-gate-checks-it`). Index now **22**.
+
+**Nothing merged** (Maksim's call: checkpoint, don't merge — no Codex gate ran, UI not final). `main` untouched at `27edbd6`. Branch is 6 M2a commits + 1 docs (rule) + s8 docs ahead.
+
+**Next:** UI redesign ([#12]) → Customizer options ([#13]) → Task 7 (full gate + Codex + PR). See CURRENT-STATE "Next actions".
+
 ## s8 — 24.07.2026 — M2a Task 1 committed, stream stall, session saved early
 
 **Short one, salvage session.** The AI SDK stream stalled ("no event for 60000ms") right at the point I was about to delegate Task 2 to a Sonnet worker. Maksim caught it ("ты завис?"), I re-oriented, we agreed to stop and save rather than risk letting a new instance drive over half-committed work.
