@@ -1901,4 +1901,39 @@
   .woocommerce div.product div.images .woocommerce-product-gallery__wrapper {
     transition: none;
   }
+
+  /* Woo's AJAX blocking overlay and its standalone loader both spin the same
+   * pseudo-element: `animation: spin 1s ease-in-out infinite`, at (0,3,1) and
+   * (0,2,1) respectively in `woocommerce.css`. Mirrored, not raised — this
+   * file is un-layered and loads after Woo's, so equal specificity wins. */
+  .woocommerce .blockUI.blockOverlay::before {
+    animation: none;
+  }
+
+  .woocommerce .loader::before {
+    animation: none;
+  }
+
+  /* Woo fades the placeholder out on focus — `transition: opacity .5s .5s ease`
+   * at (0,4,2). Kept as its OWN rule rather than joined to the list above:
+   * `::-webkit-input-placeholder` is non-standard, and a browser that does not
+   * recognise it drops the entire selector list it appears in. Woo declares no
+   * standard `::placeholder` equivalent, so there is nothing to stop elsewhere.
+   * Classic markup only — the block checkout renders no `.form-row`.
+   *
+   * NOT covered by e2e, unlike the two spinners above: Chromium reports
+   * `transition-duration: 0s` on this pseudo-element even with the vendor rule
+   * live and unmutated, so an assertion there would pass whatever the CSS
+   * says. Stated rather than replaced with a weaker check that looks like
+   * coverage. */
+  .woocommerce form .form-row [placeholder]:focus::-webkit-input-placeholder {
+    transition: none;
+  }
+
+  /* What this block still does NOT cover, stated rather than implied: Woo's
+   * jQuery animations. `slideUp()`/`slideDown()` on the coupon and login forms,
+   * `fadeTo()` on the cart's blocking overlay, and the 1s animated scroll to
+   * the notices are all driven from JS by mutating inline styles frame by
+   * frame. CSS cannot stop them; only a JS-side opt-out could, which is
+   * plugin territory for a v1 theme. */
 }
