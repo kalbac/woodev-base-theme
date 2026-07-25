@@ -1,6 +1,6 @@
 # Current State — Woodev Base
 
-> Updated: 25.07.2026 (s11)
+> Updated: 25.07.2026 (s12)
 
 ## Phase status
 
@@ -12,7 +12,7 @@
 | Dev-mode coverage | ✅ Done | s7, PR [#10](https://github.com/kalbac/woodev-base-theme/pull/10) `e1cf31b` — the s3 debt, closed |
 | §7 component tail | ✅ Done | s7, PR [#11](https://github.com/kalbac/woodev-base-theme/pull/11) `6dfac28` — card/badge/alert/comment-form. tabs+accordion deferred to M2 |
 | Design — whole-theme visual identity | ✅ Approved (s10) | Refined V2 «Обиход» in `docs/design/v2-mockup/`. Golos Text + IBM Plex (OFL, Cyrillic), token-driven, 7 palette presets, hover-reveal CTA, all pages. Source of truth for implementation |
-| Identity implementation (T0–T8) | 🟡 T0–T7 done, T8 (gate) in progress | ADR-007 (fonts) + ADR-008 (identity replaces the 8 style packs) recorded. Plan: `docs/plans/2026-07-25-visual-identity.md`. Committed `bb9d591` + post-critic fixes. **Not merged, not fully criticked** — see T8 below |
+| Identity implementation (T0–T8) | 🟡 T0–T7 done, T8 nearly done | ADR-007 (fonts) + ADR-008 (identity replaces the 8 style packs) recorded. Plan: `docs/plans/2026-07-25-visual-identity.md`. s12 criticked **all four** areas and re-criticked every fix. **Not merged**; PR not opened — see T8 below |
 | M2a — Woo storefront | 🟡 CSS done on branch (`faf7801`), superseded by the approved design; NOT merged | s10: `woo.css` rewritten un-layered + Woo sidebar removed (grid/cascade/sidebar fixes carry over). Visual skin will be **replaced** by the approved design during implementation. Folded into T6 of the identity plan; Task 7 (full gate + Codex + PR) is now T8 |
 | M2b — Woo checkout flow | ⬜ Not started | cart/checkout/account/store-notices + Woo Customizer section |
 | M3 — Public release prep | ⬜ Not started | |
@@ -21,13 +21,21 @@
 
 **None open.** `main` is green, verified on the MERGED commit `6dfac28` and not just per-branch: phpcs 0 · phpstan L8 · unit **146** · vitest 25 · integration **35** · integration-dev 4 · e2e **44** · e2e-dev 2 · build OK.
 
-**Branch state (`feat/m2a-woo-storefront`), s11.** Green and self-verified: phpcs · phpstan L8 · unit **195** · vitest **32** · integration **35** · integration-dev **4** · e2e-woo **8** · build. Base e2e reached **40/41** before the runner was killed at the last test; a clean re-run is the first thing to finish.
+**Branch state (`feat/m2a-woo-storefront`), s12.** Self-verified this session, on the current tree: phpcs **0** · phpstan L8 **0** · unit **204** (1 pre-existing skip) · vitest **56** · eslint **0** · build OK · **e2e-woo 12/14, then both failures fixed and re-run green** (`.col-1` grid track, and the ordering-select dark check retargeted — the two were the only reds, so the suite is 14/14 across the two runs but has NOT been run 14/14 in one pass on the final tree). `npm run format` is red on 5 files this session did not touch — the three `docs/design/v2-mockup/*` artifacts (verbatim exports, must not be reformatted), `scripts/lib/build-tokens-lib.mjs`, and an untracked `opencode.json` that is not the theme's; that script is not in the documented gate battery.
 
-**What is NOT yet at the merge bar, and why the branch must not be merged on today's evidence:**
-- ~~e2e-dev has not run~~ — ran, 2/2 green.
-- **The Codex critic has covered two areas of four.** Token generator: four real defects (a never-measured contrast pair, a gate that reported success having measured nothing, a PHP-injection path through an unvalidated array KEY, and a test that would have passed with half the contrast algorithm deleted) — all fixed, then re-criticked, and the re-critic found two more defects *inside those fixes*. Customizer: one real defect (a silently-derived, untranslatable palette label), one declined with reason, one false positive caused by my own prompt omitting an out-of-chunk consumer.
-- **Still un-criticked: the Woo layer, the adapter CSS, and the asset/build wiring.** Every chunk reviewed so far produced real defects, so the unreviewed ones should not be assumed clean. This is the main reason the branch is not at the merge bar.
-- Unit count moved 156 → 195 and phpcs 72 → 80 files; the drop in some suites is pack/preset tests legitimately removed with the feature, not lost coverage.
+**The two base specs carrying this session's new assertions are green: `navigation.spec.mjs` + `components.spec.mjs` = 30/30** (7.8 min, run alone). That includes the `transitionrun` assertion, which is what proves `@starting-style` + `transition-behavior: allow-discrete` survive the build into `assets/dist` and actually fire; the `forced-colors` focus assertions; the `60dvh` height cap under both header variants; and the select-chevron geometry.
+
+**Not yet run on the current tree, and therefore the first thing to finish:** the other four base specs (`smoke`, `templates`, `theme-mods` — the last is ~12 min alone), integration, integration-dev, e2e-dev, and a full clean 14/14 `e2e:woo` in one pass. A combined run was started and killed after it stalled competing with the woo environment for Docker — **two suites on two different wp-env configs contend badly even though they do not corrupt each other**; run them one at a time.
+
+**What the critic gate produced (all four areas now criticked AND re-criticked):**
+- **Woo layer** — 4 real defects, then 3 more inside the fixes: the shortcode/block product loop shipping without CSS or `data-cta`; a priority window swallowing third-party buttons; the same repair then wrapping the Product Button BLOCK's markup in an inline span; a placeholder sprite unreachable from REST-rendered blocks.
+- **Asset/build wiring** — the licence written from memory (then a circular test for it), a WOFF2 check that a 4-byte file passed, a missing preload, and that preload ignoring the `font=system` setting.
+- **adapter CSS** — 12 defects, 2 of them P0, and **both P0s were re-critic findings inside the first repair**: an invalid field's focus indicator vanishing in forced-colors mode, and a mobile-menu height cap computed from a `padding-top` the header bar does not have.
+- **`woo.css`** — 7 cascade-race defects plus the Tailwind import that made the bundle 45,895 bytes of un-scoped preflight. **One repair existed only as a comment** — the prose claimed (0,4,3), the selector stayed (0,3,0) — caught by an e2e assertion on computed `display`, not by either critic.
+
+**Scope finding for M2b, recorded here because it changes what T6 actually covers:** WooCommerce 10.x's `install_pages` creates a **block-based** cart and checkout (`<!-- wp:woocommerce/checkout -->`, verified on the seeded :8891 store). A large part of `woo.css`'s cart/checkout styling targets the classic `.form-row` / `input.input-text` / `.shop_table` shapes, which a default install never renders — it applies only to stores that swap the shortcode back in. `/my-account/` IS classic, so `.col2-set` and the account surfaces are live. Nothing is wrong with what was written; the gap is that the default checkout experience is unstyled by us and untested.
+
+**Still not at the merge bar:** the suites above have not run on the current tree, and four e2e assertions are known to pass with their fix reverted (listed in `next-session-promt.md`) — they over-claim rather than mislead about the product, but they must be strengthened and mutation-verified before the PR.
 
 s7's near-miss is worth carrying: the new `ScriptModuleGuard` reflected on `WP_Script_Modules::$done`, which **exists only from WP 6.9** while the theme declares `Requires at least: 6.8`. Every test using it would have died with `ReflectionException` on the floor we claim to support. Local runs cannot see this — wp-env uses `core: null`, i.e. latest — and neither can CI, which does not matrix the floor. **Nothing in this project currently tests the declared WP floor**; that is now the most valuable untested claim we make.
 
@@ -84,18 +92,28 @@ s5 found and fixed one real defect after merging — the mobile-drawer focus-tra
 | — | **Integration (orchestrator):** `adapter/index.css` rewired — 10 imports, superseded blocks deleted (skip-link, nav, scheme-toggle, entry-card bits, comment bits), container/layout/post-grid deliberately kept below the imports. Verified: no selector collides across the 10 files; build green; the ported CSS is in the bundle and inside `@layer adapter` | ✅ Done |
 | T6 | WooCommerce surfaces — shop/product/cart/checkout/account, hover-reveal CTA (static under `@media (hover: none)`), placeholder sprite. `woo.css` rewritten un-layered; Woo form controls + store notices live there, not in the adapter | ✅ Done |
 | T7 | Customizer — 5 settings: `palette` (7), `accent` (hex→oklch), `radius` (px, renamed from `radius_scale`), `font`, `cta_reveal`. Each sanitised and resolved by one function | ✅ Done |
-| T8 | Gate. **All suites green:** phpcs · phpstan L8 · unit **196** · vitest **32** · build · integration **35** · integration-dev **4** · e2e-dev **2** · e2e-woo **8** · base e2e **40/41 in-suite, the 41st re-run alone and green** (it failed on a `wp-env run cli` error while the runner was being killed, not on an assertion). Codex: token generator ✅ (critic + re-critic), Customizer ✅ (2 chunks). **Woo layer, adapter CSS and asset/build wiring NOT criticked.** PR not opened | 🟡 In progress |
+| T8 | Gate. **Critic: complete.** All four areas criticked and every fix re-criticked (s12, 10 Codex chunks): token generator ✅, Customizer ✅, Woo layer ✅, `woo.css` ✅, adapter CSS ✅, asset/build wiring ✅. Fixed on the current tree and self-verified: phpcs 0 · phpstan L8 0 · unit **204** · vitest **56** · eslint 0 · build. **Suites still to re-run on the current tree: base e2e, integration, integration-dev, e2e-dev, a clean e2e:woo.** Four e2e assertions are known to over-claim (pass with their fix reverted) and must be strengthened + mutation-verified. PR not opened | 🟡 Gate re-run + test strengthening left |
 
 T0→T1→T2 sequential; T3 parallel with T1/T2; T4–T6 parallelisable once T1–T3 land; T7 after T1; T8 last. Then M2b + M3 (remaining Woo flow polish + release prep). i18n cross-cutting; `.pot` deferred to M3.
 
 ## Last session
 
-s11 (25.07.2026): implemented the approved visual identity, T0–T7 of
-`docs/plans/2026-07-25-visual-identity.md`. ADR-007 (self-hosted fonts) and ADR-008 (one
-identity replaces the 8 Basecoat style packs) recorded — the latter was the session's single
-question to Maksim, because it overrides approved spec §6. Four commits on
-`feat/m2a-woo-storefront`, nothing merged.
+s12 (25.07.2026): finished T8's critic gate. Five Codex chunks covered the three areas s11
+left unreviewed (Woo layer, `woo.css`, adapter CSS, asset/build wiring); five re-critic
+chunks then read every fix, and **each one found defects inside the fixes**. Six commits on
+`feat/m2a-woo-storefront`, nothing merged, PR not opened.
 
-**Next session starts here:** critic the three un-reviewed areas (Woo layer, adapter CSS,
-asset/build wiring), fix what it finds, re-critic the fixes, then open the PR. Everything
-else in T8 is green. See `next-session-promt.md`.
+**Next session starts here:**
+1. Re-run on the current tree, ONE SUITE AT A TIME: base e2e (`navigation.spec.mjs` and
+   `components.spec.mjs` carry new assertions), integration, integration-dev, e2e-dev, and a
+   clean full `e2e:woo`. Two wp-env environments contend badly for Docker even on different
+   configs — a run stalled and had to be killed for exactly that.
+2. Strengthen the four e2e assertions that pass with their fix reverted, and the
+   non-idempotent gallery seeding, all listed in `next-session-promt.md`. Mutation-verify each.
+3. Add the missing coverage for a fix that already shipped: a page containing `[products]`
+   must receive `woo.css` and the `data-cta` attribute.
+4. Finish `prefers-reduced-motion` on the storefront (the CSS-reachable ones only — the rest
+   are jQuery animations CSS cannot stop; say so rather than implying coverage).
+5. Then push, open the PR, close #14/#15/#16. **Merge is Maksim's call.**
+
+See `next-session-promt.md` for the full handoff, including the traps this session paid for.

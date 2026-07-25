@@ -1,5 +1,80 @@
 # Session Log — Woodev Base
 
+## s12 — 25.07.2026 — T8: the three un-criticked areas reviewed, fixed and re-criticked
+
+**The job was the critic gate, and it earned its keep four times over.** s11 left the
+Woo layer, the adapter CSS and the asset/build wiring unreviewed. Five Codex chunks
+covered them; then five re-critic chunks read the fixes. **Every re-critic chunk found
+defects inside the fixes** — the fourth session running.
+
+**Two P0s, both in accessibility, both inside a fix.** An invalid form field lost its
+focus indicator entirely: `.is-error` sat later in source at equal specificity to
+`:focus` and overwrote both the border and the halo, with `outline: none` leaving no
+fallback. The repair for it then failed in forced-colors mode, where `box-shadow` is
+dropped and `outline: none` also suppresses `base.css`'s themed ring — so the fix for
+"no focus indicator" shipped no focus indicator to Windows High Contrast. Now a
+transparent outline plus a `forced-colors` block. Separately: the mobile menu's height
+cap was `calc(100dvh - 4.5rem)` where `4.5rem` was documented as a sum including a
+`padding-top: 1rem` the header bar does not have (it is `min-height: 72px`), and the
+`centered` variant stacks its bar into a column — so the fix for unreachable menu items
+left them unreachable. Replaced with `60dvh`, which depends on no other declaration.
+
+**The most expensive findings were the ones where my own justification was false, not
+the code.** I authorised loading `woo.css` on every page on the grounds that every rule
+in it is nested under `.woocommerce`. The file began with `@import 'tailwindcss'`: the
+built bundle was 45,895 bytes carrying a full preflight and utility set, so "inert off a
+storefront page" was simply untrue. A grep of the source cannot see what an `@import`
+adds — **for anything a build generates, assert against `assets/dist`**. Removing that
+import (the file uses no Tailwind feature; `app.css` already scans the same glob) took
+the bundle to ~30,400 bytes and stopped every Woo page shipping a second reset.
+
+**Pulling that thread found CSS nobody wrote, on a page that takes money.** Tailwind v4's
+automatic content detection is on regardless of an explicit `@source`, so it scanned the
+whole repo — including the approved design mockup, whose ordinary `col-1`/`col-2` class
+names made Tailwind emit `.col-1{grid-column:1}` / `.col-2{grid-column:2}`. Those are
+WooCommerce's own checkout column classes. `source(none)` plus explicit sources removed
+48 generated utilities and added none.
+
+**Seven storefront rules were losing the cascade race outright.** All the same shape: our
+selector was weaker than the Woo rule it had to beat, in a file that is un-layered
+precisely so it can win that race. Verified each against the real WooCommerce 10.9.4
+stylesheets rather than reasoning about them. The card link was (0,3,0) against Woo's
+(0,4,3) `display:block`, so the card's whole flex column did nothing; the gallery strip
+lost to `li{width:25%;float:left}` under a live `overflow:hidden`; the active-thumbnail
+selector expected a nested `img` where Woo marks `img.flex-active`; `.col2-set`'s
+children kept Woo's `width:48%` inside their own grid track. **One of those repairs was
+written as a comment and never applied to the selector** — the prose claimed (0,4,3)
+while the code stayed (0,3,0), and the e2e assertion on computed `display` is what
+caught it.
+
+**A licence written from memory.** `build-fonts.mjs` synthesised the OFL text it shipped
+(its docblock said so) and invented both copyright lines: we claimed a Reserved Font
+Name Golos Text's authors never reserved, and the wrong year. The real upstream files are
+now vendored, copied byte-for-byte, pinned by SHA-256 — because the first fix was
+circular: the build checked a `Copyright` prefix and one heading, and the test compared
+the shipped file to that same input, so truncating the licence body passed everything.
+`.gitattributes` needed `-text` for them: IBM's upstream OFL is CRLF and `eol=lf` would
+have silently renormalised the file we ship as verbatim.
+
+**A finding a worker dismissed, wrongly.** Woo's password-visibility toggle bakes
+`fill="%23111111"` into its icon, unreadable on our dark `--card`. A worker declared it a
+false positive because no `show-password-input` markup exists in Woo's templates — it is
+created by Woo's frontend JS (`woocommerce.js:126`). Fixed, and then the re-critic caught
+that my own fix covered only an explicit `.dark` and missed the DEFAULT `system` scheme,
+where dark arrives through `prefers-color-scheme`.
+
+**Process cost worth recording.** Six parallel workers share one worktree and one wp-env:
+two ran `git stash` on the shared tree (survived on luck) and two ran Playwright against
+the same `:8888`, whose `global-setup` reseed made them delete each other's fixtures —
+surfacing as "Invalid post" and "No such post category", which read like a broken seed
+script and cost two runs plus a `wp-env reset`. e2e is now serialised through the
+orchestrator. Four gotchas recorded, including PHPUnit 9.6 silently discarding
+`#[RunInSeparateProcess]` (a test was green while asserting the opposite of the code) and
+Serena's `replace_symbol_body` duplicating a class header into invalid PHP.
+
+Commits: `6da5398` (Woo layer), `49ca2c9` (fonts/licences), `bdfdb5f` (assets + Tailwind
+sources + eslint gap), `ba6aeb3` (gotchas), plus the CSS surfaces. **Not merged.**
+
 ## s11 — 25.07.2026 — the approved visual identity implemented (T0–T7); critic gate run, fixes re-criticked
 
 **Scope decided up front, once.** The approved design conflicts with spec §6's eight
