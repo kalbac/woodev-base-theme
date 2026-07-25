@@ -17,6 +17,8 @@
 // (pretty vs plain) of the wp-env install.
 import { expect, test } from '@playwright/test';
 
+import { SHORTCODE_PAGE_SLUG } from './global-setup.mjs';
+
 const NAMES = {
   simple: 'WTB Simple Product',
   sale: 'WTB Sale Product',
@@ -181,6 +183,32 @@ test('a gallery with 4+ images leaves the last thumbnail reachable, and clicking
   expect(box.width).toBeGreaterThan(0);
   expect(box.height).toBeGreaterThan(0);
 
+  // MUTATION-VERIFIED (s13). "Visible and clickable" alone does NOT detect
+  // either repair being reverted: `flex-wrap: wrap` survives on the container,
+  // so Woo's `li { width: 25%; float: left }` simply wraps onto a second row —
+  // `float` is ignored on a flex item — and all five thumbnails stay on screen.
+  // The test passed with BOTH the (0,4,3) `li` selector and `overflow: visible`
+  // reverted. What actually separates fixed from broken is the geometry our
+  // rules assert ownership of:
+  //   - the `li` is our fixed 64px square, not a percentage of the container;
+  //   - the container's overflow is `visible`, not Woo's `hidden`.
+  const strip = page.locator('.flex-control-thumbs');
+  const geometry = await strip.evaluate((el) => {
+    const cs = getComputedStyle(el);
+    const li = el.querySelector('li');
+    const liStyle = getComputedStyle(li);
+    return {
+      overflowX: cs.overflowX,
+      overflowY: cs.overflowY,
+      liWidth: liStyle.width,
+      liHeight: liStyle.height,
+    };
+  });
+  expect(geometry.liWidth).toBe('64px');
+  expect(geometry.liHeight).toBe('64px');
+  expect(geometry.overflowX).toBe('visible');
+  expect(geometry.overflowY).toBe('visible');
+
   const firstImg = thumbImgs.first();
   await expect(firstImg).toHaveClass(/flex-active/);
   const inactiveBorderColor = await lastImg.evaluate((el) => getComputedStyle(el).borderColor);
@@ -274,6 +302,54 @@ test('two stacked notices do not widen the page at 375px', async ({ page }) => {
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
   expect(overflowX).toBeLessThanOrEqual(0);
+
+  // MUTATION-VERIFIED (s13). The layout assertions above pass with the two
+  // OTHER repairs in this block reverted, and they only ever exercised one of
+  // the three notice roles. Both gaps are closed here:
+  //
+  //   - `border-top: 0` kills Woo's still-live `border-top: 3px solid` — which
+  //     our later `border-color` shorthand would otherwise re-tint into a
+  //     second, full-width accent edge above the intended left one;
+  //   - `content: none` suppresses Woo's `::before` icon glyph, which has no
+  //     reserved padding once our own padding wins and therefore lands on top
+  //     of the text. We ship no WooCommerce icon font to reposition it into.
+  //
+  // All three classic notice shapes are mounted, because the repairs live on
+  // the shared selector and a single-role check cannot prove it.
+  const notices = await page.evaluate(() => {
+    const wrap = document.querySelector('.woocommerce');
+    for (const cls of ['woocommerce-message', 'woocommerce-info']) {
+      const div = document.createElement('div');
+      div.className = cls;
+      div.textContent = 'Seeded notice for the shared-selector assertions.';
+      wrap.prepend(div);
+    }
+    return ['woocommerce-error', 'woocommerce-message', 'woocommerce-info'].map((cls) => {
+      const el = document.querySelector(`.${cls}`);
+      const cs = getComputedStyle(el);
+      return {
+        cls,
+        borderTopWidth: cs.borderTopWidth,
+        borderLeftWidth: cs.borderLeftWidth,
+        beforeContent: getComputedStyle(el, '::before').content,
+        backgroundColor: cs.backgroundColor,
+      };
+    });
+  });
+
+  for (const notice of notices) {
+    expect(notice.borderTopWidth, `${notice.cls} keeps Woo's top border`).toBe('0px');
+    expect(notice.beforeContent, `${notice.cls} keeps Woo's ::before glyph`).toBe('none');
+    // The intentional accent edge is still there — this is what carries the
+    // notice type once the icon is gone, so "no top border" must not be
+    // satisfiable by having no border at all.
+    expect(notice.borderLeftWidth, `${notice.cls} lost its accent edge`).toBe('3px');
+  }
+
+  // Each role tints its own surface: three distinct backgrounds, not one
+  // shared default that happens to satisfy every per-role assertion above.
+  const backgrounds = new Set(notices.map((n) => n.backgroundColor));
+  expect(backgrounds.size).toBe(3);
 });
 
 test('the shop ordering select is legible under the dark scheme', async ({ page }) => {
@@ -367,4 +443,87 @@ test('under prefers-reduced-motion: reduce, the Woo spinner and gallery slide tr
     (el) => getComputedStyle(el, '::after').animationName,
   );
   expect(afterAnimationName).toBe('none');
+});
+
+test('a plain page running a [products] shortcode gets woo.css and the data-cta attribute', async ({
+  page,
+}) => {
+  // s13: closes the coverage gap for a fix that shipped in s12 with nothing
+  // asserting it end to end.
+  //
+  // `is_woocommerce()` is FALSE on this page — it is an ordinary page, not
+  // shop/product/product-taxonomy — yet `[products]` renders our
+  // `content-product.php` override inside Woo's `.woocommerce` wrapper. A
+  // conditional enqueue therefore used to ship that markup with NO stylesheet,
+  // and `[data-cta]` (which `woo.css` selects on to switch the add-to-cart
+  // reveal) was missing for the same reason.
+  await page.setViewportSize({ width: 1400, height: 1000 });
+  await page.goto(`/${SHORTCODE_PAGE_SLUG}/`);
+
+  // The premise: Woo markup on a page that is not a Woo context.
+  await expect(page.locator('.woocommerce ul.products li.product').first()).toBeVisible();
+  expect(
+    await page.evaluate(() => ({
+      isShopBodyClass: document.body.classList.contains('woocommerce-shop'),
+      hasWooWrapper: !!document.querySelector('.woocommerce'),
+    })),
+  ).toEqual({ isShopBodyClass: false, hasWooWrapper: true });
+
+  // woo.css is not merely LINKED — one of its rules actually applies. The card
+  // vocabulary class only ever gets its grid/geometry from woo.css, so a
+  // resolved multi-track `ul.products` is proof the bundle reached this page.
+  expect(await productGridTracks(page)).toBe(3);
+
+  // `[data-cta]` lands on <html> (body_class() cannot add attributes — see
+  // inc/Woo/CtaAttribute.php), and its value is the sanitised Customizer
+  // setting, so assert membership rather than one literal.
+  const cta = await page.evaluate(() => document.documentElement.getAttribute('data-cta'));
+  expect(['hover', 'always']).toContain(cta);
+});
+
+test("Woo's AJAX blocking overlay and loader stop spinning under prefers-reduced-motion", async ({
+  page,
+}) => {
+  // s13: the two remaining CSS-reachable animations Woo declares. Both are
+  // `animation: spin 1s ease-in-out infinite` on a pseudo-element —
+  // `.woocommerce .blockUI.blockOverlay::before` (0,3,1) and
+  // `.woocommerce .loader::before` (0,2,1) in the installed 10.9.4
+  // `woocommerce.css`, mirrored at the same specificity rather than raised.
+  //
+  // The markup is mounted rather than triggered: both are created by Woo's
+  // jQuery blockUI at AJAX time and torn down again on completion, so racing a
+  // real request would be flaky. What is under test is the CSS cascade against
+  // Woo's real class shape, inside the real `.woocommerce` wrapper the vendor
+  // selector requires — the same approach the stacked-notices test above uses,
+  // and for the same reason.
+  await page.goto('/shop/');
+
+  const read = () =>
+    page.evaluate(() => {
+      const wrap = document.querySelector('.woocommerce');
+      for (const cls of ['blockUI blockOverlay', 'loader']) {
+        if (!wrap.querySelector(`.${cls.split(' ').join('.')}`)) {
+          const el = document.createElement('div');
+          el.className = cls;
+          wrap.prepend(el);
+        }
+      }
+      return {
+        overlay: getComputedStyle(wrap.querySelector('.blockUI.blockOverlay'), '::before')
+          .animationName,
+        loader: getComputedStyle(wrap.querySelector('.loader'), '::before').animationName,
+      };
+    });
+
+  // Baseline first: without the media query these really are animated, so a
+  // later "none" proves our rule did the work rather than the animation never
+  // having been there. Woo names the keyframes `spin`.
+  const moving = await read();
+  expect(moving.overlay).toBe('spin');
+  expect(moving.loader).toBe('spin');
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const stopped = await read();
+  expect(stopped.overlay).toBe('none');
+  expect(stopped.loader).toBe('none');
 });

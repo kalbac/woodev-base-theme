@@ -92,6 +92,39 @@ function reseedProduct(slug, args) {
   return wp(`wc product create --user=admin --slug=${slug} --porcelain ${args}`);
 }
 
+/** Slug of the page carrying a `[products]` shortcode loop. */
+export const SHORTCODE_PAGE_SLUG = 'wtb-products-shortcode';
+
+/**
+ * Seed an ordinary PAGE whose content is a `[products]` shortcode.
+ *
+ * This is not a Woo page: `is_woocommerce()` is `is_shop() ||
+ * is_product_taxonomy() || is_product()` and is FALSE here, yet the shortcode
+ * renders `woocommerce/content-product.php` — our override, carrying every
+ * `wtb-*` class — inside Woo's own `<div class="woocommerce columns-N">`
+ * wrapper. That combination is exactly the case `inc/Woo/Assets.php` was
+ * changed to serve (a conditional enqueue used to ship that markup with no
+ * stylesheet at all) and `inc/Woo/CtaAttribute.php` alongside it, and nothing
+ * asserted it end to end until s13.
+ *
+ * Idempotent by delete-then-create on the slug, same as `reseedProduct()`.
+ */
+function seedShortcodePage() {
+  const existing = wpTry(`post list --post_type=page --name=${SHORTCODE_PAGE_SLUG} --field=ID`);
+  for (const id of existing.split(/\r?\n/).filter(Boolean)) {
+    wp(`post delete ${id} --force`);
+  }
+  // The shortcode is written WITHOUT attributes on purpose: this command goes
+  // through `npx wp-env run cli`, which re-splits the command string, so inner
+  // quotes are stripped and `[products limit="3"]` arrives as two positional
+  // arguments and fails. Only three products are seeded anyway, so the default
+  // limit is not doing any work here.
+  return wp(
+    `post create --post_type=page --post_status=publish --post_title="WTB Products Shortcode" ` +
+      `--post_name=${SHORTCODE_PAGE_SLUG} --post_content="[products]" --porcelain`,
+  );
+}
+
 /**
  * Attach `count` freshly generated placeholder images to a product — one
  * set as the featured image, the rest as the gallery — so
@@ -107,10 +140,24 @@ function reseedProduct(slug, args) {
  * the theme directory, and this repo carries no fixture images to upload.
  *
  * Idempotent: every attachment this creates carries a
- * `_wtb_e2e_gallery_marker` meta pointing at the product id; existing ones
- * for the SAME product are force-deleted first, so re-running
- * global-setup never accumulates orphaned media in the container (which,
- * per the file header, persists state across restarts).
+ * `_wtb_e2e_gallery_marker` meta, and EVERY attachment carrying that meta is
+ * force-deleted first — whatever value it holds. That "whatever value" is
+ * load-bearing, and an earlier version got it wrong: it deleted only the
+ * attachments whose marker equalled the CURRENT product id, while
+ * `reseedProduct()` deletes and recreates the product before this runs, so the
+ * product's id is new every time. The previous run's attachments were marked
+ * with the OLD id, matched nothing, and survived — five orphaned media rows per
+ * run, in a container that persists state across restarts. The marker still
+ * records the product id, which is useful when inspecting the container by
+ * hand; it is simply no longer what the cleanup query filters on.
+ *
+ * `post_status => 'any'` is explicitness, NOT part of the fix — measured on the
+ * container, the marker query returns the same five attachments with `'any'`,
+ * with `'inherit'`, and with the parameter omitted entirely (WP_Query special-
+ * cases `post_type => 'attachment'`, and `inherit` is registered with
+ * `exclude_from_search => false`, so `'any'` includes it). Recorded because an
+ * earlier draft of this comment's commit message blamed the default status for
+ * the orphans, which the measurement disproves.
  *
  * The PHP runs as a single `wp eval` line — no literal newlines — because
  * embedding a multi-line PHP string in this project's `wp-env run cli`
@@ -121,7 +168,7 @@ function reseedProduct(slug, args) {
 function seedGalleryImages(productId, count) {
   const php = [
     `$pid = ${productId};`,
-    `$old = get_posts(['post_type' => 'attachment', 'meta_key' => '_wtb_e2e_gallery_marker', 'meta_value' => $pid, 'posts_per_page' => -1, 'fields' => 'ids']);`,
+    `$old = get_posts(['post_type' => 'attachment', 'post_status' => 'any', 'meta_key' => '_wtb_e2e_gallery_marker', 'posts_per_page' => -1, 'fields' => 'ids']);`,
     `foreach ($old as $aid) { wp_delete_attachment($aid, true); }`,
     `require_once ABSPATH . 'wp-admin/includes/image.php';`,
     `$upload_dir = wp_upload_dir();`,
@@ -266,6 +313,10 @@ export default function globalSetup() {
     ].join(' '),
   );
   log(`out-of-stock product wtb-product-oos → id ${oosId}`);
+
+  // ── 5. Seed a NON-Woo page that renders a Woo product loop ───────────────
+  const shortcodePageId = seedShortcodePage();
+  log(`[products] shortcode page ${SHORTCODE_PAGE_SLUG} → id ${shortcodePageId}`);
 
   log('done.');
 }
