@@ -117,12 +117,14 @@ final class AssetsProductionTest extends WP_UnitTestCase {
 		$dist_uri = get_template_directory_uri() . '/assets/dist';
 		$html     = self::render_front_end_assets();
 
-		// The default style_preset is vega, and this suite never changes it.
+		// One bundle (ADR-008): no per-pack theme_mod resolution, so the manifest
+		// key is a fixed string, not something this suite has to keep in sync
+		// with a stored setting.
 		AssetMarkup::assert_stylesheet_link(
 			$html,
 			'woodev-base-style-css',
-			$dist_uri . '/' . $manifest['src/css/packs/vega.css']['file'],
-			'Expected wp_enqueue_style( \'woodev-base-style\', … ) to print the exact file the manifest names for the vega pack.'
+			$dist_uri . '/' . $manifest['src/css/app.css']['file'],
+			'Expected wp_enqueue_style( \'woodev-base-style\', … ) to print the exact file the manifest names for the CSS entry.'
 		);
 
 		AssetMarkup::assert_script_module(

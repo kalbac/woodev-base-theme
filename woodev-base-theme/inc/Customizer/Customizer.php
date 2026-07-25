@@ -1,6 +1,6 @@
 <?php
 /**
- * Customizer registration (spec §6).
+ * Customizer registration (spec §6, extended by ADR-008's identity controls).
  *
  * @package Woodev\Theme\Base
  */
@@ -10,58 +10,16 @@ declare(strict_types=1);
 namespace Woodev\Theme\Base\Customizer;
 
 use Woodev\Theme\Base\Scheme;
-use Woodev\Theme\Base\StylePreset;
 use Woodev\Theme\Base\Templates\Layout;
 
 /**
  * Registers the v1 sections, settings and controls.
  *
  * Every sanitize_callback here is the same validator the front end resolves
- * with (Layout, StylePreset, Settings), so the Customizer cannot store a value
- * a template or the inline stylesheet would then reject.
+ * with (Layout, Scheme, Settings), so the Customizer cannot store a value a
+ * template or the inline stylesheet would then reject.
  */
 final class Customizer {
-
-	/**
-	 * Labels for the generated accent presets.
-	 *
-	 * The slugs come from the generated map; only the human-readable side lives
-	 * here, because a generated file cannot carry translator context — a
-	 * `__()` call needs a literal string in the source for the .pot scanner to
-	 * find it.
-	 *
-	 * A generated slug with no label here is therefore NOT offered at all. The
-	 * tempting fallback, `ucfirst( $slug )`, would put an untranslated string in
-	 * front of the admin — silently, and in a theme whose i18n policy is
-	 * absolute. Failing closed means the worst case of forgetting a label is a
-	 * missing choice (loud, and caught by CustomizerTest against the real
-	 * generated map) rather than an English word leaking into every locale.
-	 *
-	 * @return array<string, string>
-	 */
-	private function primary_preset_choices(): array {
-		$labels = [
-			'default' => __( 'Inherit style pack', 'woodev-base-theme' ),
-			'neutral' => __( 'Neutral', 'woodev-base-theme' ),
-			'blue'    => __( 'Blue', 'woodev-base-theme' ),
-			'green'   => __( 'Green', 'woodev-base-theme' ),
-			'red'     => __( 'Red', 'woodev-base-theme' ),
-			'rose'    => __( 'Rose', 'woodev-base-theme' ),
-			'orange'  => __( 'Orange', 'woodev-base-theme' ),
-			'yellow'  => __( 'Yellow', 'woodev-base-theme' ),
-			'violet'  => __( 'Violet', 'woodev-base-theme' ),
-		];
-
-		$choices = [ Settings::PRIMARY_PRESET_DEFAULT => $labels['default'] ];
-
-		foreach ( array_keys( Settings::presets() ) as $slug ) {
-			if ( isset( $labels[ $slug ] ) ) {
-				$choices[ $slug ] = $labels[ $slug ];
-			}
-		}
-
-		return $choices;
-	}
 
 	/**
 	 * Hook registration into WordPress.
@@ -81,28 +39,7 @@ final class Customizer {
 		$this->add_section( $wp_customize, 'woodev_base_layout', __( 'Layout', 'woodev-base-theme' ), 50 );
 		$this->add_section( $wp_customize, 'woodev_base_header', __( 'Header', 'woodev-base-theme' ), 60 );
 		$this->add_section( $wp_customize, 'woodev_base_footer', __( 'Footer', 'woodev-base-theme' ), 70 );
-
-		$this->add_select(
-			$wp_customize,
-			'style_preset',
-			'woodev_base_colors',
-			__( 'Style pack', 'woodev-base-theme' ),
-			StylePreset::choices(),
-			StylePreset::default()->value,
-			StylePreset::sanitize( ... ),
-			__( 'Basecoat visual style. Packs change component shape and density, not the palette.', 'woodev-base-theme' )
-		);
-
-		$this->add_select(
-			$wp_customize,
-			'primary_preset',
-			'woodev_base_colors',
-			__( 'Accent color', 'woodev-base-theme' ),
-			$this->primary_preset_choices(),
-			Settings::PRIMARY_PRESET_DEFAULT,
-			Settings::sanitize_primary_preset( ... ),
-			__( 'Applies on top of the style pack, in both light and dark schemes.', 'woodev-base-theme' )
-		);
+		$this->add_section( $wp_customize, 'woodev_base_shop', __( 'Shop', 'woodev-base-theme' ), 80 );
 
 		$this->add_select(
 			$wp_customize,
@@ -140,6 +77,27 @@ final class Customizer {
 			__( 'Lets a visitor override the default and remembers their choice.', 'woodev-base-theme' )
 		);
 
+		$this->add_select(
+			$wp_customize,
+			'palette',
+			'woodev_base_colors',
+			__( 'Colour palette', 'woodev-base-theme' ),
+			$this->palette_choices(),
+			Settings::PALETTE_DEFAULT,
+			Settings::sanitize_palette( ... ),
+			__( 'The neutral temperature and accent that drive every surface, border and wash in the theme.', 'woodev-base-theme' )
+		);
+
+		$this->add_color(
+			$wp_customize,
+			'accent',
+			'woodev_base_colors',
+			__( 'Accent colour', 'woodev-base-theme' ),
+			Settings::ACCENT_DEFAULT,
+			Settings::sanitize_accent( ... ),
+			__( 'Overrides the palette\'s accent. Leave empty to use the palette\'s own accent.', 'woodev-base-theme' )
+		);
+
 		$this->add_number(
 			$wp_customize,
 			'base_font_size',
@@ -149,6 +107,20 @@ final class Customizer {
 			Settings::BASE_FONT_SIZE_MIN,
 			Settings::BASE_FONT_SIZE_MAX,
 			Settings::sanitize_base_font_size( ... )
+		);
+
+		$this->add_select(
+			$wp_customize,
+			'font',
+			'woodev_base_typography',
+			__( 'Font', 'woodev-base-theme' ),
+			[
+				Settings::FONT_IDENTITY => __( 'Golos Text + IBM Plex (default)', 'woodev-base-theme' ),
+				Settings::FONT_SYSTEM   => __( 'System font (no download)', 'woodev-base-theme' ),
+			],
+			Settings::FONT_DEFAULT,
+			Settings::sanitize_font( ... ),
+			__( 'System font fetches nothing: no request for the self-hosted webfont files is ever made.', 'woodev-base-theme' )
 		);
 
 		$this->add_number(
@@ -162,19 +134,15 @@ final class Customizer {
 			Settings::sanitize_container_width( ... )
 		);
 
-		$this->add_select(
+		$this->add_number(
 			$wp_customize,
-			'radius_scale',
+			'radius',
 			'woodev_base_layout',
-			__( 'Corner rounding', 'woodev-base-theme' ),
-			[
-				'none' => __( 'Square', 'woodev-base-theme' ),
-				'sm'   => __( 'Small', 'woodev-base-theme' ),
-				'md'   => __( 'Medium', 'woodev-base-theme' ),
-				'lg'   => __( 'Large', 'woodev-base-theme' ),
-			],
+			__( 'Corner rounding (px)', 'woodev-base-theme' ),
 			Settings::RADIUS_DEFAULT,
-			Settings::sanitize_radius_scale( ... )
+			Settings::RADIUS_MIN,
+			Settings::RADIUS_MAX,
+			Settings::sanitize_radius( ... )
 		);
 
 		$this->add_select(
@@ -216,6 +184,56 @@ final class Customizer {
 			'simple',
 			Layout::sanitize_footer_variant( ... )
 		);
+
+		$this->add_select(
+			$wp_customize,
+			'cta_reveal',
+			'woodev_base_shop',
+			__( 'Add-to-cart reveal', 'woodev-base-theme' ),
+			[
+				Settings::CTA_REVEAL_HOVER  => __( 'On hover (default)', 'woodev-base-theme' ),
+				Settings::CTA_REVEAL_ALWAYS => __( 'Always visible', 'woodev-base-theme' ),
+			],
+			Settings::CTA_REVEAL_DEFAULT,
+			Settings::sanitize_cta_reveal( ... ),
+			__( 'Whether the add-to-cart button on a product card appears only on hover/focus, or is always shown.', 'woodev-base-theme' )
+		);
+	}
+
+	/**
+	 * Palette choices for the `palette` control: slug => translated label,
+	 * restricted to whatever Palettes::slugs() actually returns.
+	 *
+	 * A malformed inc/generated/palettes.php degrades Palettes::slugs() down
+	 * to just PALETTE_DEFAULT (see Palettes) — the control must offer exactly
+	 * that narrowed set, or it would let the admin pick a slug the renderer
+	 * has already stopped supporting.
+	 *
+	 * @return array<string, string>
+	 */
+	private function palette_choices(): array {
+		$labels = [
+			'warm-clay'    => __( 'Warm Clay', 'woodev-base-theme' ),
+			'cold-petrol'  => __( 'Cold Petrol', 'woodev-base-theme' ),
+			'graphite'     => __( 'Graphite', 'woodev-base-theme' ),
+			'forest'       => __( 'Forest', 'woodev-base-theme' ),
+			'sand'         => __( 'Sand', 'woodev-base-theme' ),
+			'wine'         => __( 'Wine', 'woodev-base-theme' ),
+			'night-indigo' => __( 'Night Indigo', 'woodev-base-theme' ),
+		];
+
+		$choices = [];
+
+		foreach ( Palettes::slugs() as $slug ) {
+			// The fallback only fires for a slug this list has never heard of
+			// (tokens.mjs grew an 8th palette without this list being
+			// updated) — a build-time contract miss, not a runtime input to
+			// sanitize, so it is not held to the translatable-string rule the
+			// seven named labels above are.
+			$choices[ $slug ] = $labels[ $slug ] ?? ucwords( str_replace( '-', ' ', $slug ) );
+		}
+
+		return $choices;
 	}
 
 	/**
@@ -335,6 +353,63 @@ final class Customizer {
 					'max'  => $max,
 					'step' => 1,
 				],
+			]
+		);
+	}
+
+	/**
+	 * Register a colour-picker setting and its control.
+	 *
+	 * WP_Customize_Color_Control is the real class WordPress core registers
+	 * for its colour-picker JS/UI; it is only autoloadable when WordPress'
+	 * own customize-controls machinery has loaded, which the Brain\Monkey
+	 * unit suite never does (no WP code runs there at all — see
+	 * CustomizerTest's own note on why WP_Customize_Manager itself is a
+	 * Mockery double in that suite). class_exists() picks a plain control as
+	 * a fallback there; the integration suite runs under real WordPress,
+	 * where the class always exists and the picker renders for real.
+	 *
+	 * @param \WP_Customize_Manager $wp_customize  Customizer manager.
+	 * @param string                $id            Setting id.
+	 * @param string                $section       Section id.
+	 * @param string                $label         Control label.
+	 * @param string                $default_value Default value.
+	 * @param callable              $sanitize      Sanitize callback.
+	 * @param string                $description   Optional control description.
+	 */
+	private function add_color( \WP_Customize_Manager $wp_customize, string $id, string $section, string $label, string $default_value, callable $sanitize, string $description = '' ): void {
+		$wp_customize->add_setting(
+			$id,
+			[
+				'default'           => $default_value,
+				'sanitize_callback' => $sanitize,
+				'transport'         => 'refresh',
+			]
+		);
+
+		if ( class_exists( \WP_Customize_Color_Control::class ) ) {
+			$wp_customize->add_control(
+				new \WP_Customize_Color_Control(
+					$wp_customize,
+					$id,
+					[
+						'label'       => $label,
+						'description' => $description,
+						'section'     => $section,
+					]
+				)
+			);
+
+			return;
+		}
+
+		$wp_customize->add_control(
+			$id,
+			[
+				'label'       => $label,
+				'description' => $description,
+				'section'     => $section,
+				'type'        => 'color',
 			]
 		);
 	}

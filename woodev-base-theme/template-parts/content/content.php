@@ -11,9 +11,9 @@ declare(strict_types=1);
 ?>
 <article id="post-<?php the_ID(); ?>" <?php post_class( 'wtb-entry mb-8' ); ?>>
 	<header class="wtb-entry-header mb-4">
-		<h1 class="wtb-entry-title text-3xl font-semibold tracking-tight"><?php the_title(); ?></h1>
+		<h1 class="wtb-entry-title"><?php the_title(); ?></h1>
 
-		<div class="wtb-entry-meta mt-2 text-sm text-[var(--muted-foreground)]">
+		<div class="wtb-entry-meta">
 			<time datetime="<?php echo esc_attr( get_the_date( DATE_W3C ) ); ?>">
 				<?php echo esc_html( get_the_date() ); ?>
 			</time>

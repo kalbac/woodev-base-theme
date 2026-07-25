@@ -1,6 +1,14 @@
 # Basecoat's tokens are un-layered — `@layer theme` tokens lose, and `layer(components)` won't build
 
 > Discovered s2 (17.07.2026) executing M0 Task 5, proven by sentinel builds against basecoat-css 1.0.2 + Tailwind 4.3.3 + Vite 8.1.5. This corrected two assumptions baked into the M0 plan.
+>
+> **Context changed (25.07.2026):** ADR-008's T2 landed. The 8-pack machinery
+> this file used to describe (`packs-lib.mjs`, `src/css/packs/`,
+> `build-pack-entries.mjs`) is deleted; the load-bearing import order lives in
+> one `src/css/app.css` now, importing `basecoat-css/base` instead of a pack.
+> "How to apply here" below is updated to match. The underlying lesson
+> (Basecoat's tokens are un-layered; ours must follow, un-layered and after it)
+> is unchanged — only the file names moved.
 
 ## The traps
 

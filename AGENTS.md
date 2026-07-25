@@ -4,7 +4,7 @@ Entry point for all development agents. Read this first, then `docs/CURRENT-STAT
 
 ## What this project is
 
-Woodev Base — a universal WordPress theme (optional WooCommerce layer) built on Basecoat UI + Tailwind CSS v4 + Alpine.js, classic templates + `theme.json` (hybrid). Full brief: `PROJECT.md`. Approved design: `docs/specs/2026-07-17-woodev-base-v1-design.md`. Architecture decisions: `docs/adr/`.
+Woodev Base — a universal WordPress theme (optional WooCommerce layer) built on Basecoat UI + Tailwind CSS v4 + Alpine.js, classic templates + `theme.json` (hybrid). Full brief: `PROJECT.md`. Architecture: `docs/specs/2026-07-17-woodev-base-v1-design.md`. Current visual identity (colours, type, radius — supersedes that spec's §6 style packs and §9 fonts): `docs/design/v2-mockup/`, [ADR-008](docs/adr/ADR-008-single-visual-identity.md), [ADR-007](docs/adr/ADR-007-self-hosted-fonts.md). Architecture decisions: `docs/adr/`.
 
 ## Roles and models
 

@@ -25,129 +25,58 @@ final class Settings {
 	public const BASE_FONT_SIZE_DEFAULT = 16;
 
 	/**
-	 * The radius scale, as CSS lengths for `--radius`. Basecoat derives
-	 * --radius-md/-lg/-xl from it with calc(), so one value reshapes every
-	 * component.
+	 * ADR-008: `warm-clay` equals the :root defaults, so selecting it is the
+	 * one palette that emits no override at all (InlineStyles::build_css()).
+	 * Guaranteed resolvable even if inc/generated/palettes.php is missing or
+	 * tampered with — see Palettes, which always synthesises this slug.
 	 */
-	public const RADIUS_SCALE = [
-		'none' => '0rem',
-		'sm'   => '0.375rem',
-		'md'   => '0.625rem',
-		'lg'   => '1rem',
+	public const PALETTE_DEFAULT = 'warm-clay';
+
+	/**
+	 * '' means "no override": the palette's own accent wins. A picked colour
+	 * is stored as a normalized 6-digit hex (`#rrggbb`, lowercase) and
+	 * converted to --accent-h/--accent-c by ColorConverter at render time —
+	 * the theme's palette architecture (ADR-008) has no admin-facing
+	 * lightness control, only hue and chroma.
+	 */
+	public const ACCENT_DEFAULT = '';
+
+	/**
+	 * `--radius` is a px BASE, not a step in a rem lookup table — see the
+	 * docblock on sanitize_radius() for why this replaced radius_scale
+	 * outright instead of reusing its theme_mod key.
+	 */
+	public const RADIUS_MIN     = 0;
+	public const RADIUS_MAX     = 16;
+	public const RADIUS_DEFAULT = 10;
+
+	public const FONT_IDENTITY = 'identity';
+	public const FONT_SYSTEM   = 'system';
+	public const FONT_DEFAULT  = self::FONT_IDENTITY;
+
+	public const FONTS = [ self::FONT_IDENTITY, self::FONT_SYSTEM ];
+
+	/**
+	 * The system fallback stack already baked into --font-display/-body/-mono
+	 * as the tail of every value in src/tokens/tokens.mjs (ADR-007): picking
+	 * `system` here reproduces that exact fallback, so the theme degrades to
+	 * its own documented v1 look rather than to something new. Duplicated by
+	 * hand rather than parsed from the generated CSS — Settings has no build
+	 * dependency — so keep the two in sync if the fallback tail ever changes.
+	 *
+	 * @var array<string, string>
+	 */
+	public const FONT_SYSTEM_STACK = [
+		'--font-display' => 'system-ui, "Segoe UI", Roboto, sans-serif',
+		'--font-body'    => 'system-ui, "Segoe UI", Roboto, sans-serif',
+		'--font-mono'    => 'ui-monospace, "SF Mono", Menlo, monospace',
 	];
 
-	public const RADIUS_DEFAULT = 'md';
+	public const CTA_REVEAL_HOVER   = 'hover';
+	public const CTA_REVEAL_ALWAYS  = 'always';
+	public const CTA_REVEAL_DEFAULT = self::CTA_REVEAL_HOVER;
 
-	/**
-	 * "Inherit the active style pack's own primary" — emits no override.
-	 */
-	public const PRIMARY_PRESET_DEFAULT = 'default';
-
-	/**
-	 * The generated primary presets, validated entry by entry.
-	 *
-	 * Deliberately NOT memoised in a static: the file is a handful of lines that
-	 * opcache already holds, this runs a few times per request at most, and a
-	 * static cache would silently couple the unit tests to each other — the
-	 * first test's get_template_directory() stub would decide the answer for
-	 * every later one.
-	 *
-	 * @return array<string, array{light: array<string, string>, dark: array<string, string>}>
-	 */
-	public static function presets(): array {
-		$path = get_template_directory() . '/inc/generated/primary-presets.php';
-
-		if ( ! \is_file( $path ) || ! \is_readable( $path ) ) {
-			return [];
-		}
-
-		$raw = require $path;
-
-		return \is_array( $raw ) ? self::normalize( $raw ) : [];
-	}
-
-	/**
-	 * Keep only well-formed entries.
-	 *
-	 * The map is our own build artifact, but it is also the single point where
-	 * strings enter the inline <style>. Enforcing the shape here means no
-	 * consumer has to escape or re-check anything downstream.
-	 *
-	 * @param array<mixed> $raw Decoded map.
-	 * @return array<string, array{light: array<string, string>, dark: array<string, string>}>
-	 */
-	private static function normalize( array $raw ): array {
-		$clean = [];
-
-		foreach ( $raw as $slug => $schemes ) {
-			if ( ! \is_string( $slug ) || ! \is_array( $schemes ) ) {
-				continue;
-			}
-
-			$light = self::normalize_scheme( $schemes['light'] ?? null );
-			$dark  = self::normalize_scheme( $schemes['dark'] ?? null );
-
-			if ( [] === $light || [] === $dark ) {
-				continue;
-			}
-
-			$clean[ $slug ] = [
-				'light' => $light,
-				'dark'  => $dark,
-			];
-		}
-
-		return $clean;
-	}
-
-	/**
-	 * The three custom properties of one scheme, or [] if anything is off.
-	 *
-	 * @param mixed $scheme Candidate scheme.
-	 * @return array<string, string>
-	 */
-	private static function normalize_scheme( mixed $scheme ): array {
-		if ( ! \is_array( $scheme ) ) {
-			return [];
-		}
-
-		$clean = [];
-
-		foreach ( [ '--primary', '--primary-foreground', '--ring' ] as $property ) {
-			$value = $scheme[ $property ] ?? null;
-
-			// Pinned to the generator's own output shape: digits, dots, spaces
-			// and percent signs inside oklch(). Anything else cannot have come
-			// from `npm run tokens` and must not reach a <style> block.
-			if ( ! \is_string( $value ) || 1 !== preg_match( '/^oklch\([\d.% ]+\)$/', $value ) ) {
-				return [];
-			}
-
-			$clean[ $property ] = $value;
-		}
-
-		return $clean;
-	}
-
-	/**
-	 * Customizer sanitize callback for `primary_preset`.
-	 *
-	 * @param mixed $value Raw value.
-	 */
-	public static function sanitize_primary_preset( mixed $value ): string {
-		if ( ! \is_string( $value ) ) {
-			return self::PRIMARY_PRESET_DEFAULT;
-		}
-
-		return isset( self::presets()[ $value ] ) ? $value : self::PRIMARY_PRESET_DEFAULT;
-	}
-
-	/**
-	 * The chosen accent preset slug, or `default` to inherit the pack.
-	 */
-	public static function primary_preset(): string {
-		return self::sanitize_primary_preset( get_theme_mod( 'primary_preset', self::PRIMARY_PRESET_DEFAULT ) );
-	}
+	public const CTA_REVEALS = [ self::CTA_REVEAL_HOVER, self::CTA_REVEAL_ALWAYS ];
 
 	/**
 	 * Customizer sanitize callback for `container_width`.
@@ -182,30 +111,163 @@ final class Settings {
 	}
 
 	/**
-	 * Customizer sanitize callback for `radius_scale`.
+	 * Customizer sanitize callback for `palette`.
+	 *
+	 * The closed set is Palettes::slugs(), not a hardcoded list of seven: a
+	 * tampered or absent inc/generated/palettes.php still resolves (Palettes
+	 * always synthesises PALETTE_DEFAULT), so a stored slug that the current
+	 * file no longer supports falls back here exactly like any other invalid
+	 * value, rather than the request fataling.
 	 *
 	 * @param mixed $value Raw value.
 	 */
-	public static function sanitize_radius_scale( mixed $value ): string {
-		return \is_string( $value ) && isset( self::RADIUS_SCALE[ $value ] )
-			? $value
-			: self::RADIUS_DEFAULT;
+	public static function sanitize_palette( mixed $value ): string {
+		return self::closed_set( $value, Palettes::slugs(), self::PALETTE_DEFAULT );
 	}
 
 	/**
-	 * The chosen radius step.
+	 * The admin's chosen palette slug.
 	 */
-	public static function radius_scale(): string {
-		return self::sanitize_radius_scale( get_theme_mod( 'radius_scale', self::RADIUS_DEFAULT ) );
+	public static function palette(): string {
+		return self::sanitize_palette( get_theme_mod( 'palette', self::PALETTE_DEFAULT ) );
 	}
 
 	/**
-	 * The CSS length for a radius step.
+	 * Customizer sanitize callback for `accent`.
 	 *
-	 * @param string $step Candidate radius step; sanitized before lookup.
+	 * Accepts a 3- or 6-digit hex colour, with or without a leading '#',
+	 * case-insensitively, and normalizes it to lowercase `#rrggbb`. Anything
+	 * else — including a non-string, an out-of-shape string, or a value that
+	 * merely LOOKS like CSS ('red', 'rgb(0,0,0)', a `sanitize_hex_color()`-
+	 * style breakout attempt) — falls back to '' (ACCENT_DEFAULT), which
+	 * InlineStyles reads as "no override, the palette's accent wins".
+	 *
+	 * A dedicated pattern rather than WordPress core's own
+	 * sanitize_hex_color(): core returns null on rejection (not the empty
+	 * string this class's fail-closed convention needs everywhere else) and
+	 * accepts only a leading '#', where a colour picker's raw POST value is
+	 * worth normalizing either way.
+	 *
+	 * @param mixed $value Raw value.
 	 */
-	public static function radius_value( string $step ): string {
-		return self::RADIUS_SCALE[ self::sanitize_radius_scale( $step ) ];
+	public static function sanitize_accent( mixed $value ): string {
+		if ( ! \is_string( $value ) ) {
+			return self::ACCENT_DEFAULT;
+		}
+
+		$value = \trim( $value );
+
+		if ( 1 !== \preg_match( '/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/', $value, $matches ) ) {
+			return self::ACCENT_DEFAULT;
+		}
+
+		$hex = \strtolower( $matches[1] );
+
+		if ( 3 === \strlen( $hex ) ) {
+			$hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+		}
+
+		return '#' . $hex;
+	}
+
+	/**
+	 * The admin's accent override, or '' when the palette's own accent applies.
+	 */
+	public static function accent(): string {
+		return self::sanitize_accent( get_theme_mod( 'accent', self::ACCENT_DEFAULT ) );
+	}
+
+	/**
+	 * Customizer sanitize callback for `radius`.
+	 *
+	 * Replaces the retired `radius_scale` theme_mod under a NEW key rather
+	 * than reusing it. radius_scale stored one of four STRING steps
+	 * ('none'…'lg') mapped to rem lengths; `radius` stores a PX INTEGER
+	 * 0–16 directly, so reusing the old key would feed a site's stored
+	 * string ('lg') into clamp()'s is_numeric() check, silently fail it, and
+	 * collapse to the new default (10px) — reinterpreting a real admin
+	 * choice as if it had never been made, with nothing in the UI or the log
+	 * to say so. A new key makes the same outcome (old choice not carried
+	 * forward) visible instead: `radius_scale` is simply orphaned, and
+	 * `radius` starts fresh at its own documented default — which, because
+	 * 10px is what `radius_scale = md` used to resolve to (0.625rem at the
+	 * 16px root), is visually a no-op for the common case anyway. There is
+	 * no shipped release of the pre-identity Customizer to migrate away
+	 * from (this theme has not reached v1), so the honest reset costs
+	 * nothing today that reuse-and-corrupt would not have cost silently
+	 * later.
+	 *
+	 * @param mixed $value Raw value.
+	 */
+	public static function sanitize_radius( mixed $value ): int {
+		return self::clamp( $value, self::RADIUS_MIN, self::RADIUS_MAX, self::RADIUS_DEFAULT );
+	}
+
+	/**
+	 * The chosen radius base, in pixels.
+	 */
+	public static function radius(): int {
+		return self::sanitize_radius( get_theme_mod( 'radius', self::RADIUS_DEFAULT ) );
+	}
+
+	/**
+	 * Customizer sanitize callback for `font`.
+	 *
+	 * @param mixed $value Raw value.
+	 */
+	public static function sanitize_font( mixed $value ): string {
+		return self::closed_set( $value, self::FONTS, self::FONT_DEFAULT );
+	}
+
+	/**
+	 * The admin's chosen font mode: FONT_IDENTITY (Golos Text / IBM Plex, the
+	 * default) or FONT_SYSTEM (the OS stack, zero webfont bytes fetched).
+	 */
+	public static function font(): string {
+		return self::sanitize_font( get_theme_mod( 'font', self::FONT_DEFAULT ) );
+	}
+
+	/**
+	 * Customizer sanitize callback for `cta_reveal`.
+	 *
+	 * @param mixed $value Raw value.
+	 */
+	public static function sanitize_cta_reveal( mixed $value ): string {
+		return self::closed_set( $value, self::CTA_REVEALS, self::CTA_REVEAL_DEFAULT );
+	}
+
+	/**
+	 * The admin's chosen add-to-cart reveal mode: CTA_REVEAL_HOVER (default)
+	 * or CTA_REVEAL_ALWAYS.
+	 *
+	 * Consumer: inc/Woo/CtaAttribute.php renders `data-cta="…"` on `<html>`
+	 * via the `language_attributes` filter, on WooCommerce contexts only, and
+	 * calls this method for the value — so a tampered theme_mod is sanitised
+	 * before it can reach markup. Nothing here touches CSS output:
+	 * `[data-cta="always"]` is the escape-hatch selector the shipped
+	 * stylesheet already keys off.
+	 *
+	 * This setting governs POINTER devices only. woo.css forces the static,
+	 * always-visible treatment under `@media (hover: none)` regardless of what
+	 * is stored here, because a touchscreen cannot fire :hover and the default
+	 * would otherwise ship an unreachable button to every phone visitor.
+	 */
+	public static function cta_reveal(): string {
+		return self::sanitize_cta_reveal( get_theme_mod( 'cta_reveal', self::CTA_REVEAL_DEFAULT ) );
+	}
+
+	/**
+	 * Shared shape for a setting whose valid values are a closed set of
+	 * strings: a non-string, or a string outside the set, both fall back.
+	 *
+	 * @param mixed         $value    Raw value.
+	 * @param array<string> $set      Valid values.
+	 * @param string        $fallback Value for anything outside the set.
+	 */
+	private static function closed_set( mixed $value, array $set, string $fallback ): string {
+		return \is_string( $value ) && \in_array( $value, $set, true )
+			? $value
+			: $fallback;
 	}
 
 	/**

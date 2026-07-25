@@ -1,0 +1,111 @@
+/* src/css/adapter/hero.css
+ * Mockup §8 "Hero", ported as component CSS only — see the T4 report.
+ *
+ * No template renders a hero anywhere in the base theme: index.php's front
+ * page shows an `sr-only` heading, not the mockup's hero. The mockup's hero
+ * content (trust badges, a shop-flavoured CTA row) reads as storefront
+ * content, which belongs with a WooCommerce home surface (T6), not a generic
+ * blog front page — inventing headline/CTA/trust-badge copy for a hero with
+ * no content source would be guessing at product copy, not porting CSS.
+ * These classes are unused until a template wires them; naming is `wtb-`
+ * prefixed up front so that wiring does not also require a rename.
+ */
+
+.wtb-hero {
+  position: relative;
+  overflow: hidden;
+}
+
+.wtb-hero__inner {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  align-items: center;
+  gap: var(--space-2xl);
+  padding-block: var(--space-3xl);
+}
+
+.wtb-hero__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: var(--space-lg);
+}
+
+.wtb-hero__eyebrow .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--primary);
+}
+
+.wtb-hero h1 {
+  margin-bottom: var(--space-lg);
+  font-size: var(--text-display);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+}
+
+.wtb-hero h1 em {
+  color: var(--primary);
+  font-style: normal;
+}
+
+.wtb-hero__cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-top: var(--space-xl);
+}
+
+.wtb-hero__trust {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-lg);
+  margin-top: var(--space-xl);
+}
+
+.wtb-hero__trust div {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--muted-foreground);
+  font-size: var(--text-sm);
+}
+
+.wtb-hero__trust svg {
+  width: 18px;
+  height: 18px;
+  color: var(--primary);
+}
+
+.wtb-hero__art {
+  position: relative;
+  aspect-ratio: 4 / 3.4;
+  overflow: hidden;
+  background-color: var(--surface-2);
+  border: var(--rule);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+}
+
+.wtb-hero__art .float-card {
+  position: absolute;
+  padding: var(--space-sm) var(--space-md);
+  background-color: var(--card);
+  border: var(--rule);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+@media (max-width: 67.5rem) {
+  .wtb-hero__inner {
+    grid-template-columns: 1fr;
+    gap: var(--space-xl);
+  }
+}
+
+@media (max-width: 35rem) {
+  .wtb-hero h1 {
+    font-size: var(--text-3xl);
+  }
+}

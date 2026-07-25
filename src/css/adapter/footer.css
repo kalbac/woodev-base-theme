@@ -1,0 +1,162 @@
+/* src/css/adapter/footer.css
+ * Mockup §15 "Footer + newsletter + 404 + search", retargeted onto the
+ * existing wtb-* markup: template-parts/footer/{simple,columns}.php,
+ * 404.php, search.php.
+ *
+ * NOT ported (no matching markup/content source — see the T4 report):
+ * - `.newsletter` (a mail-signup form; no subscription integration exists)
+ * - `.footer-social` (social links; no Customizer field for them exists)
+ * - `.footer-bottom .pay` (payment-method icons; that is Woo/T6 content)
+ * - `.search-result`'s compact 72px-thumbnail layout: search.php reuses the
+ *   blog post-card (content-excerpt.php) for its results rather than a
+ *   distinct list treatment — a genuine template/design difference, flagged
+ *   rather than silently built or silently dropped. Rebuilding search's
+ *   result markup into a second, parallel card shape was judged out of
+ *   scope for a CSS + class-name pass.
+ *
+ * The two footer variants (Layout::FOOTER_VARIANTS: 'simple' / 'columns')
+ * are an existing product feature with two deliberately different layouts —
+ * 'simple' keeps its centred single-column stack rather than being forced
+ * into the mockup's one horizontal `.footer-bottom` row, which is really
+ * `columns`' shape (name + nav + copyright sit together in a single
+ * bottom band there, closest to the mockup's bottom bar).
+ */
+
+.wtb-footer {
+  padding-block: var(--space-3xl) var(--space-xl);
+  color: var(--footer-fg);
+  background-color: var(--footer-bg);
+  border-top: 1px solid var(--footer-border);
+}
+
+.wtb-footer .wtb-wordmark {
+  color: var(--footer-fg);
+}
+
+.wtb-footer__brand {
+  margin-bottom: var(--space-md);
+  color: var(--footer-fg);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--text-lg);
+  letter-spacing: -0.035em;
+}
+
+/* 'columns' variant: up to three widget-area columns. */
+.wtb-footer__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2xl);
+  margin-bottom: var(--space-2xl);
+}
+
+/* Footer widgets sit on the inverted surface: override the generic
+ * (light-surface) widget colours from content.css to the footer's own
+ * tokens. */
+.wtb-footer .wtb-widget__title {
+  color: var(--footer-fg);
+  border-bottom-color: var(--footer-border);
+}
+
+.wtb-footer .wtb-widget ul li a {
+  color: var(--footer-muted);
+}
+
+.wtb-footer .wtb-widget ul li a:hover {
+  color: var(--footer-fg);
+}
+
+/* 'simple' variant: a single centred stack (brand, nav, copyright). */
+.wtb-footer__simple {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  color: var(--footer-muted);
+  font-size: var(--text-sm);
+  text-align: center;
+}
+
+.wtb-footer__simple .wtb-footer-nav__menu {
+  justify-content: center;
+}
+
+/* 'columns' variant: the bottom band under the grid — name, nav and
+ * copyright share one horizontal row (mockup's `.footer-bottom`). */
+.wtb-footer__bottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-md);
+  padding-block: var(--space-lg);
+  border-top: 1px solid var(--footer-border);
+  color: var(--footer-muted);
+  font-size: var(--text-sm);
+}
+
+.wtb-footer__copy {
+  color: var(--footer-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.wtb-footer-nav__menu {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+}
+
+.wtb-footer-nav__menu a {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--footer-muted);
+  font-size: var(--text-xs);
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.wtb-footer-nav__menu a:hover {
+  color: var(--footer-fg);
+}
+
+/* ---- 404 ------------------------------------------------------------------ */
+
+.wtb-error-404 {
+  padding-block: var(--space-4xl) 0;
+  text-align: center;
+}
+
+.wtb-error-404__code {
+  margin: 0;
+  color: var(--primary);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(5rem, 14vw, 9rem);
+  line-height: 0.9;
+  letter-spacing: -0.05em;
+}
+
+/* ---- Search summary heading ------------------------------------------------ */
+
+.wtb-search-summary {
+  margin-bottom: var(--space-lg);
+  font-size: var(--text-lg);
+}
+
+.wtb-search-summary strong {
+  font-family: var(--font-display);
+}
+
+@media (max-width: 67.5rem) {
+  .wtb-footer__grid {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-xl);
+  }
+}
+
+@media (max-width: 35rem) {
+  .wtb-footer__grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-lg);
+  }
+}

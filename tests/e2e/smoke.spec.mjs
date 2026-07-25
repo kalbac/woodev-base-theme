@@ -1,5 +1,6 @@
 // tests/e2e/smoke.spec.mjs
 import { expect, test } from '@playwright/test';
+import { formatColor, resolveColor, varsFor } from '../../scripts/lib/build-tokens-lib.mjs';
 import { tokens } from '../../src/tokens/tokens.mjs';
 
 test('front page renders with theme assets and no console errors', async ({ page }) => {
@@ -29,14 +30,27 @@ test('our design tokens win the cascade at runtime', async ({ page }) => {
   // the whole test hangs on it. Every colour token we ship is byte-identical to
   // Basecoat's shadcn default, so if Basecoat's copy won instead, --background
   // would still read oklch(1 0 0) and every colour assertion would pass while the
-  // cascade is broken. --font-sans differs: Basecoat's vega pack sets "Geist
-  // Sans" (dist/base/base.css), while the spec requires our system stack. If our
-  // tokens ever stop winning, Geist appears here and this test fails — verified
-  // by simulating the regression, not by assuming.
+  // cascade is broken. --font-sans differs: Basecoat's base entry
+  // (`basecoat-css/base`, ADR-008 — the packs are retired) sets "Geist Sans" in
+  // its @theme block (dist/base/base.css), while the spec requires our system
+  // stack. If our tokens ever stop winning, Geist appears here and this test
+  // fails — verified by simulating the regression, not by assuming.
   //
   // So: do not "simplify" this to colours only, and do not drop the font
   // assertion as redundant. It is the only load-bearing one.
   await page.goto('/');
+
+  // --background is `var(--n-0)` in tokens.mjs since the identity landed
+  // (ADR-008) — no longer a literal oklch() string. Canvas 2D's fillStyle does
+  // NOT resolve custom properties: assigning an invalid value to it is
+  // silently ignored, so feeding the raw token straight to canonicalizeColor
+  // would compare a real colour against canvas's untouched default (black),
+  // not against what the design actually specifies. Resolve it first, through
+  // the exact substitution the generator and the browser both perform.
+  const expectedBackgroundVars = varsFor(tokens, 'warm-clay', 'light');
+  const expectedBackgroundRaw = formatColor(
+    resolveColor(expectedBackgroundVars.background, expectedBackgroundVars),
+  );
 
   const result = await page.evaluate((expectedBackgroundRaw) => {
     const root = document.documentElement;
@@ -79,18 +93,20 @@ test('our design tokens win the cascade at runtime', async ({ page }) => {
         getComputedStyle(root).getPropertyValue('--font-sans').trim(),
       ),
     };
-  }, tokens.colors.light.background);
+  }, expectedBackgroundRaw);
 
   expect(result.actualBackground).toBe(result.expectedBackground);
 
   // The real guard (see the note at the top): Basecoat DOES define --font-sans,
   // as "Geist Sans", and ours must beat it. Unlike the colour check above, this
-  // one fails if the cascade regresses.
+  // one fails if the cascade regresses. --font-sans is aliased from the body
+  // role (tokens.aliases['font-sans'] === 'var(--font-body)'), so the body
+  // role's own font stack is the concrete value the browser resolves to.
   const expectedFontSans = await page.evaluate((fontFamilyString) => {
     const probe = document.createElement('div');
     probe.style.fontFamily = fontFamilyString;
     return probe.style.fontFamily;
-  }, tokens.fonts.sans);
+  }, tokens.fontRoles['font-body']);
   expect(result.actualFontSans).toBe(expectedFontSans);
 });
 

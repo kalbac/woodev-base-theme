@@ -20,5 +20,8 @@ final class Woo {
 	public function register(): void {
 		( new Support() )->register();
 		( new Assets() )->register();
+		( new CardActionsWrapper() )->register();
+		( new CtaAttribute() )->register();
+		( new ProductPlaceholder() )->register();
 	}
 }

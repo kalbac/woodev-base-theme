@@ -2,6 +2,15 @@
 
 > For the commissioned designer (Open Design). Written 25.07.2026.
 > Status: **draft for Maksim's review** before hand-off.
+>
+> **Superseded (25.07.2026):** this brief did its job — refined V2 «Обиход» was
+> approved from it (`docs/design/v2-mockup/`) and the "eight style packs stay
+> underneath" premise in §2 below was overtaken by the outcome: ADR-008 retires
+> all 8 packs in favour of the one identity this brief produced. See
+> [ADR-008](docs/adr/ADR-008-single-visual-identity.md),
+> [ADR-007](docs/adr/ADR-007-self-hosted-fonts.md) (fonts) and
+> `docs/plans/2026-07-25-visual-identity.md` (the implementation plan). Left
+> as-is below as a record of what was asked for.
 
 This brief asks for the **whole-theme visual identity** of Woodev Base — a free,
 publicly distributable WordPress theme with an optional WooCommerce storefront.
@@ -26,6 +35,8 @@ Design the theme's **default look** — its flagship visual identity. Under the
 hood the theme keeps eight neutral "style packs" (alternate token sets) and a
 Customizer accent; this design becomes the *default* one, expressed through
 design tokens so it maps cleanly onto that system (see §5).
+<!-- Superseded (25.07.2026): the "eight style packs" premise above did not
+survive the outcome — ADR-008 replaces them with this one identity. -->
 
 ## 2. The subject (make it concrete)
 

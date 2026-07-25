@@ -1,0 +1,341 @@
+/* src/css/adapter/forms.css
+ * Mockup §5 "Form controls", ported onto Basecoat's real component contracts
+ * (dist/components/{field,label,input,textarea,native-select,checkbox,radio}.css)
+ * — every one of them is `@layer components`, structural-only (@apply with no
+ * colour/border/size), so the visuals below are additive, not overriding.
+ *
+ * Currently rendered: bare `.input` (searchform.php, comments.php author/
+ * email/url) and `.textarea` (comments.php comment field) — no `.field`
+ * wrapper anywhere yet. Select, radio, the native-select chevron overlay and
+ * the quantity stepper are forward groundwork: nothing in the template
+ * hierarchy renders them today (confirmed by grep across woodev-base-theme/),
+ * same status tabs/accordion have in components.css. They are written against
+ * Basecoat's real selectors so a future template (T6 checkout/account forms)
+ * gets a working component the moment it emits the markup, per this task's
+ * brief.
+ */
+
+.field {
+  gap: 6px;
+}
+
+/* Basecoat's real label contract: `.field > label`, `.field > section >
+ * label`, and our own `.label` class. comments.php's labels are core's bare
+ * <label> with no class or `.field` wrapper (a template change out of this
+ * task's CSS-only scope — see the task report), so this rule does not reach
+ * them today. */
+.field > label,
+.field > section > label,
+.label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+/* `wp_required_field_indicator()` — used verbatim by comments.php — emits
+ * `<span class="required" aria-hidden="true">`, not the mockup's `.req`. This
+ * IS live markup today. */
+.required {
+  color: var(--destructive);
+}
+
+.hint {
+  font-size: var(--text-xs);
+  color: var(--muted-foreground);
+}
+
+/* -- Text inputs, native select, textarea --------------------------------
+ * One combined ruleset: Basecoat's own input.css/native-select.css/
+ * textarea.css already union every text-like input type this way (see the
+ * source files) — this mirrors that union rather than repeating it per type. */
+.field > input[type='text'],
+.field > input[type='email'],
+.field > input[type='password'],
+.field > input[type='number'],
+.field > input[type='tel'],
+.field > input[type='url'],
+.field > input[type='search'],
+.field > input[type='date'],
+.field > input[type='datetime-local'],
+.field > input[type='month'],
+.field > input[type='week'],
+.field > input[type='time'],
+.field > select,
+.field > textarea,
+.input[type='text'],
+.input[type='email'],
+.input[type='password'],
+.input[type='number'],
+.input[type='tel'],
+.input[type='url'],
+.input[type='search'],
+.input[type='date'],
+.input[type='datetime-local'],
+.input[type='month'],
+.input[type='week'],
+.input[type='time'],
+.input:not([type]),
+select.select,
+.textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.6rem 0.8rem;
+  background-color: var(--card);
+  color: var(--foreground);
+  border: 1px solid var(--input);
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  transition:
+    border-color var(--dur) var(--ease-out),
+    box-shadow var(--dur) var(--ease-out);
+}
+
+.textarea,
+.field > textarea {
+  min-height: 96px;
+  padding: 0.7rem 0.8rem;
+  resize: vertical;
+  line-height: var(--lh-body);
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--muted-foreground);
+}
+
+.input:hover,
+select.select:hover,
+.textarea:hover,
+.field > input:hover,
+.field > select:hover,
+.field > textarea:hover {
+  border-color: var(--border-strong);
+}
+
+.input:focus,
+select.select:focus,
+.textarea:focus,
+.field > input:focus,
+.field > select:focus,
+.field > textarea:focus {
+  outline: none;
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px var(--ring-halo);
+}
+
+.input.is-error,
+select.select.is-error,
+.field[data-invalid='true'] > input,
+.field[data-invalid='true'] > select {
+  border-color: var(--destructive);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--destructive) 18%, transparent);
+}
+
+.input.is-success {
+  border-color: var(--success);
+}
+
+/* Native <select> only (Basecoat's OWN `.select:not(select)` custom
+ * JS-driven listbox component is not styled here: the mockup never draws it
+ * and nothing in this theme renders its markup — ADR-008's "style a
+ * component as it is first used" applies). */
+select.select,
+.field > select {
+  appearance: none;
+  padding-right: 2.6rem;
+  cursor: pointer;
+}
+
+/* The chevron is a MASK, not an image — its colour comes from
+ * --muted-foreground, so it follows the palette and the scheme. The data URI
+ * is an alpha stencil (see --icon-chevron's own comment in tokens.generated.css),
+ * not a rendered colour. Uses OUR --icon-chevron, not Basecoat's
+ * --chevron-down-icon: see the T5 leftover-token decision table in the task
+ * report — Basecoat's own chevron token is only ever read by its `.sidebar`
+ * component, which this theme does not use, so nothing here shares it. */
+.select-wrap {
+  position: relative;
+  display: block;
+}
+
+.select-wrap::after {
+  content: '';
+  position: absolute;
+  right: 0.85rem;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  transform: translateY(-50%);
+  pointer-events: none;
+  background-color: var(--muted-foreground);
+  mask: var(--icon-chevron) center / 16px 16px no-repeat;
+}
+
+/* -- Checkbox / radio -----------------------------------------------------
+ * Basecoat's checkbox.css/radio.css are `appearance: none` shells with a
+ * masked/positioned pseudo-element and NO colour, border or size of their
+ * own — the mockup's version instead relies on the browser's native
+ * `accent-color`, a different (simpler) contract. Basecoat's is the one
+ * actually shipped in the build, so this restyles THAT one: a11y hard gate
+ * "state not conveyed by colour alone" is met by the checkmark/dot shape
+ * appearing on :checked, not by a colour swap alone.
+ *
+ * Live today: the comment form's cookie-consent checkbox
+ * (`#wp-comment-cookies-consent`, WP core's own unclassed markup — comments.php
+ * only overrides the author/email/url fields, not the cookies field, so core's
+ * default id-only markup reaches the page as-is). Radio has no live markup
+ * anywhere yet (forward groundwork, matching Basecoat's structural
+ * contract). */
+.field > input[type='checkbox']:not([role='switch']),
+.input[type='checkbox']:not([role='switch']),
+#wp-comment-cookies-consent {
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--input);
+  border-radius: var(--radius-sm);
+  background-color: var(--card);
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.field > input[type='checkbox']:not([role='switch']):hover,
+.input[type='checkbox']:not([role='switch']):hover,
+#wp-comment-cookies-consent:hover {
+  border-color: var(--border-strong);
+}
+
+.field > input[type='checkbox']:not([role='switch']):checked,
+.input[type='checkbox']:not([role='switch']):checked,
+#wp-comment-cookies-consent:checked {
+  background-color: var(--primary);
+  border-color: var(--primary);
+  /* `currentColor` is what Basecoat's own :checked:after mask paints with
+   * (`bg-current`), so this is what makes the checkmark glyph legible against
+   * the filled box, not decorative. */
+  color: var(--primary-foreground);
+}
+
+.field > input[type='checkbox']:not([role='switch']):focus-visible,
+.input[type='checkbox']:not([role='switch']):focus-visible,
+#wp-comment-cookies-consent:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.field > input[type='radio'],
+.input[type='radio'] {
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--input);
+  border-radius: var(--radius-full);
+  background-color: var(--card);
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+
+.field > input[type='radio']:hover,
+.input[type='radio']:hover {
+  border-color: var(--border-strong);
+}
+
+.field > input[type='radio']:checked,
+.input[type='radio']:checked {
+  border-color: var(--primary);
+}
+
+/* Basecoat's own radio.css already positions/rounds `:checked:before` — this
+ * only adds the dot's colour and size. */
+.field > input[type='radio']:checked:before,
+.input[type='radio']:checked:before {
+  width: 10px;
+  height: 10px;
+  background-color: var(--primary);
+}
+
+.field > input[type='radio']:focus-visible,
+.input[type='radio']:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Label pairing (not Basecoat's own `.field > label` grid — this is the
+ * mockup's simpler inline row for a standalone checkbox/radio + text, e.g. a
+ * "remember me" row). */
+.checkbox,
+.radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  cursor: pointer;
+  font-size: var(--text-base);
+}
+
+/* -- Quantity stepper -------------------------------------------------
+ * WooCommerce's own quantity field ships no +/- buttons by default; this is
+ * the markup a future single-product/cart-line enhancement would need to add
+ * — a template change out of this task's CSS-only scope (see the task
+ * report). Ported now because mockup §5 belongs to this file per the plan's
+ * mapping table. */
+.qty {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background-color: var(--card);
+}
+
+.qty button {
+  width: 44px;
+  min-height: 44px;
+  background-color: transparent;
+  border: 0;
+  cursor: pointer;
+  color: var(--foreground);
+  display: grid;
+  place-items: center;
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+.qty button:hover {
+  background-color: var(--accent);
+}
+
+.qty button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+
+.qty input {
+  width: 52px;
+  text-align: center;
+  border: 0;
+  border-inline: 1px solid var(--border);
+  background-color: transparent;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  -moz-appearance: textfield;
+}
+
+.qty input::-webkit-outer-spin-button,
+.qty input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .input,
+  .textarea,
+  select.select,
+  .field > input,
+  .field > select,
+  .field > textarea,
+  .field > input[type='checkbox'],
+  .field > input[type='radio'],
+  .input[type='checkbox'],
+  .input[type='radio'],
+  #wp-comment-cookies-consent,
+  .qty button {
+    transition-duration: 0.01ms;
+  }
+}

@@ -37,7 +37,7 @@ if ( ! is_a( $product, WC_Product::class ) || ! $product->is_visible() ) {
 	do_action( 'woocommerce_before_shop_loop_item_title' );
 	?>
 	<?php if ( ! $product->is_in_stock() ) : ?>
-		<span class="wtb-stock-badge badge"><?php esc_html_e( 'Out of stock', 'woodev-base-theme' ); ?></span>
+		<span class="wtb-stock-badge badge" data-variant="secondary"><?php esc_html_e( 'Out of stock', 'woodev-base-theme' ); ?></span>
 	<?php endif; ?>
 	<div class="wtb-product-card__body">
 		<?php

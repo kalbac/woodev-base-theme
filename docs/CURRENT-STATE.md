@@ -1,6 +1,6 @@
 # Current State — Woodev Base
 
-> Updated: 25.07.2026 (s10)
+> Updated: 25.07.2026 (s11)
 
 ## Phase status
 
@@ -12,7 +12,8 @@
 | Dev-mode coverage | ✅ Done | s7, PR [#10](https://github.com/kalbac/woodev-base-theme/pull/10) `e1cf31b` — the s3 debt, closed |
 | §7 component tail | ✅ Done | s7, PR [#11](https://github.com/kalbac/woodev-base-theme/pull/11) `6dfac28` — card/badge/alert/comment-form. tabs+accordion deferred to M2 |
 | Design — whole-theme visual identity | ✅ Approved (s10) | Refined V2 «Обиход» in `docs/design/v2-mockup/`. Golos Text + IBM Plex (OFL, Cyrillic), token-driven, 7 palette presets, hover-reveal CTA, all pages. Source of truth for implementation |
-| M2a — Woo storefront | 🟡 CSS done on branch (`faf7801`), superseded by the approved design; NOT merged | s10: `woo.css` rewritten un-layered + Woo sidebar removed (grid/cascade/sidebar fixes carry over). Visual skin will be **replaced** by the approved design during implementation. Task 7 (full gate + Codex + PR) still pending |
+| Identity implementation (T0–T8) | 🟡 In progress (s11) | ADR-007 (fonts) + ADR-008 (single identity replaces the 8 style packs) recorded. Plan: `docs/plans/2026-07-25-visual-identity.md`. **T0 (fix `tokens.css` export) done.** T1 (token layer) in progress. T3 (fonts, `scripts/fetch-fonts.mjs`) in progress. T2/T4–T8 not started |
+| M2a — Woo storefront | 🟡 CSS done on branch (`faf7801`), superseded by the approved design; NOT merged | s10: `woo.css` rewritten un-layered + Woo sidebar removed (grid/cascade/sidebar fixes carry over). Visual skin will be **replaced** by the approved design during implementation. Folded into T6 of the identity plan; Task 7 (full gate + Codex + PR) is now T8 |
 | M2b — Woo checkout flow | ⬜ Not started | cart/checkout/account/store-notices + Woo Customizer section |
 | M3 — Public release prep | ⬜ Not started | |
 
@@ -30,6 +31,8 @@ s5 found and fixed one real defect after merging — the mobile-drawer focus-tra
 
 - ~~**Dev mode has no integration/e2e coverage**~~ — resolved s7, closing a Codex P2 open since s3. Integration: `tests/integration/Integration/DevMode/AssetsDevModeTest.php` via `npm run test:integration:dev` (a second PHPUnit config whose bootstrap defines the constant — never wp-env's `config` key, which leaks into both environments and persists), mirrored by `Integration/AssetsProductionTest.php`. e2e: `tests/e2e-dev/dev-mode.spec.mjs` via `npm run e2e:dev`, against `.wp-env.dev-mode.json` on :8892 with Playwright owning a live Vite dev server. The e2e asserts **computed style**, since the defect class it guards has the script tag present and the styles absent.
 - **Customizer overrides do nothing in dev mode.** Vite serves the pack CSS as a JS module that injects its `<style>` when the module EXECUTES — after `InlineStyles`' block was parsed — so `tokens.generated.css` wins on source order. Production is unaffected and an e2e mutation pins it (moving the block to `wp_head` 5 turns the accent assertion red). Raising selector specificity would fix dev at the cost of every real site's override path (Additional CSS), which is the wrong trade — see `InlineStyles`' docblock.
+- **Self-hosted fonts 404 in dev mode** (s11, same root cause as the entry above). Vite dev injects the CSS through a JS-created `<style>`, which has no URL of its own, so `fonts.css`'s relative `url('../../fonts/…')` resolves against the *page* and misses at a depth-dependent path. `font-display: swap` hides it — the page renders in the fallback stack and merely looks slightly off, so **typography must be judged in a production build, never in dev**. Not fixed with a `/`-rooted path: that breaks subdirectory installs and is a wp.org review flag. Production verified (all 20 built `url()`s resolve). See `docs/gotchas/dev-mode-css-injection-breaks-relative-urls.md`.
+- **IBM Plex Mono 700 does not exist in the vendored subsets**, so the design's one `.totals .row.grand .amount` rule falls back to 600. Closes with the M3 `pyftsubset` re-instancing (ADR-007).
 - **Live OS-following is not pinned by a test.** Spec §6 says `system` keeps following `prefers-color-scheme` after load. `page.emulateMedia()` updates `matchMedia().matches` but does NOT dispatch `change` to registered listeners in this Chromium/CDP build, so the behaviour was verified by invoking the handler directly and the spec file says so rather than faking it.
 - **No-JS + `system` misses Basecoat's `dark:` utilities.** Such a visitor gets our dark *tokens* via the generated `prefers-color-scheme` block, but Basecoat's dark variant keys off a literal `html.dark`, which only exists once JS or an explicit admin default sets it.
 - **Reset-to-defaults (spec §6) not built.** Core has no reset primitive; a real one is a JS control plus a nonce'd handler, i.e. plugin territory for a v1 theme. Clearing a value in the Customizer already returns the setting to its documented default.
@@ -62,14 +65,22 @@ s5 found and fixed one real defect after merging — the mobile-drawer focus-tra
 | Dev-mode coverage | ✅ `e1cf31b` (s7), PR #10 |
 | §7 component tail | ✅ `6dfac28` (s7), PR #11 |
 
-**s10 changed the plan: the whole-theme VISUAL IDENTITY is now designed and approved** (refined V2 «Обиход», in `docs/design/v2-mockup/`). The storefront-only redesign (#12) is subsumed by it. What remains, in order:
+**s10 approved the whole-theme VISUAL IDENTITY; s11 is implementing it** per `docs/plans/2026-07-25-visual-identity.md` (tasks T0–T8, ADR-007 + ADR-008 recorded). The storefront-only redesign (#12) and M2a are subsumed by it (T6). Nothing merged; `main` untouched at `27edbd6`. Status by task:
 
-1. **Implement the approved design into the theme** — this is the big next effort. Port `docs/design/v2-mockup/tokens.css` into the theme's token layer (note the **`--n-h` neutral-temperature** var + the **7 palette presets** + `--accent-h/c` + `--radius` scale), then translate the mockup's markup/CSS into the theme's classic templates + `@layer adapter` (header/footer, home, shop archive + product card with the **hover-reveal-over-price** CTA, single product, cart, checkout, account, order-received, sidebars, blog, component kit). Reconcile with the existing `woo.css` (`faf7801`) — its grid/cascade/sidebar fixes carry over; the visual skin is replaced.
-2. **Customizer controls** — expose as settings: font, border-radius (rounded→zero, drive from `--radius`), accent colour, **colour-palette preset** (the 7, light+dark), add-to-cart reveal mode (`always`/`hover`, the `[data-cta="always"]` toggle). Each is a single-point token/class change by design.
-3. **Task 7 — the M2a/theme gate + merge** — full battery (phpcs · phpstan L8 · unit · vitest · build · integration · integration-dev · **base-isolation `npm run e2e` on :8888** · e2e-dev · e2e-woo), then Codex critic + re-critic, then push + PR. Merge is Maksim's call.
-4. **Then M2b + M3** — remaining Woo flow polish + release prep.
+| Task | What | Status |
+|---|---|---|
+| T0 | Fix `docs/design/v2-mockup/tokens.css` (regenerate from the mockup HTML's inline `<style>`, not the stale 8-`[data-palette]` version) | ✅ Done |
+| T1 | Token layer — `src/tokens/tokens.mjs` + `scripts/lib/build-tokens-lib.mjs` emit `--n-h`, the 7 palettes, accent/radius/type roles. Contrast gate **resolves `var()`/`calc()` numerically** and measures 7 palettes × 2 schemes × 24 pairs; below AA the build throws. Mutation-verified (a broken `--muted-foreground` yields exactly 21 named failures). vitest 25/25. Verified separately: all 82 tokens the design's CSS consumes are emitted | ✅ Done |
+| T2 | Retire the pack machinery (`src/css/packs/`, `scripts/build-pack-entries.mjs`, `scripts/lib/packs-lib.mjs`, `style_preset`) → one `src/css/app.css` entry on `basecoat-css/base` | 🟡 In progress |
+| T3 | Fonts (ADR-007): `scripts/build-fonts.mjs`, self-hosted Golos Text + IBM Plex Sans/Mono, `src/css/fonts.css`, OFL licenses. 20 woff2, **352 KB shipped / ~132 KB fetched** by a Russian page — over the ADR's original estimate, which is now restated with measured numbers + an M3 `pyftsubset` plan. Idempotency and all 20 built-CSS `url()`s verified by hand | ✅ Done |
+| T4 | Base + layout surfaces → `adapter/{base,header,hero,blocks,content,footer}.css` + template pass. Hero/category-tiles/promo CSS is ported but **not wired to any template** — no front-page merchandising markup exists yet | ✅ Done |
+| T5 | Component kit → `adapter/{buttons,forms,feedback,components}.css`, incl. tabs + accordion (the M1 §7 deferral). Basecoat's leftover tokens ruled on: nothing overridden, reasons in the plan | ✅ Done |
+| — | **Integration (orchestrator):** `adapter/index.css` rewired — 10 imports, superseded blocks deleted (skip-link, nav, scheme-toggle, entry-card bits, comment bits), container/layout/post-grid deliberately kept below the imports. Verified: no selector collides across the 10 files; build green; the ported CSS is in the bundle and inside `@layer adapter` | ✅ Done |
+| T6 | WooCommerce surfaces — shop/product/cart/checkout/account; reconciles with `woo.css` (`faf7801`) | ⬜ Not started |
+| T7 | Customizer — 5 settings: `palette` (7), `accent`, `radius`, `font`, `cta_reveal` | ⬜ Not started |
+| T8 | Full gate (phpcs · phpstan L8 · unit · vitest · build · integration · integration-dev · base-isolation e2e · e2e-dev · e2e-woo) → Codex critic + re-critic → push + PR. Merge is Maksim's call | ⬜ Not started |
 
-Fonts: the design uses **Golos Text + IBM Plex Sans/Mono** (all OFL, Cyrillic, self-hosted) — this **revisits the v1 spec's system-font-only decision** (Maksim approved 25.07.2026; record an ADR when implementing). i18n cross-cutting; `.pot` deferred to M3.
+T0→T1→T2 sequential; T3 parallel with T1/T2; T4–T6 parallelisable once T1–T3 land; T7 after T1; T8 last. Then M2b + M3 (remaining Woo flow polish + release prep). i18n cross-cutting; `.pot` deferred to M3.
 
 ## Last session
 

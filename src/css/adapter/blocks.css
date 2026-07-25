@@ -1,0 +1,167 @@
+/* src/css/adapter/blocks.css
+ * Mockup §10 "Category tiles / promo / value band", ported as component CSS
+ * only — same reasoning as hero.css: this is homepage merchandising content
+ * (product categories, promo banners) with no current template and no
+ * content source in the base theme. `wtb-` prefixed up front so a future
+ * task can wire the markup without a rename.
+ */
+
+.wtb-cat-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-md);
+}
+
+.wtb-cat-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 200px;
+  padding: var(--space-lg);
+  overflow: hidden;
+  color: var(--foreground);
+  background-color: var(--surface-2);
+  border: var(--rule);
+  border-radius: var(--radius-lg);
+  transition:
+    box-shadow var(--dur) var(--ease-out),
+    transform var(--dur) var(--ease-out);
+}
+
+.wtb-cat-tile:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-3px);
+}
+
+.wtb-cat-tile .bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.9;
+}
+
+.wtb-cat-tile .label {
+  position: relative;
+  z-index: 1;
+}
+
+.wtb-cat-tile h3 {
+  font-size: var(--text-lg);
+}
+
+.wtb-cat-tile .count {
+  color: var(--muted-foreground);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+.wtb-cat-tile .arrow {
+  position: absolute;
+  top: var(--space-lg);
+  right: var(--space-lg);
+  z-index: 1;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  background-color: var(--card);
+  border: var(--rule);
+  border-radius: var(--radius-full);
+  transition: transform var(--dur) var(--ease-out);
+}
+
+.wtb-cat-tile:hover .arrow {
+  transform: translate(2px, -2px);
+}
+
+.wtb-value-band {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-lg);
+}
+
+.wtb-value {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.wtb-value .ico {
+  display: grid;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  color: var(--primary);
+  background-color: var(--accent);
+  border-radius: var(--radius-md);
+}
+
+.wtb-value .ico svg {
+  width: 20px;
+  height: 20px;
+}
+
+.wtb-value h4 {
+  margin-bottom: 2px;
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+
+.wtb-value p {
+  color: var(--muted-foreground);
+  font-size: var(--text-sm);
+}
+
+.wtb-promo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  overflow: hidden;
+  border: var(--rule);
+  border-radius: var(--radius-xl);
+}
+
+.wtb-promo__text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: var(--space-2xl);
+  background-color: var(--card);
+}
+
+.wtb-promo__art {
+  position: relative;
+  min-height: 280px;
+  background-color: var(--surface-2);
+}
+
+@media (max-width: 53.75rem) {
+  .wtb-promo {
+    grid-template-columns: 1fr;
+  }
+
+  .wtb-cat-tiles {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .wtb-value-band {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 35rem) {
+  .wtb-cat-tiles {
+    grid-template-columns: 1fr;
+  }
+
+  .wtb-value-band {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wtb-cat-tile,
+  .wtb-cat-tile .arrow {
+    transition: none;
+  }
+}

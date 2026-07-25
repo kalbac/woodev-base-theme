@@ -9,44 +9,19 @@ use Woodev\Theme\Base\Tests\Unit\TestCase;
 
 final class SettingsTest extends TestCase {
 
+	protected function setUp(): void {
+		parent::setUp();
+
+		// palette's sanitizer reads Palettes::slugs(), which reads a
+		// generated file through get_template_directory() — point it at the
+		// real shipped file so the closed set is the actual seven palettes
+		// unless a test below overrides this for the corrupted-file path.
+		Functions\when( 'get_template_directory' )
+			->justReturn( \dirname( __DIR__, 4 ) . '/woodev-base-theme' );
+	}
+
 	private function stub_theme_mod( mixed $value ): void {
 		Functions\when( 'get_theme_mod' )->justReturn( $value );
-	}
-
-	/**
-	 * Point the theme root at the fixture whose generated map has been tampered
-	 * with, so the rejection path is exercised through the public API.
-	 */
-	private function stub_malformed_theme(): void {
-		Functions\when( 'get_template_directory' )
-			->justReturn( \dirname( __DIR__, 2 ) . '/fixtures/malformed-theme' );
-	}
-
-	/**
-	 * The generated map is the single point where strings enter the inline
-	 * <style>, so the shape check has to hold at the public boundary — not just
-	 * inside the private normaliser. Every rejected entry below is a real
-	 * failure mode: a value that closes the declaration and hides the page, a
-	 * CSS function we never emit, and a half-written file missing its dark half.
-	 */
-	public function test_a_tampered_generated_map_yields_only_its_sound_entries(): void {
-		$this->stub_malformed_theme();
-
-		self::assertSame( [ 'sound' ], array_keys( Settings::presets() ) );
-	}
-
-	/**
-	 * The same boundary from the Customizer's side: a slug that was dropped
-	 * during normalisation must not be selectable either, or the Customizer
-	 * would store a preset the renderer then refuses to emit.
-	 */
-	public function test_a_rejected_slug_is_not_a_valid_primary_preset(): void {
-		$this->stub_malformed_theme();
-
-		self::assertSame( 'default', Settings::sanitize_primary_preset( 'injected' ) );
-		self::assertSame( 'default', Settings::sanitize_primary_preset( 'not_oklch' ) );
-		self::assertSame( 'default', Settings::sanitize_primary_preset( 'missing_dark' ) );
-		self::assertSame( 'sound', Settings::sanitize_primary_preset( 'sound' ) );
 	}
 
 	public function test_container_width_defaults_and_clamps(): void {
@@ -91,18 +66,6 @@ final class SettingsTest extends TestCase {
 		self::assertSame( 20, Settings::sanitize_base_font_size( 1e100 ) );
 	}
 
-	public function test_radius_scale_is_a_closed_set(): void {
-		self::assertSame( 'md', Settings::sanitize_radius_scale( 'md' ) );
-		self::assertSame( 'none', Settings::sanitize_radius_scale( 'none' ) );
-		self::assertSame( 'md', Settings::sanitize_radius_scale( '9999px' ) );
-		self::assertSame( 'md', Settings::sanitize_radius_scale( [] ) );
-	}
-
-	public function test_radius_value_maps_to_a_css_length(): void {
-		self::assertSame( '0rem', Settings::radius_value( 'none' ) );
-		self::assertSame( '0.625rem', Settings::radius_value( 'md' ) );
-	}
-
 	public function test_resolvers_read_the_theme_mod_through_the_sanitizer(): void {
 		$this->stub_theme_mod( '1100' );
 		self::assertSame( 1100, Settings::container_width() );
@@ -111,35 +74,122 @@ final class SettingsTest extends TestCase {
 		self::assertSame( 1440, Settings::container_width() );
 	}
 
-	public function test_primary_preset_defaults_to_inheriting_the_pack(): void {
-		Functions\when( 'get_template_directory' )->justReturn( \dirname( __DIR__, 4 ) . '/woodev-base-theme' );
+	// --- palette (T7, ADR-008) ---------------------------------------
 
-		self::assertSame( 'default', Settings::sanitize_primary_preset( 'default' ) );
-		self::assertSame( 'blue', Settings::sanitize_primary_preset( 'blue' ) );
-		self::assertSame( 'default', Settings::sanitize_primary_preset( 'chartreuse' ) );
-		self::assertSame( 'default', Settings::sanitize_primary_preset( new \stdClass() ) );
+	public function test_palette_is_a_closed_set_of_the_seven_shipped_slugs(): void {
+		self::assertSame( 'cold-petrol', Settings::sanitize_palette( 'cold-petrol' ) );
+		self::assertSame( 'night-indigo', Settings::sanitize_palette( 'night-indigo' ) );
+		self::assertSame( 'warm-clay', Settings::sanitize_palette( 'not-a-real-palette' ) );
+		self::assertSame( 'warm-clay', Settings::sanitize_palette( [] ) );
+		self::assertSame( 'warm-clay', Settings::sanitize_palette( new \stdClass() ) );
+		self::assertSame( 'warm-clay', Settings::sanitize_palette( null ) );
 	}
 
-	public function test_presets_are_read_from_the_generated_map(): void {
-		Functions\when( 'get_template_directory' )->justReturn( \dirname( __DIR__, 4 ) . '/woodev-base-theme' );
+	public function test_palette_resolver_reads_the_theme_mod_through_the_sanitizer(): void {
+		$this->stub_theme_mod( 'forest' );
+		self::assertSame( 'forest', Settings::palette() );
 
-		$presets = Settings::presets();
-
-		self::assertArrayHasKey( 'blue', $presets );
-		self::assertArrayNotHasKey( 'default', $presets, 'default means "no override" and must not be a map entry' );
-		self::assertSame(
-			[ '--primary', '--primary-foreground', '--ring' ],
-			array_keys( $presets['blue']['light'] )
-		);
+		$this->stub_theme_mod( 'does-not-exist' );
+		self::assertSame( 'warm-clay', Settings::palette() );
 	}
 
 	/**
-	 * A missing or half-written generated file must degrade to "no presets
-	 * offered", never to a fatal or to a CSS var built from garbage.
+	 * The palette closed set is Palettes::slugs(), not a hardcoded list —
+	 * when the generated file degrades to just the default (a corrupted
+	 * palettes.php, see PalettesTest), a previously-valid slug must fall
+	 * back too, rather than the request fataling on an array the renderer
+	 * no longer has data for.
 	 */
-	public function test_a_missing_generated_map_yields_no_presets(): void {
-		Functions\when( 'get_template_directory' )->justReturn( '/nonexistent/theme' );
+	public function test_a_stored_slug_the_corrupted_generated_file_no_longer_supports_falls_back(): void {
+		Functions\when( 'get_template_directory' )
+			->justReturn( \dirname( __DIR__, 2 ) . '/fixtures/non-array-theme' );
 
-		self::assertSame( [], Settings::presets() );
+		self::assertSame( 'warm-clay', Settings::sanitize_palette( 'cold-petrol' ) );
+	}
+
+	// --- accent (T7, ADR-008) ------------------------------------------
+
+	public function test_accent_accepts_and_normalizes_hex_colours(): void {
+		self::assertSame( '#3366cc', Settings::sanitize_accent( '#3366CC' ) );
+		self::assertSame( '#3366cc', Settings::sanitize_accent( '3366cc' ) );
+		self::assertSame( '#aabbcc', Settings::sanitize_accent( '#abc' ) );
+		self::assertSame( '#aabbcc', Settings::sanitize_accent( 'ABC' ) );
+	}
+
+	public function test_accent_defaults_to_empty_meaning_no_override(): void {
+		self::assertSame( '', Settings::sanitize_accent( '' ) );
+		self::assertSame( '', Settings::sanitize_accent( null ) );
+		self::assertSame( '', Settings::sanitize_accent( false ) );
+	}
+
+	public function test_accent_rejects_hostile_and_malformed_input(): void {
+		self::assertSame( '', Settings::sanitize_accent( 'red' ) );
+		self::assertSame( '', Settings::sanitize_accent( '#12345' ) );
+		self::assertSame( '', Settings::sanitize_accent( '#fff;}body{display:none}' ) );
+		self::assertSame( '', Settings::sanitize_accent( [ '#fff' ] ) );
+		self::assertSame( '', Settings::sanitize_accent( new \stdClass() ) );
+		self::assertSame( '', Settings::sanitize_accent( 42 ) );
+	}
+
+	public function test_accent_resolver_reads_the_theme_mod_through_the_sanitizer(): void {
+		$this->stub_theme_mod( '#112233' );
+		self::assertSame( '#112233', Settings::accent() );
+
+		$this->stub_theme_mod( 'not-a-colour' );
+		self::assertSame( '', Settings::accent() );
+	}
+
+	// --- radius (T7; replaces radius_scale, see sanitize_radius() docblock) --
+
+	public function test_radius_clamps_to_the_zero_to_sixteen_px_range(): void {
+		self::assertSame( 10, Settings::sanitize_radius( '' ) );
+		self::assertSame( 0, Settings::sanitize_radius( -5 ) );
+		self::assertSame( 16, Settings::sanitize_radius( 999 ) );
+		self::assertSame( 6, Settings::sanitize_radius( '6' ) );
+		self::assertSame( 10, Settings::sanitize_radius( new \stdClass() ) );
+	}
+
+	/**
+	 * The retired radius_scale's string steps ('none', 'lg', …) are not
+	 * numeric, so clamp()'s is_numeric() guard rejects them exactly like any
+	 * other non-numeric input — a site that had radius_scale stored has that
+	 * value simply ignored under the new key, never reinterpreted.
+	 */
+	public function test_a_retired_radius_scale_string_step_is_not_numeric_and_falls_back(): void {
+		self::assertSame( 10, Settings::sanitize_radius( 'lg' ) );
+		self::assertSame( 10, Settings::sanitize_radius( 'none' ) );
+	}
+
+	public function test_radius_resolver_reads_the_theme_mod_through_the_sanitizer(): void {
+		$this->stub_theme_mod( '2' );
+		self::assertSame( 2, Settings::radius() );
+	}
+
+	// --- font (T7, ADR-007) ---------------------------------------------
+
+	public function test_font_is_a_closed_set(): void {
+		self::assertSame( 'identity', Settings::sanitize_font( 'identity' ) );
+		self::assertSame( 'system', Settings::sanitize_font( 'system' ) );
+		self::assertSame( 'identity', Settings::sanitize_font( 'comic-sans' ) );
+		self::assertSame( 'identity', Settings::sanitize_font( [] ) );
+	}
+
+	public function test_font_resolver_reads_the_theme_mod_through_the_sanitizer(): void {
+		$this->stub_theme_mod( 'system' );
+		self::assertSame( 'system', Settings::font() );
+	}
+
+	// --- cta_reveal (T7, ADR-008) ----------------------------------------
+
+	public function test_cta_reveal_is_a_closed_set(): void {
+		self::assertSame( 'hover', Settings::sanitize_cta_reveal( 'hover' ) );
+		self::assertSame( 'always', Settings::sanitize_cta_reveal( 'always' ) );
+		self::assertSame( 'hover', Settings::sanitize_cta_reveal( 'sometimes' ) );
+		self::assertSame( 'hover', Settings::sanitize_cta_reveal( null ) );
+	}
+
+	public function test_cta_reveal_resolver_reads_the_theme_mod_through_the_sanitizer(): void {
+		$this->stub_theme_mod( 'always' );
+		self::assertSame( 'always', Settings::cta_reveal() );
 	}
 }

@@ -7,86 +7,96 @@
 				{
 					"slug": "background",
 					"name": "Background",
-					"color": "oklch(1 0 0)"
+					"color": "oklch(99% .002 68)"
 				},
 				{
 					"slug": "foreground",
 					"name": "Foreground",
-					"color": "oklch(0.145 0 0)"
+					"color": "oklch(17% .012 68)"
 				},
 				{
 					"slug": "primary",
 					"name": "Primary",
-					"color": "oklch(0.205 0 0)"
+					"color": "oklch(47% .088 40)"
 				},
 				{
 					"slug": "primary-foreground",
 					"name": "Primary Foreground",
-					"color": "oklch(0.985 0 0)"
+					"color": "oklch(99% .008 40)"
 				},
 				{
 					"slug": "secondary",
 					"name": "Secondary",
-					"color": "oklch(0.97 0 0)"
+					"color": "oklch(94.6% .004 68)"
 				},
 				{
 					"slug": "secondary-foreground",
 					"name": "Secondary Foreground",
-					"color": "oklch(0.205 0 0)"
+					"color": "oklch(27% .014 68)"
 				},
 				{
 					"slug": "muted",
 					"name": "Muted",
-					"color": "oklch(0.97 0 0)"
+					"color": "oklch(97.2% .003 68)"
 				},
 				{
 					"slug": "muted-foreground",
 					"name": "Muted Foreground",
-					"color": "oklch(0.556 0 0)"
+					"color": "oklch(52% .012 68)"
 				},
 				{
 					"slug": "accent",
 					"name": "Accent",
-					"color": "oklch(0.97 0 0)"
+					"color": "oklch(94.6% .004 68)"
 				},
 				{
 					"slug": "accent-foreground",
 					"name": "Accent Foreground",
-					"color": "oklch(0.205 0 0)"
-				},
-				{
-					"slug": "destructive",
-					"name": "Destructive",
-					"color": "oklch(0.577 0.245 27.325)"
+					"color": "oklch(17% .012 68)"
 				},
 				{
 					"slug": "border",
 					"name": "Border",
-					"color": "oklch(0.922 0 0)"
+					"color": "oklch(87% .006 68)"
 				},
 				{
-					"slug": "input",
-					"name": "Input",
-					"color": "oklch(0.922 0 0)"
+					"slug": "destructive",
+					"name": "Destructive",
+					"color": "oklch(55% .19 25)"
 				},
 				{
-					"slug": "ring",
-					"name": "Ring",
-					"color": "oklch(0.708 0 0)"
+					"slug": "success",
+					"name": "Success",
+					"color": "oklch(52% .13 155)"
+				},
+				{
+					"slug": "warning",
+					"name": "Warning",
+					"color": "oklch(66% .14 75)"
+				},
+				{
+					"slug": "sale",
+					"name": "Sale",
+					"color": "oklch(55% .19 25)"
 				}
 			]
 		},
 		"typography": {
 			"fontFamilies": [
 				{
-					"slug": "sans",
-					"name": "Sans",
-					"fontFamily": "system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+					"slug": "display",
+					"name": "Display",
+					"fontFamily": "\"Golos Text\", system-ui, \"Segoe UI\", Roboto, sans-serif"
+				},
+				{
+					"slug": "body",
+					"name": "Body",
+					"fontFamily": "\"IBM Plex Sans\", system-ui, \"Segoe UI\", Roboto, sans-serif"
 				},
 				{
 					"slug": "mono",
 					"name": "Mono",
-					"fontFamily": "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+					"fontFamily": "\"IBM Plex Mono\", ui-monospace, \"SF Mono\", Menlo, monospace"
 				}
 			]
 		}

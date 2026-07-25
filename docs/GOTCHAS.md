@@ -1,6 +1,6 @@
 # Gotchas Index — Woodev Base
 
-> 24 entries. Each gotcha is a separate file in `docs/gotchas/`.
+> 25 entries. Each gotcha is a separate file in `docs/gotchas/`.
 
 | Gotcha | Area | Summary |
 |---|---|---|
@@ -28,3 +28,4 @@
 | [editorconfig-css-indent-is-spaces-and-no-gate-checks-it](gotchas/editorconfig-css-indent-is-spaces-and-no-gate-checks-it.md) | Tooling/QA | `.editorconfig` is 2-space for CSS/JS but tabs for PHP. A tab-indented CSS file builds, passes phpcs (PHP-only) and every test — nothing in the gate reads CSS whitespace, so the drift ships silently (s9 `woo.css`). Tell workers "tabs for PHP, 2 spaces for CSS/JS"; verify with `cat -A` after any CSS write |
 | [svg-use-shadow-boundary-needs-custom-props](gotchas/svg-use-shadow-boundary-needs-custom-props.md) | CSS/SVG | Document class selectors don't cross a `<use>` shadow boundary, so sprite shapes styled by class fall back to `fill:black` (solid black boxes). Theme `<use>`d content with **custom properties** (they inherit) referenced as presentation attributes, not classes. Also `.plate{width:100%}` overrides inline `width=` — pin small thumbnails with higher specificity |
 | [open-design-run-pitfalls](gotchas/open-design-run-pitfalls.md) | Tooling/Open Design | OD's `amr` agent spends a paid AMR wallet (not your sub — omit `agent` or use `claude`/`codex`); `fable-5` can stall at `waiting_for_first_output`; `hallmark` sticks to a project and hijacks a "refine" run into its own critique; reused projects + native-resume make the agent rework prior output (use a FRESH project, or edit the artifact files directly); the artifact HTML has its OWN inline tokens — editing `tokens.css` doesn't touch the preview |
+| [dev-mode-css-injection-breaks-relative-urls](gotchas/dev-mode-css-injection-breaks-relative-urls.md) | Build/Assets | Vite dev serves the CSS entry as a JS module that injects a `<style>`, and a `<style>` has no URL — so every relative `url()` (fonts, images) resolves against the PAGE and 404s at a depth-dependent path. `font-display: swap` hides it: the page just renders in the fallback stack. Judge typography in a production build, never in dev; do not "fix" it with a `/`-rooted path (breaks subdirectory installs, wp.org flag) |
