@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace Woodev\Theme\Base;
 
+use Woodev\Theme\Base\Customizer\Settings;
+
 /**
  * Enqueues theme assets resolved through the Vite build manifest.
  */
@@ -23,6 +25,7 @@ final class Assets {
 	 */
 	public function register(): void {
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue' ] );
+		add_filter( 'wp_preload_resources', [ $this, 'preload_display_font' ] );
 	}
 
 	/**
@@ -51,6 +54,79 @@ final class Assets {
 		foreach ( self::entry_css( $manifest, self::JS_ENTRY ) as $index => $imported ) {
 			wp_enqueue_style( "woodev-base-app-{$index}", "{$dist_uri}/{$imported}", [], null );
 		}
+	}
+
+	/**
+	 * Preload the above-the-fold display face (Golos Text) via WP core's own
+	 * `wp_preload_resources` filter (WP 6.1+; the theme requires 6.8) so the
+	 * browser starts fetching it immediately instead of discovering the URL
+	 * only after fetching and parsing the stylesheet — the late discovery
+	 * that causes the swap-in reflow `font-display: swap` does not prevent.
+	 * docs/plans/2026-07-25-visual-identity.md T3: preload exactly this one
+	 * file, nothing else — not the body/mono faces, not the stylesheet, not
+	 * the script module.
+	 *
+	 * Skipped entirely in dev mode: the CSS is injected by a Vite JS module
+	 * there, so the relative `url()`s in fonts.css already 404
+	 * (docs/gotchas/dev-mode-css-injection-breaks-relative-urls.md) and a
+	 * preload would only add a second failing request for the same file.
+	 *
+	 * Skipped when the admin picked the `system` font mode (re-critic
+	 * finding, 25.07.2026 — B1): `Settings::font()` is the same resolver the
+	 * front end reads through, so this never duplicates its sanitising or
+	 * reads the raw `theme_mod` directly. Golos Text is never referenced by
+	 * the compiled CSS when `font` is `system` — src/css/fonts.css itself is
+	 * not even enqueued in that mode's stylesheet chain — so preloading it
+	 * would force a webfont download for a face nothing on the page uses.
+	 *
+	 * Locale → subset: a Russian locale needs the cyrillic subset above the
+	 * fold; every other locale gets latin. `str_starts_with( …, 'ru' )` on
+	 * `determine_locale()` is deliberately the whole rule — the theme ships
+	 * English source + ru_RU only (ADR-006). This is a HEURISTIC, not a
+	 * guarantee, and deliberately so in two distinct ways (re-critic
+	 * finding, 25.07.2026): it is not exhaustive across locales (another
+	 * Cyrillic-script locale, e.g. uk, bg_BG, still gets the latin preload
+	 * here and loads its own subset from fonts.css a moment later — a missed
+	 * optimisation, not a bug); and even on a matching `ru_RU` request it can
+	 * preload a subset nothing above the fold actually needs — a `ru_RU`
+	 * page whose above-the-fold text happens to be pure Latin (a brand name,
+	 * a model number) wastes the cyrillic preload. That second case is
+	 * accepted, not fixed: this hook runs before WordPress has rendered
+	 * anything, so there is no way in PHP to know the fold's real glyph
+	 * coverage, and a Russian site's chrome (nav, headings, footer) is
+	 * overwhelmingly Cyrillic — the heuristic is right far more often than
+	 * it is wrong, and the plan mandates exactly one preloaded file.
+	 *
+	 * `crossorigin` is not optional even though the font is same-origin:
+	 * fonts are always fetched in CORS mode, and a preload link without a
+	 * matching `crossorigin` attribute is treated as a different cache entry
+	 * — the browser discards the preload and fetches the font a second time.
+	 *
+	 * Existing entries (from other filters) are preserved, never replaced.
+	 *
+	 * @param array<int, array<string, string>> $preload_resources Preload entries already collected from other filters.
+	 * @return array<int, array<string, string>>
+	 */
+	public function preload_display_font( array $preload_resources ): array {
+		if ( \defined( 'WOODEV_BASE_DEV' ) && WOODEV_BASE_DEV ) {
+			return $preload_resources;
+		}
+
+		if ( Settings::FONT_SYSTEM === Settings::font() ) {
+			return $preload_resources;
+		}
+
+		$subset = \str_starts_with( determine_locale(), 'ru' ) ? 'cyrillic' : 'latin';
+		$file   = "golos-text-500-800-{$subset}.woff2";
+
+		$preload_resources[] = [
+			'href'        => get_template_directory_uri() . '/assets/fonts/' . $file,
+			'as'          => 'font',
+			'type'        => 'font/woff2',
+			'crossorigin' => 'anonymous',
+		];
+
+		return $preload_resources;
 	}
 
 	/**

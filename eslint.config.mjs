@@ -10,6 +10,13 @@ export default [
       'tests/js/**/*.mjs',
       'tests/e2e/**/*.mjs',
       'tests/e2e-dev/**/*.mjs',
+      // Added s12. `tests/e2e-woo/**` was missing here from the day that suite
+      // was written, so every browser global in it (`document`,
+      // `getComputedStyle`, even `console`) was a `no-undef` error — i.e. the
+      // whole WooCommerce e2e suite failed `npm run lint:js` and nobody
+      // noticed, because that script is not in the documented gate battery.
+      // docs/gotchas/qa-gates-cover-less-than-they-claim.md.
+      'tests/e2e-woo/**/*.mjs',
     ],
     languageOptions: {
       ecmaVersion: 2024,
