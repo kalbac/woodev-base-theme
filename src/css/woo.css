@@ -1,11 +1,21 @@
-@import 'tailwindcss';
-@source "../../woodev-base-theme/**/*.php";
-
 /*
  * Storefront styles — the identity port (docs/plans/2026-07-25-visual-identity.md
  * Task 6), sourced from docs/design/v2-mockup/woodev-base-identity.html
  * sections 9 (product card), 11 (shop layout), 12 (single product), 13
  * (commerce tables) and the parts of 18 (responsive) that touch them.
+ *
+ * NO `@import 'tailwindcss'` HERE, DELIBERATELY. This file uses no Tailwind
+ * feature (`@apply`, `theme()`, `--spacing()`, `@variant`, `@utility` — none
+ * appear below); it is plain CSS reading this theme's own custom properties,
+ * which come from `tokens.generated.css` in the MAIN bundle (`app.css`),
+ * enqueued unconditionally on every front-end request, so this bundle loses
+ * nothing by not importing Tailwind again. Importing it here used to ship a
+ * SECOND full copy of Tailwind's reset + preflight + the `@source` glob's
+ * utilities in every page that loads this bundle — un-scoped, unlike every
+ * rule below. That un-scoped duplication is also what would have made the
+ * "this bundle is scoped under `.woocommerce`, safe to enqueue
+ * unconditionally" reasoning in `inc/Woo/Assets.php` false; removing the
+ * import is what makes that reasoning actually hold.
  *
  * WHY THIS FILE STAYS UNLAYERED (unlike the base adapter styles).
  * WooCommerce ships three UN-LAYERED stylesheets (woocommerce-layout,
@@ -14,8 +24,8 @@
  * `@layer adapter` lose to Woo REGARDLESS of specificity (the s9 mistake,
  * fixed s10, faf7801). To override Woo we must (a) be un-layered too and (b)
  * match Woo's selector specificity, then win on source order (this bundle
- * enqueues after Woo's, on Woo contexts only — inc/Woo/Assets.php). Every
- * rule below is scoped under `.woocommerce` (present on the body of every
+ * enqueues after Woo's — inc/Woo/Assets.php). Every rule below is scoped
+ * under `.woocommerce` (present on the body of every
  * Woo page) so it ties Woo's own `.woocommerce …` specificity; where Woo
  * reaches deeper (`ul.products li.product .onsale`,
  * `div.product .woocommerce-tabs ul.tabs li a`) this mirrors that depth. This
@@ -250,7 +260,19 @@
     transform: translateY(-3px);
   }
 
-  .wtb-product-card .woocommerce-loop-product__link {
+  /* Woo's own `.woocommerce ul.products li.product a.woocommerce-loop-product__link
+   * { display: block }` is (0,4,3) — a plain `.wtb-product-card
+   * .woocommerce-loop-product__link` (0,3,0) loses that race outright (fewer
+   * classes beats the type-selector deficit), so `display: flex` below never
+   * takes and the card's flex column (gap, `__body` stretch, bottom-aligned
+   * price) silently does nothing.
+   *
+   * This selector adds `.wtb-product-card` to Woo's own shape, giving
+   * (0,5,3) against its (0,4,3) — it wins on specificity alone and does not
+   * depend on source order. An earlier pass wrote this comment but left the
+   * selector at (0,3,0); the e2e assertion on the computed `display` is what
+   * caught the discrepancy between the prose and the code. */
+  ul.products li.product.wtb-product-card a.woocommerce-loop-product__link {
     display: flex;
     flex: 1;
     flex-direction: column;
@@ -262,11 +284,19 @@
   /* Media: a uniform square, cover-cropped, on a muted plate — `img` for a
    * real product photo, `svg.plate` for WooCommerce's placeholder (no
    * `.thumb` wrapper needed: the card's own `overflow:hidden` above already
-   * clips the zoom). */
-  .wtb-product-card .woocommerce-loop-product__link img,
-  .wtb-product-card .woocommerce-loop-product__link svg.plate {
+   * clips the zoom).
+   *
+   * Same specificity race as the link above, and it also has to RESET
+   * something: Woo's `.woocommerce ul.products li.product a img` is (0,3,4)
+   * and sets `margin: 0 0 1em`, so at a lower specificity every card image
+   * kept a stray 1em gap under it while the card's own flex `gap` was
+   * already spacing the column. Mirroring Woo's shape plus
+   * `.wtb-product-card` gives (0,5,4). */
+  ul.products li.product.wtb-product-card a.woocommerce-loop-product__link img,
+  ul.products li.product.wtb-product-card a.woocommerce-loop-product__link svg.plate {
     display: block;
     width: 100%;
+    margin: 0;
     aspect-ratio: 1 / 1;
     object-fit: cover;
     background-color: var(--surface-2);
@@ -475,15 +505,37 @@
     border-radius: inherit;
   }
 
-  div.product .flex-control-thumbs {
+  /* Woo's own container/li/active-img rules for this strip are
+   * `.woocommerce div.product div.images .flex-control-thumbs …` — (0,4,2)
+   * for the container, (0,4,3) for the `li`. The theme's product-image
+   * template gives the gallery wrapper BOTH `woocommerce-product-gallery`
+   * AND `images` classes on the same element (verified against the
+   * installed 10.9.4 template), so `div.images` here is real, not a guess.
+   * `div.product .flex-control-thumbs` was only (0,3,1) — Woo's own
+   * `margin: 0; padding: 0; overflow: hidden` on the SAME container
+   * property-for-property beat ours, so the intended top margin/padding
+   * silently never applied either. Mirroring the container ties Woo (wins
+   * on source order); mirroring the `li` (0,4,3) does the same for width. */
+  div.product div.images .flex-control-thumbs {
     display: flex;
+    flex-wrap: wrap;
+    /* Explicit, not inherited from Woo: with 4+ thumbnails at a fixed 64px
+     * each, a `nowrap` row would overflow the container's own width and
+     * Woo's `overflow: hidden` (same selector, still active — we don't
+     * override that property) would clip everything past the third/fourth
+     * thumbnail, leaving it unreachable by mouse or touch. Wrapping keeps
+     * every thumbnail reachable by growing the strip's height instead of
+     * clipping its width; `overflow: visible` removes any doubt once rows
+     * wrap, rather than relying on wrapped content never touching the
+     * container edge. */
+    overflow: visible;
     gap: var(--space-sm);
     margin: var(--space-sm) 0 0;
     padding: 0 var(--space-sm) var(--space-sm);
     list-style: none;
   }
 
-  div.product .flex-control-thumbs li {
+  div.product div.images .flex-control-thumbs li {
     width: 64px;
     height: 64px;
     flex: none;
@@ -500,7 +552,10 @@
     transition: border-color var(--dur-fast) var(--ease-out);
   }
 
-  div.product .flex-control-thumbs .flex-active img {
+  /* Woo marks the SELECTED thumbnail on the `<img>` itself
+   * (`img.flex-active`), not on an ancestor — `.flex-active img` never
+   * matched anything real, so the active border never rendered. */
+  div.product div.images .flex-control-thumbs img.flex-active {
     border-color: var(--primary);
   }
 
@@ -868,6 +923,26 @@
   /* ================================================================== *
    * Store notices (add-to-cart confirmation, errors, info banners).
    * Owned HERE, not adapter/feedback.css — see the file header comment.
+   *
+   * Woo's own `.woocommerce-error, .woocommerce-info, .woocommerce-message`
+   * rule (0,1,0) sets `border-top: 3px solid #720eec` (`.woocommerce-error`
+   * itself then overrides just the colour). Our nested equivalent compiles
+   * to `.woocommerce .woocommerce-message` etc — (0,2,0), already ahead of
+   * Woo's on every shared property, INCLUDING the border: our later
+   * `border-color: var(--…)` below sets ALL FOUR sides (it is the `border-
+   * color` shorthand, not `border-left-color`), so it also overwrites the
+   * colour of Woo's still-active `border-top` — leaving a second, full-
+   * width, wrongly-tinted accent edge on top of the intentional left one.
+   * `border-top: 0` in the shared rule below kills Woo's top border
+   * (width+style) outright so there is nothing left for that colour to
+   * paint. Woo's `::before` icon (`content:"\e016"/"\e028"`, `position:
+   * absolute; top:1em; left:1.5em`) is a separate selector we never
+   * declared anything for, so it stayed fully live with no reserved
+   * padding once our own `padding` (no 3.5em left offset) won — landing
+   * on top of the text. We do not ship WooCommerce's icon font in this
+   * bundle to reposition it into; the border-left colour + tinted
+   * background already carry the notice type, so it is suppressed instead
+   * (`content: none` on a selector that also wins Woo's specificity).
    * ================================================================== */
   .woocommerce-message,
   .woocommerce-info,
@@ -878,9 +953,16 @@
     margin: 0 0 var(--space-lg);
     padding: var(--space-md) var(--space-lg);
     border-radius: var(--radius-md);
+    border-top: 0;
     border-left: 3px solid;
     font-size: var(--text-sm);
     list-style: none;
+  }
+
+  .woocommerce-message::before,
+  .woocommerce-info::before,
+  .woocommerce-error::before {
+    content: none;
   }
 
   .woocommerce-message {
@@ -896,6 +978,23 @@
   .woocommerce-error {
     background-color: color-mix(in oklab, var(--destructive) 9%, var(--card));
     border-color: var(--destructive);
+  }
+
+  /* Woo's error template is the only one of the three rendered as `<ul
+   * class="woocommerce-error"><li>` — one `<li>` per validation error. The
+   * shared rule above is a flex ROW (icon-less text + an optional trailing
+   * link, see `.woocommerce-message a` below); on `.woocommerce-error` that
+   * would instead pack every `<li>` onto one row, overflowing a narrow
+   * screen with two or more errors. Switch the axis so each error stacks
+   * as its own line inside one bordered box; `align-items: stretch` (flex's
+   * own initial value, stated explicitly here since it is load-bearing)
+   * keeps every `<li>` filling the full width rather than shrinking to its
+   * own content and centring, which `align-items: center` on the shared
+   * rule would otherwise do. */
+  .woocommerce-error {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.35rem;
   }
 
   .woocommerce-message a,
@@ -1029,8 +1128,17 @@
     display: block;
   }
 
+  /* `.form-row input.input-text` already ties Woo's own
+   * `.woocommerce form .form-row .input-text` (both (0,3,1)) and wins on
+   * source order. `.form-row select`, however, was only (0,2,1) — Woo
+   * targets the control with a `select` TYPE selector
+   * (`.woocommerce form .form-row select`, (0,2,2)), one type selector
+   * more than a bare `.form-row select`, so the native control kept Woo's
+   * literal `--wc-form-color-background,#fff` background and its own
+   * border/radius outright. Adding the `form` ancestor below mirrors that
+   * exactly. */
   .form-row input.input-text,
-  .form-row select,
+  form .form-row select,
   .form-row textarea,
   .woocommerce-additional-fields textarea,
   #order_comments {
@@ -1048,6 +1156,74 @@
       box-shadow var(--dur) var(--ease-out);
   }
 
+  /* The native arrow: Woo's chevron-bearing rule shares the exact same
+   * `.woocommerce form .form-row select` selector as the block above, so
+   * fixing the specificity there also lets THIS win — but Woo's version
+   * hardcodes `appearance: none` plus a black-stroke (`fill/stroke:
+   * #111111`) SVG `background-image`, which the block above never
+   * addresses (different property, no conflict, so it stays live
+   * regardless of who wins padding/border). Left as-is that chevron is
+   * illegible against `.dark`'s near-black control background. Replaced
+   * with a CSS gradient chevron instead of a second, dark-mode SVG: two
+   * triangles painted in `--foreground` (near-black in `.light`, near-white
+   * in `.dark` — the same token pair the control's own text/border use),
+   * so it tracks the scheme automatically with one declaration. */
+  form .form-row select {
+    appearance: none;
+    padding-right: 2.5rem;
+    background-image:
+      linear-gradient(45deg, transparent 50%, var(--foreground) 50%),
+      linear-gradient(135deg, var(--foreground) 50%, transparent 50%);
+    background-position:
+      calc(100% - 1.35rem) 50%,
+      calc(100% - 1.05rem) 50%;
+    background-size: 0.3rem 0.3rem;
+    background-repeat: no-repeat;
+  }
+
+  /* Woo's password-visibility toggle. Its icon is a data-URI SVG with a
+   * literal `fill="%23111111"` baked in, at
+   * `.woocommerce form .show-password-input::before` in woocommerce-layout.css
+   * — so in the dark scheme it is a near-black glyph on `--card`
+   * (≈ `--n-900`), far below 3:1.
+   *
+   * The markup is NOT in any template, which is why searching the templates
+   * suggests it does not exist: WooCommerce's frontend JS creates it, at
+   * `assets/js/frontend/woocommerce.js:126`
+   * (`'<button type="button" class="show-password-input" …'`), for every
+   * password field on my-account login/register/reset. Verified against the
+   * installed 10.9.4 payload, JS and CSS both.
+   *
+   * `invert(1)` rather than our own icon: the glyph is monochrome, so
+   * inverting turns near-black into near-white and nothing else changes. It
+   * covers both toggle states, since Woo swaps the image on
+   * `.display-password` and both SVGs carry the same `fill`. Substituting a
+   * Lucide eye would mean re-implementing that two-state behaviour for a
+   * control we do not own.
+   *
+   * BOTH dark paths are needed, and the second one is easy to forget: the
+   * default `color_scheme` is `system`, where `<html>` carries NO class at
+   * all and the dark tokens arrive through the generator's
+   * `@media (prefers-color-scheme: dark)` + `:root:where(:not(.light):not(.dark))`
+   * fallback block. A `.dark`-only rule leaves the commonest configuration —
+   * OS in dark mode, theme left at its default — with the black-on-black
+   * glyph this fixes. `:where()` keeps the fallback selector at zero
+   * specificity (docs/gotchas/not-selector-carries-its-arguments-specificity.md),
+   * so the media-query rule relies on being `.woocommerce form …` (0,2,2),
+   * tying Woo's own rule and winning on source order.
+   *
+   * The light scheme's near-black glyph on a near-white field is already
+   * correct and is deliberately untouched. */
+  .dark & form .show-password-input::before {
+    filter: invert(1);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not(.light):not(.dark)) & form .show-password-input::before {
+      filter: invert(1);
+    }
+  }
+
   .form-row textarea,
   #order_comments {
     min-height: 96px;
@@ -1057,13 +1233,13 @@
   }
 
   .form-row input.input-text:hover,
-  .form-row select:hover,
+  form .form-row select:hover,
   .form-row textarea:hover {
     border-color: var(--border-strong);
   }
 
   .form-row input.input-text:focus-visible,
-  .form-row select:focus-visible,
+  form .form-row select:focus-visible,
   .form-row textarea:focus-visible {
     outline: none;
     border-color: var(--ring);
@@ -1344,10 +1520,62 @@
     gap: var(--space-xl);
   }
 
+  /* Woo clearfixes `.col2-set` with `::before` AND `::after` (`content: " ";
+   * display: table` in woocommerce-layout.css). Turning the element into a
+   * grid turns both pseudo-elements into GRID ITEMS: `::before` takes cell
+   * 1, `.col-1` takes cell 2, and `.col-2` is pushed onto the second row —
+   * the columns render stacked at a width where they should sit side by
+   * side. Exactly the trap `ul.products::before` set in s10.
+   *
+   * This is the real cause of a symptom an earlier pass misdiagnosed. It
+   * pinned `.col-1`/`.col-2` to explicit tracks, which masked the stacking
+   * on desktop while breaking the single-column layout below 40rem (an
+   * explicit `grid-column: 2` there creates a second implicit track). The
+   * clearfix has no job left once the element is a grid — floats are gone
+   * from the children — so remove the items instead of working around
+   * them. e2e asserts the two columns share a row. */
+  .col2-set::before,
+  .col2-set::after {
+    display: none;
+  }
+
   @media (min-width: 40rem) {
     .col2-set {
       grid-template-columns: 1fr 1fr;
     }
+  }
+
+  /* Turning `.col2-set` into a grid does not stop Woo's own
+   * `.woocommerce .col2-set .col-1/.col-2 { float: left/right; width: 48% }`
+   * (0,3,0, from woocommerce-layout.css) — a grid item ignores `float`, but
+   * NOT an explicit `width`, and that percentage resolves against the grid
+   * item's own grid AREA (its track), not the whole row. On a 2-column grid
+   * each track is ~50% of the row, so 48% of a ~50%-wide track renders the
+   * column at roughly half of its own track's visual width. Reset both
+   * children at the same (0,3,0) specificity Woo uses, so this ties and
+   * wins on source order; `width: auto` lets the grid's own (stretch)
+   * sizing take back over. Woo's own `woocommerce-smallscreen.css` already
+   * resets both to `float: none; width: 100%` below 768px — this rule only
+   * needs to cover ABOVE that breakpoint, where Woo's desktop 48% rule is
+   * the one active.
+   *
+   * No explicit `grid-column` here, deliberately. An earlier pass pinned
+   * `.col-1` to track 1 and `.col-2` to track 2 to defend against a leaked
+   * global `.col-2{grid-column:2}` utility — Tailwind was generating it from
+   * a design mockup's own unrelated `.col-2` class. **That leak is fixed at
+   * the root** (`src/css/app.css` now uses `@import 'tailwindcss'
+   * source(none)` with explicit `@source` rules;
+   * docs/gotchas/tailwind-content-detection-generates-utilities-from-anything.md),
+   * so the defence is no longer needed — and it was actively harmful: an
+   * unconditional `grid-column` also applies BELOW the 40rem breakpoint,
+   * where this `.col2-set` is a single-column grid. Pinning a child to
+   * track 2 there creates a second implicit track, so `/my-account/`'s login
+   * and register forms sat side by side on a phone instead of stacking.
+   * Auto-placement is correct once nothing is fighting it. */
+  .col2-set .col-1,
+  .col2-set .col-2 {
+    float: none;
+    width: auto;
   }
 
   /* ---- Payment methods -------------------------------------------------- */
@@ -1568,13 +1796,22 @@
 
 /* ================================================================== *
  * Touch reachability — a hover-only control is unreachable on a
- * touchscreen: `:hover` never fires there at all (no pointing device to
- * hover with), so leaving the reveal hover-gated would ship an add-to-cart
- * button some visitors cannot tap regardless of the `[data-cta]` Customizer
- * default. `(hover: none)` targets exactly the devices with no hover
- * capability and forces the SAME static, always-visible treatment
- * `[data-cta="always"]` gives everyone else on request — independent of
- * whatever `data-cta` is actually set to.
+ * touchscreen. Per Media Queries Level 5, `hover` describes only the
+ * PRIMARY pointing device: a hybrid device (touchscreen primary + a mouse
+ * attached) can match `(hover: none)` and still have a hovering pointer
+ * available, and some touch UAs emulate `:hover` on long-press — so
+ * `:hover` is not strictly unreachable everywhere this query matches, and
+ * `(hover: none)` is not exactly "the devices with no hover capability".
+ * What stays true, and is the actual reason for this block: on the
+ * touch-primary devices this query is meant to catch, a SHORT tap (the
+ * normal way to activate a link/button) does not reliably trigger
+ * `:hover` first, so a hover-gated add-to-cart would ship unreachable to
+ * most of those visitors regardless of the `[data-cta]` Customizer
+ * default. The static fallback below is correct for that population; only
+ * the claim about what the query precisely targets was wrong. It forces
+ * the SAME static, always-visible treatment `[data-cta="always"]` gives
+ * everyone else on request — independent of whatever `data-cta` is
+ * actually set to.
  * ================================================================== */
 @media (hover: none) {
   .woocommerce li.product .card-actions {
@@ -1621,7 +1858,7 @@
   .woocommerce div.product .woocommerce-tabs ul.tabs li a,
   .woocommerce div.product form.cart .quantity .qty,
   .woocommerce .form-row input.input-text,
-  .woocommerce .form-row select,
+  .woocommerce form .form-row select,
   .woocommerce .form-row textarea,
   .woocommerce nav.woocommerce-pagination ul li a,
   .woocommerce .quantity .qty,
@@ -1642,5 +1879,26 @@
   .woocommerce li.product:hover .card-actions,
   .woocommerce li.product:focus-within .card-actions {
     transform: none;
+  }
+
+  /* This block only ever stopped motion THIS FILE declares. Two animations
+   * are Woo's own and were never addressed, so they kept running under
+   * `prefers-reduced-motion: reduce`:
+   *  - `.woocommerce a.button.loading::after` (and the button/input
+   *    variants) — Woo's `animation: spin 2s linear infinite` on the
+   *    add-to-cart spinner, selector (0,3,2) once the zero-specificity
+   *    `:where()` wrapper Woo puts around it is discounted (`:where()` is
+   *    always (0,0,0) by spec); mirrored here at the same specificity.
+   *  - `.woocommerce div.product div.images .woocommerce-product-gallery__wrapper`
+   *    — Woo's `transition: all cubic-bezier(...) .5s` (0,4,2) on the
+   *    gallery's flexslider slide transition; mirrored the same way. */
+  .woocommerce a.button.loading::after,
+  .woocommerce button.button.loading::after,
+  .woocommerce input.button.loading::after {
+    animation: none;
+  }
+
+  .woocommerce div.product div.images .woocommerce-product-gallery__wrapper {
+    transition: none;
   }
 }

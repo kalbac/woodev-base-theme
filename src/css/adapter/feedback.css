@@ -100,30 +100,74 @@
  * SVG; Setup.php's password-protected wrapper uses `<h2>` + `<section>`
  * with no icon. `data-variant='destructive'` is forward groundwork (e.g. a
  * future validation-error alert) — nothing emits it yet. */
+/* Finding 2 (P1): the live markup (404.php, content-none.php) is icon +
+ * title + section — THREE siblings — but a single flex row lays all three
+ * out side by side, so the heading and body text sit next to each other
+ * instead of stacking (worse at 320px, worse again with ~30% longer Russian
+ * copy). Basecoat's own `.alert` (dist/components/alert.css) supplies NO
+ * icon layout at all — it is `position: relative; width: 100%` only, plus a
+ * `grid` on `.alert > section` for that section's OWN internal paragraph
+ * stacking — so there is no icon/title/section contract to inherit; the
+ * grid below is this file's addition, reconciled with the markup that
+ * actually renders rather than the two-child shape the mockup assumed. */
 .alert {
-  display: flex;
-  gap: 0.75rem;
-  align-items: flex-start;
+  display: grid;
+  gap: 0.25rem;
   padding: var(--space-md);
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
   background-color: var(--card);
 }
 
-.alert > svg {
-  width: 20px;
-  height: 20px;
-  flex: none;
-  margin-top: 1px;
-}
-
-.alert > :is(h2, h3, h4, h5, h6, strong, [data-title]) {
+/* `h1` is explicit here, not incidental: 404.php's alert IS that page's
+ * main heading (`<h1 class="wtb-archive-title" data-title>`) — correct
+ * HTML, since a 404 has no other h1 on the page — while content-none.php's
+ * is an `<h2>` (that view already owns a page-level h1 elsewhere). Both
+ * would still match via `[data-title]` alone, but naming `h1`/`h2`
+ * explicitly means the selector's coverage is stated, not a side effect of
+ * the attribute selector happening to catch it. */
+.alert > :is(h1, h2, h3, h4, h5, h6, strong, [data-title]) {
   font-weight: 600;
 }
 
 .alert > section {
   font-size: var(--text-sm);
   color: var(--muted-foreground);
+}
+
+/* With no icon (Setup.php's password-protected wrapper: just `<h2>` +
+ * `<section>`) the grid above stays a single implicit column, so title and
+ * body already stack correctly with no extra rule needed. With an icon, add
+ * a second column and pin title + section into it (both, explicitly — grid
+ * auto-placement would otherwise walk the section into a phantom second
+ * icon row instead of under the title) so the icon sits beside two STACKED
+ * rows rather than one flattened row. */
+.alert:has(> svg) {
+  grid-template-columns: auto 1fr;
+  column-gap: 0.75rem;
+  align-items: start;
+}
+
+.alert:has(> svg) > svg {
+  grid-column: 1;
+  grid-row: span 2;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+}
+
+/* Finding (P2): pinning this to `:is(h1..h6, strong, [data-title]), section`
+ * only worked for exactly the three siblings the live templates render
+ * today (icon + title + section) — any FOURTH ordinary child (a retry
+ * button, a trailing paragraph, a form placed after `<section>`) matched
+ * neither selector, so grid auto-placement walked it into the first
+ * available cell scanning row-by-row, which is column 1 — the narrow icon
+ * column, not the content column. `:not(svg)` covers every non-icon child
+ * regardless of element type or how many there are: column 2 stacks all of
+ * them in DOM order via ordinary auto-placement, column 1 keeps exactly the
+ * icon. */
+.alert:has(> svg) > :not(svg) {
+  grid-column: 2;
 }
 
 .alert[data-variant='destructive'] {
@@ -192,8 +236,12 @@
  * pagination"> wrapping <div class="nav-links"> of `.page-numbers` links/
  * spans, current page as `.page-numbers.current`, the ellipsis as
  * `.page-numbers.dots`. Retargeted onto that real contract. */
+/* Finding 3 (P1): core prints prev + first/last + up to two ellipses +
+ * neighbours + next mid-list; at the 44px minimum hit size that row needs
+ * roughly 440px and overflows horizontally at 320-375px with no wrap. */
 .pagination .nav-links {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   justify-content: center;

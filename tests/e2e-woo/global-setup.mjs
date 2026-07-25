@@ -39,6 +39,16 @@ const THEME_SLUG = 'woodev-base-theme';
 /** Plugin slug — WooCommerce. */
 const WOO_SLUG = 'woocommerce';
 
+// Known credentials for a seeded customer account. Some `.form-row select`
+// legibility assertions (storefront.spec.mjs) need a page that only exists
+// for a logged-in shopper — WooCommerce's country/state `<select>` lives on
+// `/my-account/edit-address/billing/`, which requires an authenticated
+// session (the unauthenticated login/register forms carry no `<select>` at
+// all). Exported so the spec can log in through the real classic login form
+// rather than duplicating credentials.
+export const CUSTOMER_USERNAME = 'wtb-e2e-customer';
+export const CUSTOMER_PASSWORD = 'WtbE2eCustomer!1';
+
 /** Run a wp-cli command against the Woo environment, return trimmed stdout. */
 function wp(command) {
   const full = `npx wp-env run cli --config=${CONFIG} wp ${command}`;
@@ -82,6 +92,82 @@ function reseedProduct(slug, args) {
   return wp(`wc product create --user=admin --slug=${slug} --porcelain ${args}`);
 }
 
+/**
+ * Attach `count` freshly generated placeholder images to a product — one
+ * set as the featured image, the rest as the gallery — so
+ * storefront.spec.mjs has a real product whose `.flex-control-thumbs` strip
+ * carries 4+ thumbnails to test wrap/reachability against. WooCommerce's
+ * flexslider gallery prints one thumbnail per image, featured image
+ * included (verified against the installed 10.9.4
+ * `templates/single-product/product-image.php`).
+ *
+ * Generated with GD directly through `wp eval` (confirmed available in the
+ * container) rather than `wp media import`, which needs a file already
+ * reachable from inside the container — nothing is mounted there except
+ * the theme directory, and this repo carries no fixture images to upload.
+ *
+ * Idempotent: every attachment this creates carries a
+ * `_wtb_e2e_gallery_marker` meta pointing at the product id; existing ones
+ * for the SAME product are force-deleted first, so re-running
+ * global-setup never accumulates orphaned media in the container (which,
+ * per the file header, persists state across restarts).
+ *
+ * The PHP runs as a single `wp eval` line — no literal newlines — because
+ * embedding a multi-line PHP string in this project's `wp-env run cli`
+ * invocation was observed to truncate the command silently.
+ *
+ * @returns {number} total images attached (gallery + 1 featured).
+ */
+function seedGalleryImages(productId, count) {
+  const php = [
+    `$pid = ${productId};`,
+    `$old = get_posts(['post_type' => 'attachment', 'meta_key' => '_wtb_e2e_gallery_marker', 'meta_value' => $pid, 'posts_per_page' => -1, 'fields' => 'ids']);`,
+    `foreach ($old as $aid) { wp_delete_attachment($aid, true); }`,
+    `require_once ABSPATH . 'wp-admin/includes/image.php';`,
+    `$upload_dir = wp_upload_dir();`,
+    `$ids = [];`,
+    `for ($i = 0; $i < ${count}; $i++) {`,
+    `  $im = imagecreatetruecolor(400, 400);`,
+    `  $color = imagecolorallocate($im, 40 + $i * 40, 120, 200 - $i * 30);`,
+    `  imagefill($im, 0, 0, $color);`,
+    `  $filename = 'wtb-gallery-' . $pid . '-' . $i . '.png';`,
+    `  $filepath = $upload_dir['path'] . '/' . $filename;`,
+    `  imagepng($im, $filepath);`,
+    `  imagedestroy($im);`,
+    `  $attach_id = wp_insert_attachment(['post_mime_type' => 'image/png', 'post_title' => $filename, 'post_content' => '', 'post_status' => 'inherit'], $filepath, $pid);`,
+    `  wp_update_attachment_metadata($attach_id, wp_generate_attachment_metadata($attach_id, $filepath));`,
+    `  update_post_meta($attach_id, '_wtb_e2e_gallery_marker', $pid);`,
+    `  $ids[] = $attach_id;`,
+    `}`,
+    `$thumbnail_id = array_shift($ids);`,
+    `set_post_thumbnail($pid, $thumbnail_id);`,
+    `update_post_meta($pid, '_product_image_gallery', implode(',', $ids));`,
+    `echo count($ids) + 1;`,
+  ].join(' ');
+  return Number(wp(`eval "${php}"`));
+}
+
+/**
+ * Ensure a customer account exists with the fixed CUSTOMER_USERNAME /
+ * CUSTOMER_PASSWORD credentials, so the spec can log in through the real
+ * classic login form to reach a page only a logged-in shopper sees
+ * (`/my-account/edit-address/billing/`, needed for the `<select>`
+ * legibility check — see the constants' own comment). `wp user create`
+ * fails loudly on a duplicate login, so check first; the password is reset
+ * on every run regardless, so a stale password from an interrupted
+ * previous run never blocks login.
+ */
+function seedCustomer() {
+  const existingId = wpTry(`user get ${CUSTOMER_USERNAME} --field=ID`);
+  if (!existingId) {
+    wp(
+      `user create ${CUSTOMER_USERNAME} wtb-e2e-customer@example.com --role=customer --user_pass="${CUSTOMER_PASSWORD}"`,
+    );
+  } else {
+    wp(`user update ${existingId} --user_pass="${CUSTOMER_PASSWORD}"`);
+  }
+}
+
 export default function globalSetup() {
   const log = (...a) => console.log('[e2e-woo:setup]', ...a);
 
@@ -117,6 +203,22 @@ export default function globalSetup() {
   wp('wc tool run install_pages --user=admin');
   log('install_pages done.');
 
+  // ── 3b. Enable my-account registration ────────────────────────────────────
+  //
+  // Off by default. The register form's `.col2-set` split (login left,
+  // register right, `templates/myaccount/form-login.php`) is the only
+  // unauthenticated classic-rendered `.col2-set`/`.col-1`/`.col-2` surface
+  // Woo ships (checkout's own `#customer_details` uses the same class
+  // shape but the seeded store's checkout page renders the Checkout BLOCK,
+  // not this classic markup) — storefront.spec.mjs needs it on to reach
+  // that layout.
+  log('enabling my-account registration (for the .col2-set login/register layout) …');
+  wp('option update woocommerce_enable_myaccount_registration yes');
+
+  // ── 3c. Seed a customer account for login-gated assertions ───────────────
+  seedCustomer();
+  log(`seeded customer account: ${CUSTOMER_USERNAME}`);
+
   // ── 4. Seed three simple products, idempotently ──────────────────────────
   //
   // Field names come from the WC REST API product schema (which the wc-cli
@@ -133,6 +235,11 @@ export default function globalSetup() {
     ].join(' '),
   );
   log(`simple product wtb-product-simple → id ${simpleId}`);
+
+  const galleryImageCount = seedGalleryImages(simpleId, 5);
+  log(
+    `attached ${galleryImageCount} placeholder images (1 featured + 4 gallery) to wtb-product-simple`,
+  );
 
   const saleId = reseedProduct(
     'wtb-product-sale',

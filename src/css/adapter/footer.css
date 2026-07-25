@@ -29,12 +29,7 @@
   border-top: 1px solid var(--footer-border);
 }
 
-.wtb-footer .wtb-wordmark {
-  color: var(--footer-fg);
-}
-
 .wtb-footer__brand {
-  margin-bottom: var(--space-md);
   color: var(--footer-fg);
   font-family: var(--font-display);
   font-weight: 800;

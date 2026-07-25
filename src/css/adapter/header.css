@@ -157,6 +157,25 @@
   transform: rotate(180deg);
 }
 
+/* The submenu stays `display: none` while closed, and the reveal is animated
+ * with `transition-behavior: allow-discrete` + `@starting-style` — the two
+ * features that make a transition run across a `display` change at all.
+ * Before those existed the declared opacity/transform transition here was
+ * dead code: a transition cannot start from `display: none`, so the submenu
+ * snapped open and shut while claiming to fade.
+ *
+ * `visibility: hidden` would also transition, and is more widely supported,
+ * but it is the WRONG mechanism for this menu: a hidden-but-visible-box
+ * submenu still contributes to its containing block's scrollable overflow,
+ * and `min-width: 12rem` anchored at the parent item's `left: 0` then pushes
+ * past the viewport for any item near the right edge — which is exactly where
+ * the `inline` header variant puts the whole menu. That would trade a dead
+ * animation for a horizontal scrollbar on every page. `display: none` cannot
+ * do that, because it produces no box at all.
+ *
+ * Degradation is graceful and is the status quo: a browser without
+ * `allow-discrete` ignores that transition component and shows the submenu
+ * instantly — today's behaviour, minus the pretence. */
 .wtb-nav__menu .sub-menu {
   position: absolute;
   top: calc(100% + 6px);
@@ -176,7 +195,8 @@
   transform: translateY(6px);
   transition:
     opacity var(--dur) var(--ease-out),
-    transform var(--dur) var(--ease-out);
+    transform var(--dur) var(--ease-out),
+    display var(--dur) allow-discrete;
 }
 
 .wtb-nav__menu .menu-item-has-children:hover > .sub-menu,
@@ -184,6 +204,14 @@
   display: block;
   opacity: 1;
   transform: translateY(0);
+
+  /* The from-state for the open transition. Without it the submenu is already
+   * at its end values the moment it starts being rendered, and there is
+   * nothing to interpolate from. */
+  @starting-style {
+    opacity: 0;
+    transform: translateY(6px);
+  }
 }
 
 .wtb-nav__menu .sub-menu a {
@@ -216,13 +244,44 @@
   .wtb-nav--enhanced .wtb-nav__menu {
     display: none;
     flex-direction: column;
+    /* The base rule sets `flex-wrap: wrap`, for the desktop inline row; a
+     * column-direction flex container that is STILL wrapping fills up to
+     * `max-height` and then wraps into a SECOND column instead of needing
+     * to scroll — scrollHeight stays equal to clientHeight because the
+     * overflow becomes horizontal columns, not vertical content. `nowrap`
+     * is what makes the max-height/overflow-y fix above actually scroll. */
+    flex-wrap: nowrap;
     align-items: flex-start;
     gap: 0.75rem;
     margin-top: 0.75rem;
   }
 
+  /* x-trap locks body scroll while the menu is open, so the menu must
+   * scroll itself or a long menu (or a phone in landscape) leaves items
+   * below the viewport unreachable. `dvh` (not `vh`) so mobile browser
+   * chrome doesn't lie about available height.
+   *
+   * P0 fix: this used to subtract a hand-computed sum ("bar padding-top +
+   * toggle height + menu margin-top") from 100dvh — but `.wtb-header__bar`
+   * has no `padding-top` at all (it is `min-height: 72px`, see above), so
+   * the subtrahend was wrong from the start, and it also assumed the
+   * `inline` header's layout while `.wtb-header--centered .wtb-header__bar`
+   * stacks wordmark + nav + actions in a column, starting the menu much
+   * lower on that variant while inheriting the exact same cap. Any of
+   * those values changing — the bar's height, the header variant, an
+   * admin's radius/font Customizer settings, the toggle's rendered size —
+   * silently reintroduces the same bug. A flat viewport fraction has no
+   * dependency on any other declaration: the header always sits at the top
+   * of the page, so menu-start + 60% of the viewport is on screen for
+   * either variant at any viewport height, and it still leaves a real
+   * scrollable area instead of collapsing to near-nothing at a short
+   * viewport. `overscroll-behavior: contain` stops the menu's scroll from
+   * chaining into the locked body. */
   .wtb-nav--enhanced.wtb-nav--open .wtb-nav__menu {
     display: flex;
+    max-height: 60dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   /* In the collapsed menu the submenu is a static, always-open block, not a

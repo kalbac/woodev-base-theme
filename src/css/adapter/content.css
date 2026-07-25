@@ -306,6 +306,34 @@
   list-style: none;
 }
 
+/* Finding 4 (P1): `margin-left` on `.children` compounds per level with no
+ * cap — WordPress permits deeper threads than any fixed-width column can
+ * indent legibly, and at 320px a few levels already squeeze the text to
+ * nothing. Chained descendant selectors are how CSS expresses "depth" here
+ * (there is no depth counter): from the third nested `.children` on, stop
+ * adding further indent, so the total stays capped at two levels' worth
+ * (deeper replies still read as nested — the border/spacing above still
+ * marks each `.comment-body` — they just stop marching further right). The
+ * chain also matches every depth beyond 3, not only exactly 3, because a
+ * depth-5 reply still has 3+ `.children` ancestors. */
+.wtb-comment-list .children .children .children {
+  margin-left: 0;
+}
+
+@media (max-width: 30rem) {
+  .wtb-comment-list .children {
+    margin-left: var(--space-md);
+  }
+
+  .wtb-comment-list .children .children {
+    margin-left: var(--space-sm);
+  }
+
+  .wtb-comment-list .children .children .children {
+    margin-left: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .wtb-entry-card,
   .wtb-entry-more svg {

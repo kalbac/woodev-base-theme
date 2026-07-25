@@ -29,7 +29,20 @@
     transform var(--dur) var(--ease-out);
 }
 
-.wtb-cat-tile:hover {
+/* Finding 7 (P1): the lift + arrow-move only fired on `:hover`, so a
+ * keyboard user landing on the tile (or a link inside it, once real
+ * merchandising markup lands) got base.css's themed `:focus-visible` ring
+ * (`2px solid var(--ring)`) but none of the lift/arrow affordance — not the
+ * browser's generic outline, which base.css already replaces everywhere,
+ * but still no parity with the mouse experience. `:focus-visible` covers
+ * the tile itself being focusable (e.g. rendered as `<a class="wtb-cat-tile">`);
+ * `:focus-within` covers it wrapping a separately-focusable child link.
+ * Untestable today — nothing in the template hierarchy renders this markup
+ * yet (see this file's header) — but the port is what a future task builds
+ * on, so it should not ship the same keyboard gap the port started with. */
+.wtb-cat-tile:hover,
+.wtb-cat-tile:focus-visible,
+.wtb-cat-tile:focus-within {
   box-shadow: var(--shadow-md);
   transform: translateY(-3px);
 }
@@ -71,7 +84,9 @@
   transition: transform var(--dur) var(--ease-out);
 }
 
-.wtb-cat-tile:hover .arrow {
+.wtb-cat-tile:hover .arrow,
+.wtb-cat-tile:focus-visible .arrow,
+.wtb-cat-tile:focus-within .arrow {
   transform: translate(2px, -2px);
 }
 

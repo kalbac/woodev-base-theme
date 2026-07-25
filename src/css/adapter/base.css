@@ -1,7 +1,5 @@
 /* src/css/adapter/base.css
- * Mockup §2 "Base / reset": global element defaults + a handful of base-level
- * utility classes (.mono, .eyebrow, .lede, .section-pad) reused across the
- * other adapter files.
+ * Mockup §2 "Base / reset": global element defaults.
  *
  * `.wrap` / `.wrap-wide` from the mockup are deliberately NOT ported: the
  * theme already has a container wrapper, `.wtb-container` (defined in
@@ -101,35 +99,14 @@ textarea {
   display: none !important;
 }
 
-.mono {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-}
-
-.eyebrow {
-  color: var(--muted-foreground);
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-.lede {
-  max-width: 52ch;
-  color: var(--muted-foreground);
-  font-size: var(--text-md);
-  line-height: var(--lh-body);
-}
-
-.section-pad {
-  padding-block: var(--space-3xl);
-}
-
 /*
- * Accessible skip-link (WCAG 2.1 AA): off-screen until it receives keyboard
- * focus, then moves into view. The `top`-based reveal (rather than the
- * mockup's `position: fixed`) is the theme's existing, e2e-pinned mechanism
- * (navigation.spec.mjs) — this is a restyle of it, not a re-mechanism.
+ * Accessible skip-link (WCAG 2.1 SC 2.4.1 Bypass Blocks): off-screen until it
+ * receives keyboard focus, then moves into view. This rule is only the
+ * visual half — conformance also needs the skip target to be focusable
+ * (header.php's `#wtb-content` carries `tabindex="-1"` for that). The
+ * `top`-based reveal (rather than the mockup's `position: fixed`) is the
+ * theme's existing, e2e-pinned mechanism (navigation.spec.mjs) — this is a
+ * restyle of it, not a re-mechanism.
  */
 .wtb-skip-link {
   position: absolute;
