@@ -90,4 +90,12 @@ T0→T1→T2 sequential; T3 parallel with T1/T2; T4–T6 parallelisable once T1�
 
 ## Last session
 
-s10 (25.07.2026): pivoted from patching the storefront CSS to designing the **whole-theme visual identity** via Open Design. Rewrote `woo.css` un-layered (beats Woo's un-layered CSS) + removed Woo sidebar (`faf7801`); wrote `DESIGN.md` (`fff851f`). Ran 3 OD mockups (v1/v2/v3) — **Maksim chose v2 «Обиход» and refined it** (warm palette + 7 colour-palette presets, plates fixed, hover-reveal over price, Customizer-ready tokens). **Approved mockup lives in `docs/design/v2-mockup/`** — the design source of truth. Next = implement it into the theme. Nothing merged. See SESSION-LOG.
+s11 (25.07.2026): implemented the approved visual identity, T0–T7 of
+`docs/plans/2026-07-25-visual-identity.md`. ADR-007 (self-hosted fonts) and ADR-008 (one
+identity replaces the 8 Basecoat style packs) recorded — the latter was the session's single
+question to Maksim, because it overrides approved spec §6. Four commits on
+`feat/m2a-woo-storefront`, nothing merged.
+
+**Next session starts here:** critic the three un-reviewed areas (Woo layer, adapter CSS,
+asset/build wiring), fix what it finds, re-critic the fixes, then open the PR. Everything
+else in T8 is green. See `next-session-promt.md`.

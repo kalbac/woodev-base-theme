@@ -81,12 +81,28 @@ Twenty Twenty-Five still being active on a freshly created `:8888`. The gotcha h
 this gap as "tolerated, it fails loudly". It does fail loudly; it fails loudly **pointing at
 the wrong thing**. Fixed the setup and rewrote that conclusion.
 
-**Gate:** phpcs · phpstan L8 (needed WooCommerce stubs, pinned to the same 10.9 the e2e
-environment installs) · unit **195** · vitest **32** · integration **35** · integration-dev
-**4** · e2e-woo **8** · build. Base e2e: 40/41 green on a run the harness killed at the last
-test; a clean re-run was still in flight at write time.
+**A second critic chunk, on the Customizer**, found one real defect: `palette_choices()`
+derives a label for any slug its map has not heard of, so adding an eighth palette without a
+label breaks nothing, logs nothing, and shows a Russian-locale admin one English word among
+seven. The first test written for it was itself useless — the labels ARE the title-cased
+slugs, so a derived label and a hand-written one are the same string; only the KEYS can tell
+them apart. One finding was declined with reason (`clamp()` clamping rather than rejecting a
+fractional radius — ordinary numeric-control behaviour, unreachable through the UI), and one
+was a **false positive I caused**: I forgot to name `inc/Woo/CtaAttribute.php` as an
+out-of-chunk consumer, so the critic reported `cta_reveal` as unread by `build_css()` when it
+is CSS-inert by design. `codex-split-diff-false-positives` describes exactly that mistake.
 
-**Not merged.** Commit `bb9d591` on `feat/m2a-woo-storefront` plus the post-critic fixes.
+**Gate, all green:** phpcs · phpstan L8 (needed WooCommerce stubs, pinned to the same 10.9
+the e2e environment installs) · unit **196** · vitest **32** · integration **35** ·
+integration-dev **4** · e2e-dev **2** · e2e-woo **8** · build · base e2e **40/41 in-suite**,
+with the 41st re-run alone and green — it had failed on a `wp-env run cli` error while the
+runner was being killed, not on an assertion.
+
+**Not at the merge bar, and the reason is specific:** the Woo layer, the adapter CSS and the
+asset/build wiring have had **no critic pass**. Both areas that were reviewed produced real
+defects, one of them a PHP-injection path; assuming the rest is clean has no basis.
+
+**Not merged.** `bb9d591`, `a12d47a`, `87a9718`, `197c0ae` on `feat/m2a-woo-storefront`.
 
 ## s10 — 25.07.2026 — Storefront scaffold → whole-theme VISUAL IDENTITY (approved: refined V2 «Обиход»), via Open Design
 
