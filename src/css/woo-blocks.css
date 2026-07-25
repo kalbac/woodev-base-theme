@@ -1,0 +1,172 @@
+/*
+ * Block-based WooCommerce Cart and Checkout — the hardcoded surfaces only
+ * (ADR-009 finding 4 / docs/plans/2026-07-25-block-cart-checkout.md, task B1,
+ * work-list row 1). Measured against the installed WooCommerce 10.9.4 package
+ * on disk, not recalled.
+ *
+ * NO `@import 'tailwindcss'` HERE, DELIBERATELY. Same trap `src/css/woo.css`'s
+ * own header documents (lines 7-19): this file uses no Tailwind feature
+ * (`@apply`, `theme()`, `--spacing()`, `@variant`, `@utility` — none appear
+ * below), it is plain CSS reading this theme's own custom properties, which
+ * come from `tokens.generated.css` in the MAIN bundle (`app.css`), enqueued
+ * unconditionally on every front-end request. Importing Tailwind again here
+ * would ship a SECOND full copy of the reset + preflight + the `@source`
+ * glob's utilities — un-scoped, unlike every rule below — on top of every
+ * page that already paid for it once via `app.css`. `woo.css`'s header
+ * records that this used to actually ship (45,895 bytes, un-scoped) before
+ * the import was removed there; the same failure mode applies verbatim to a
+ * second stylesheet, so it is called out again here rather than trusted to
+ * be "obviously" avoided.
+ *
+ * WHY A NEW FILE, NOT AN ADDITION TO woo.css (ADR-009 finding 5).
+ * Verified against the BUILT artifact, not the source: all 184 top-level
+ * rules in the built `woo.css` bundle (`assets/dist/assets/woo-*.css`)
+ * require a `.woocommerce` ancestor — the whole file is nested inside
+ * `.woocommerce { … }` plus two `.woocommerce`-prefixed rules (see that
+ * file's own header). The block Checkout page's `<body>` carries no bare
+ * `woocommerce` class at all — its classes are `woocommerce-checkout
+ * woocommerce-page woocommerce-no-js` — so not one byte of `woo.css` can
+ * ever match there. Nesting these rules inside `woo.css`'s `.woocommerce { … }`
+ * block would silently compile to dead code on the one page that needs it;
+ * a stylesheet with its own scope is the only shape that actually reaches
+ * the block Cart/Checkout markup.
+ *
+ * WHY UN-LAYERED (mirrors woo.css's own reasoning, same file, lines 20-31).
+ * WooCommerce Blocks ships `cart.css` / `checkout.css` un-layered. Our
+ * stylesheets already load LAST in `<head>` on both pages (ADR-009 finding 3
+ * — the tail of the head order is `wc-blocks-style` → `wc-blocks-style-
+ * cart|checkout` → `global-styles` → `woocommerce-general` →
+ * `woodev-base-style` → `woodev-base-woo`, and this bundle's own enqueue
+ * — inc/Woo/BlockAssets.php — registers after all of those), so an
+ * UN-LAYERED rule of EQUAL specificity wins purely on source order. A rule
+ * parked in `@layer adapter` would lose to Woo's un-layered CSS regardless of
+ * specificity, exactly the s9 mistake `woo.css`'s header already documents
+ * (fixed s10, faf7801) — there is no reason to repeat it in a second file.
+ *
+ * WHY THE SCOPE IS THE WRAPPER, NOT INTERNAL MARKUP (ADR-009 decision 1).
+ * Every rule below is scoped under `.wp-block-woocommerce-cart` /
+ * `.wp-block-woocommerce-checkout` — the class WordPress generates from the
+ * block's REGISTERED NAME (`woocommerce/cart`, `woocommerce/checkout`), not
+ * from any internal DOM structure. That is the most stable selector
+ * available: ADR-009 finding 7 measured only 85-94% survival of Woo's OWN
+ * internal `.wc-block-*` classes across 6 majors (~10 months) — churn we
+ * have no control over — whereas the wrapper is WordPress core's own
+ * block-serialisation convention (block name -> `wp-block-{namespace}-
+ * {name}`), which only changes if WooCommerce renames the block itself, and
+ * that would break every site's saved content, not just this stylesheet. The
+ * wrapper is also what keeps this file from leaking onto blocks explicitly
+ * OUT of ADR-009's scope — Mini Cart, Product Collection, and the other Woo
+ * blocks reuse several of the very same `.wc-block-components-*` internal
+ * classes targeted below; an un-scoped override would restyle those too.
+ *
+ * SPECIFICITY: mirrored against the real vendor rule, never inflated with
+ * `!important` (ADR-009 decision 3 / plan ground rule 2). Every selector
+ * below reproduces the vendor selector's own classes/attributes/elements
+ * exactly, prefixed with the ONE wrapper class scoping requires (see each
+ * rule's comment for the vendor file, line and the specificity arithmetic).
+ * That wrapper prefix does add one class of specificity over the bare vendor
+ * selector — unavoidable, since scoping correctly IS the point (previous
+ * paragraph) — but this page wins even without that extra class: our
+ * stylesheet loads after Woo's on both pages (finding 3 above), so an
+ * EQUAL-specificity un-layered rule already wins on source order alone. The
+ * added class is a side effect of correct scope, not a selector raised to
+ * force a win — nothing here relies on the extra specificity to function.
+ *
+ * SCOPE: work-list row 1 only (the plan doc's table). Text input and the
+ * select/combobox control — background, text colour, border colour and
+ * radius, the one genuine defect ADR-009 found (a white field with
+ * near-black text on an `oklch(13% …)` dark page). Checkboxes, radios, focus
+ * rings, buttons, notices and general radii elsewhere are B2-B5, deliberately
+ * not here. Also deliberately not here: `.wc-block-gateway-container
+ * .wc-block-gateway-input` (checkout.css, a payment-gateway card-details
+ * field with the same hardcoded #fff/near-black/4px shape) — found while
+ * reading the vendor file for the rule below, but it belongs to a specific
+ * payment gateway's markup, not core Woo Blocks, and is outside ADR-009
+ * finding 4's measured table; left for whoever owns that surface to decide
+ * on, not silently folded in here.
+ *
+ * Nothing is a literal colour: every declaration reads `var(--…)` from
+ * `tokens.generated.css` (un-layered, loaded on every page via `app.css`) —
+ * the same tokens `woo.css` and `adapter/forms.css` read, so this surface
+ * joins the identity in both colour schemes without sharing code with
+ * either. No separate dark-scheme block is needed: `--background`,
+ * `--foreground`, `--border` and `--radius` already resolve differently
+ * under `.dark`/`prefers-color-scheme: dark` (tokens.generated.css), so one
+ * declaration each covers both schemes.
+ */
+
+/* -- Text input --------------------------------------------------------
+ * Vendor rule (WooCommerce 10.9.4, verified on disk):
+ *   checkout.css:68 — compiled directly into the checkout page's own bundle.
+ *   assets/client/blocks/packages-style.css:17 — the shared "wc-blocks-style"
+ *     bundle enqueued on the cart page too (cart.css itself does not carry
+ *     this rule — checked, absent — the cart's coupon field, which uses this
+ *     same `.wc-block-components-text-input` class, is styled from the
+ *     shared bundle instead).
+ * Narrowest matching branch: `.wc-block-components-text-input
+ * input[type=text]` (and the other five types) — 1 class + 1 attribute
+ * selector + 1 element = specificity (0,2,1). (`checkout.css` and
+ * `packages-style.css` both also carry a `.wc-block-components-form
+ * .wc-block-components-text-input input[type=text]` branch at (0,3,1); our
+ * rule below ties that one too, since our wrapper class brings us to (0,3,1)
+ * as well — see the file header on why the added class is not a specificity
+ * trick.)
+ * Vendor declares (kept, not restated): border WIDTH/STYLE (1px solid),
+ * box-sizing, font metrics, height, padding, width. Vendor declares (fixed
+ * below): background-color:#fff, border colour (a color-mix(currentColor)
+ * that resolves to near-black once combined with the hardcoded color:#2b2d2f
+ * on the same rule), color:#2b2d2f, border-radius:4px.
+ */
+.wp-block-woocommerce-cart .wc-block-components-text-input input[type='email'],
+.wp-block-woocommerce-cart .wc-block-components-text-input input[type='number'],
+.wp-block-woocommerce-cart .wc-block-components-text-input input[type='password'],
+.wp-block-woocommerce-cart .wc-block-components-text-input input[type='tel'],
+.wp-block-woocommerce-cart .wc-block-components-text-input input[type='text'],
+.wp-block-woocommerce-cart .wc-block-components-text-input input[type='url'],
+.wp-block-woocommerce-checkout .wc-block-components-text-input input[type='email'],
+.wp-block-woocommerce-checkout .wc-block-components-text-input input[type='number'],
+.wp-block-woocommerce-checkout .wc-block-components-text-input input[type='password'],
+.wp-block-woocommerce-checkout .wc-block-components-text-input input[type='tel'],
+.wp-block-woocommerce-checkout .wc-block-components-text-input input[type='text'],
+.wp-block-woocommerce-checkout .wc-block-components-text-input input[type='url'] {
+  background-color: var(--background);
+  border-color: var(--border);
+  color: var(--foreground);
+  border-radius: var(--radius);
+}
+
+/* -- Select / combobox --------------------------------------------------
+ * WooCommerce Blocks has no separate "combobox" CSS class — the country/
+ * state autocomplete control (grep confirms `combobox` appears only in the
+ * package's JS, as an ARIA role on this same markup) renders through the
+ * identical `.wc-blocks-components-select` component targeted below.
+ *
+ * Vendor rule (WooCommerce 10.9.4, verified on disk): checkout.css:6 only.
+ * Checked and NOT present in cart.css or packages-style.css — the select
+ * component's base style is compiled solely into the checkout bundle, so
+ * the override below is scoped to `.wp-block-woocommerce-checkout` alone,
+ * matching where the vendor rule (and therefore the defect) actually is.
+ *
+ * Two nested elements carry the visible surface:
+ *  - `.wc-blocks-components-select__container` — `background:#fff;
+ *    border-radius:4px` (plus non-colour layout declarations, kept). 2
+ *    classes, specificity (0,2,0).
+ *  - `.wc-blocks-components-select__select` (the actual `<select>`) —
+ *    `background:none` (the container's fill shows through), `border:1px
+ *    solid color-mix(...)`, `border-radius:4px`, `color:#2b2d2f` (plus kept
+ *    font/size/layout declarations). 2 classes, specificity (0,2,0).
+ *    The chevron (`__expand`, `fill:#2b2d2f`) is deliberately left alone:
+ *    row 1 covers background/text/border/radius, not icon fill.
+ */
+.wp-block-woocommerce-checkout
+  .wc-blocks-components-select
+  .wc-blocks-components-select__container {
+  background-color: var(--background);
+  border-radius: var(--radius);
+}
+
+.wp-block-woocommerce-checkout .wc-blocks-components-select .wc-blocks-components-select__select {
+  border-color: var(--border);
+  color: var(--foreground);
+  border-radius: var(--radius);
+}
