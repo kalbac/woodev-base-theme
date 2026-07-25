@@ -1,6 +1,6 @@
 # Current State — Woodev Base
 
-> Updated: 25.07.2026 (s12)
+> Updated: 26.07.2026 (s13)
 
 ## Phase status
 
@@ -12,20 +12,22 @@
 | Dev-mode coverage | ✅ Done | s7, PR [#10](https://github.com/kalbac/woodev-base-theme/pull/10) `e1cf31b` — the s3 debt, closed |
 | §7 component tail | ✅ Done | s7, PR [#11](https://github.com/kalbac/woodev-base-theme/pull/11) `6dfac28` — card/badge/alert/comment-form. tabs+accordion deferred to M2 |
 | Design — whole-theme visual identity | ✅ Approved (s10) | Refined V2 «Обиход» in `docs/design/v2-mockup/`. Golos Text + IBM Plex (OFL, Cyrillic), token-driven, 7 palette presets, hover-reveal CTA, all pages. Source of truth for implementation |
-| Identity implementation (T0–T8) | 🟡 T0–T7 done, T8 nearly done | ADR-007 (fonts) + ADR-008 (identity replaces the 8 style packs) recorded. Plan: `docs/plans/2026-07-25-visual-identity.md`. s12 criticked **all four** areas and re-criticked every fix. **Not merged**; PR not opened — see T8 below |
-| M2a — Woo storefront | 🟡 CSS done on branch (`faf7801`), superseded by the approved design; NOT merged | s10: `woo.css` rewritten un-layered + Woo sidebar removed (grid/cascade/sidebar fixes carry over). Visual skin will be **replaced** by the approved design during implementation. Folded into T6 of the identity plan; Task 7 (full gate + Codex + PR) is now T8 |
-| M2b — Woo checkout flow | ⬜ Not started | cart/checkout/account/store-notices + Woo Customizer section |
+| Identity implementation (T0–T8) | ✅ T0–T8 done | ADR-007 (fonts) + ADR-008 (identity replaces the 8 style packs) recorded. Plan: `docs/plans/2026-07-25-visual-identity.md`. All four areas criticked and re-criticked (s12); test debt paid s13. **PR [#24](https://github.com/kalbac/woodev-base-theme/pull/24) open, 27 commits. Merge is Maksim's call** |
+| M2a — Woo storefront | ✅ Done, in PR #24 | Classic storefront on the approved identity. The block cart/checkout gap is M2b, see below |
+| M2b — Woo block cart & checkout | 🟡 Researched + decided, not implemented | [ADR-009](adr/ADR-009-block-cart-checkout-styling.md) + `docs/plans/2026-07-25-block-cart-checkout.md` written s13 from measurement. Next branch |
 | M3 — Public release prep | ⬜ Not started | |
 
 ## Known bugs
 
 **None open.** `main` is green, verified on the MERGED commit `6dfac28` and not just per-branch: phpcs 0 · phpstan L8 · unit **146** · vitest 25 · integration **35** · integration-dev 4 · e2e **44** · e2e-dev 2 · build OK.
 
-**Branch state (`feat/m2a-woo-storefront`), s12.** Self-verified this session, on the current tree: phpcs **0** · phpstan L8 **0** · unit **204** (1 pre-existing skip) · vitest **56** · eslint **0** · build OK · **e2e-woo 12/14, then both failures fixed and re-run green** (`.col-1` grid track, and the ordering-select dark check retargeted — the two were the only reds, so the suite is 14/14 across the two runs but has NOT been run 14/14 in one pass on the final tree). `npm run format` is red on 5 files this session did not touch — the three `docs/design/v2-mockup/*` artifacts (verbatim exports, must not be reformatted), `scripts/lib/build-tokens-lib.mjs`, and an untracked `opencode.json` that is not the theme's; that script is not in the documented gate battery.
+**Branch `feat/m2a-woo-storefront` (PR [#24](https://github.com/kalbac/woodev-base-theme/pull/24)) — every suite run on the current tree, s13, one at a time:** phpcs **0** · phpstan L8 **0** · eslint **0** · prettier (on the files we own) · unit **204** (1 skip) · vitest **56** · integration **37** (1 skip) · integration-dev **4** · base e2e **57/57** in one pass · **e2e:woo 16/16 in one pass** · e2e-dev **2/2** · build OK.
 
-**The two base specs carrying this session's new assertions are green: `navigation.spec.mjs` + `components.spec.mjs` = 30/30** (7.8 min, run alone). That includes the `transitionrun` assertion, which is what proves `@starting-style` + `transition-behavior: allow-discrete` survive the build into `assets/dist` and actually fire; the `forced-colors` focus assertions; the `60dvh` height cap under both header variants; and the select-chevron geometry.
+**The critic gate on s13's own three commits has NOT run.** s10–s12 were criticked and re-criticked; s13 (ADR-009 + plan, the `prefers-reduced-motion` completion, the test strengthening) has not been through `/codex:review`. A hand-rolled `codex exec` pass covered the CSS (clean) and produced two test findings — one disproved by measurement, one filed as [#23](https://github.com/kalbac/woodev-base-theme/issues/23) — but that is not the gate. **Run `/codex:review --base 8b117a8 --scope branch` before merge.**
 
-**Not yet run on the current tree, and therefore the first thing to finish:** the other four base specs (`smoke`, `templates`, `theme-mods` — the last is ~12 min alone), integration, integration-dev, e2e-dev, and a full clean 14/14 `e2e:woo` in one pass. A combined run was started and killed after it stalled competing with the woo environment for Docker — **two suites on two different wp-env configs contend badly even though they do not corrupt each other**; run them one at a time.
+**Suites still contend for Docker.** Run them ONE AT A TIME even on different wp-env configs — s12 lost a run to a stall, and s13 watched wp-cli calls slow to a crawl with 15 containers up. Stop the environments you are not using.
+
+`npm run format` is red on 5 files no session has touched — the three `docs/design/v2-mockup/*` artifacts (verbatim exports, must not be reformatted), `scripts/lib/build-tokens-lib.mjs`, and an untracked `opencode.json` that is not the theme's. Not in the documented gate battery; the files we own are clean.
 
 **What the critic gate produced (all four areas now criticked AND re-criticked):**
 - **Woo layer** — 4 real defects, then 3 more inside the fixes: the shortcode/block product loop shipping without CSS or `data-cta`; a priority window swallowing third-party buttons; the same repair then wrapping the Product Button BLOCK's markup in an inline span; a placeholder sprite unreachable from REST-rendered blocks.
@@ -33,11 +35,18 @@
 - **adapter CSS** — 12 defects, 2 of them P0, and **both P0s were re-critic findings inside the first repair**: an invalid field's focus indicator vanishing in forced-colors mode, and a mobile-menu height cap computed from a `padding-top` the header bar does not have.
 - **`woo.css`** — 7 cascade-race defects plus the Tailwind import that made the bundle 45,895 bytes of un-scoped preflight. **One repair existed only as a comment** — the prose claimed (0,4,3), the selector stayed (0,3,0) — caught by an e2e assertion on computed `display`, not by either critic.
 
-**Scope finding for M2b, and Maksim's decision on it (s12).** WooCommerce 10.x's `install_pages` creates a **block-based** cart and checkout (`<!-- wp:woocommerce/checkout -->`, verified on the seeded :8891 store). A large part of `woo.css`'s cart/checkout styling targets the classic `.form-row` / `input.input-text` / `.shop_table` shapes, which a default install never renders — it applies only to stores that swap the shortcode back in. `/my-account/` IS classic, so `.col2-set` and the account surfaces are live. Nothing is wrong with what was written; the gap is that the default checkout experience is unstyled by us and untested.
+**M2b researched and decided (s13), against the installed WooCommerce 10.9.4 and the live `:8891` store — [ADR-009](adr/ADR-009-block-cart-checkout-styling.md).** The scope finding is worse than s12 recorded and the fix is smaller than feared:
 
-**Decision: the theme must support the block cart and checkout** ([#19](https://github.com/kalbac/woodev-base-theme/issues/19)). Their styling contract is not yet understood by anyone here — the issue lists what to verify against the installed package before any CSS is written, and the work is ADR → plan → implement → critic + re-critic. This is the next session's headline task, ahead of the PR.
+- The Cart/Checkout block trees declare **no design supports at all** — no `color`, `typography`, `spacing` or border, across all 40+ inner blocks. There is no block-supports route.
+- `theme.json` → `styles.blocks["woocommerce/checkout"]` **does** emit and apply, but only to the wrapper, at specificity **(0,1,0)**. Verified by patching `theme.json` and reading computed style: the wrapper changed colour and padding; the place-order button and the text input did not.
+- **Not one byte of `woo.css` can reach those pages.** All 184 top-level rules in the BUILT bundle require a `.woocommerce` ancestor, and the block checkout page carries no element with that class. Block surfaces need a new top-level scope on `.wp-block-woocommerce-*` — see the gotcha.
+- Our stylesheets already load **last** in `<head>` on both `/cart/` and `/checkout/`, so the un-layered specificity-mirroring approach carries over unchanged.
+- The blocks lean on `currentColor`/`inherit`, so type, colour and our Golos Text already reach them in both schemes. The broken set is small and specific — inputs, selects, checkboxes, buttons, notices, radii — and **only one of them is a real defect rather than an off-brand look: a white input with near-black text on a dark page.**
+- The classic path stays first-party supported (shortcodes plus the `woocommerce/classic-shortcode` block, `enum: ["cart","checkout"]`), so the classic CSS is not dead code. Two branches, both maintained.
+- `.wc-block-*` churn measured 9.4.0 → 10.9.4: **94%** of checkout classes and **85%** of cart classes survived.
+- **Progressive enhancement cannot hold on the block checkout** — it ships zero `<input>`s server-side. That is WooCommerce's architecture; the classic branch is the PE-friendly option.
 
-**Still not at the merge bar:** the suites above have not run on the current tree, and four e2e assertions are known to pass with their fix reverted (listed in `next-session-promt.md`) — they over-claim rather than mislead about the product, but they must be strengthened and mutation-verified before the PR.
+Plan: `docs/plans/2026-07-25-block-cart-checkout.md`. Implementation is the next branch.
 
 s7's near-miss is worth carrying: the new `ScriptModuleGuard` reflected on `WP_Script_Modules::$done`, which **exists only from WP 6.9** while the theme declares `Requires at least: 6.8`. Every test using it would have died with `ReflectionException` on the floor we claim to support. Local runs cannot see this — wp-env uses `core: null`, i.e. latest — and neither can CI, which does not matrix the floor. **Nothing in this project currently tests the declared WP floor**; that is now the most valuable untested claim we make.
 
@@ -58,7 +67,9 @@ s5 found and fixed one real defect after merging — the mobile-drawer focus-tra
 
 ## Open items
 
-- **Codex: use the DEFAULT profile with MCP disabled.** `codex exec -c 'mcp_servers={}' "…"`. The s3 recipe's clean `CODEX_HOME=~/.codex-review-clean` has its **own** `auth.json`, which goes stale independently — s6 lost an hour to "refresh token already used" there while the default profile was freshly authorised. The 403s that appear alongside come from an **MCP worker**, not the model, which is what `mcp_servers={}` silences. Everything else from the s3 recipe still holds: foreground, prompt inline and **under ~15 KB**, stdin closed, smoke-test with `"Reply with exactly: CODEX_OK"` first (every failure mode exits 0 — `codex-cli-dies-silently.md`), and name the out-of-chunk guards in every chunk prompt (`codex-split-diff-false-positives.md`).
+- **Use the `/codex:*` plugin, not a hand-rolled `codex exec`.** `/codex:review [--base <ref>] [--scope branch]` and `/codex:adversarial-review` run through `codex-companion.mjs`. They carry `disable-model-invocation: true`, so **Maksim triggers them** — an agent that needs a review asks for it rather than rebuilding the invocation (s13 wasted a pass doing exactly that, and the hand-rolled run could read nothing: Codex's shell is dead here and its sandbox is workdir-only, while `mcp_servers={}` removes the Serena fallback — see `docs/gotchas/codex-sandbox-blocks-shell-and-outside-files.md`). If you must go direct, **inline the content in the prompt** in <15 KB chunks.
+- **Bash needs a separate safety classifier in auto mode.** When `claude-sonnet-5[1m]` is unavailable, every Bash call is refused with "auto mode cannot determine the safety" — nothing to do with the session model or with Codex. Read-only tools keep working. Wait it out, switch permission mode, or have Maksim run the command with `! …`.
+- **Codex history (still true when going direct): use the DEFAULT profile with MCP disabled.** `codex exec -c 'mcp_servers={}' "…"`. The s3 recipe's clean `CODEX_HOME=~/.codex-review-clean` has its **own** `auth.json`, which goes stale independently — s6 lost an hour to "refresh token already used" there while the default profile was freshly authorised. The 403s that appear alongside come from an **MCP worker**, not the model, which is what `mcp_servers={}` silences. Everything else from the s3 recipe still holds: foreground, prompt inline and **under ~15 KB**, stdin closed, smoke-test with `"Reply with exactly: CODEX_OK"` first (every failure mode exits 0 — `codex-cli-dies-silently.md`), and name the out-of-chunk guards in every chunk prompt (`codex-split-diff-false-positives.md`).
 - **Re-critic the fixes, always.** s6's two re-critic passes each found defects *inside* the fixes written for the previous round — including one in a fix for a finding the critic had just made. See `three-rounds-of-fixes-means-change-the-approach.md`.
 - **Codex reads project files during review.** Tell it explicitly not to read `.claude/skills/**` — one run returned 186 KB.
 - **Line endings, three routes into the same trap**: `.gitattributes` pins `eol=lf`; a Python helper in text mode emits CRLF (s5, twice). **Serena writes CRLF regardless — `line_ending: "lf"` does NOT work** (s6 said it did; measured false in s7 for both `create_text_file` and `replace_symbol_body`, the latter converting the whole file while `git diff` stays clean). Strip CRs after every Serena write and check `git ls-files --eol`. All three end in PHPCS failing on line 1.
@@ -87,35 +98,35 @@ s5 found and fixed one real defect after merging — the mobile-drawer focus-tra
 |---|---|---|
 | T0 | Fix `docs/design/v2-mockup/tokens.css` (regenerate from the mockup HTML's inline `<style>`, not the stale 8-`[data-palette]` version) | ✅ Done |
 | T1 | Token layer — `src/tokens/tokens.mjs` + `scripts/lib/build-tokens-lib.mjs` emit `--n-h`, the 7 palettes, accent/radius/type roles. Contrast gate **resolves `var()`/`calc()` numerically** and measures 7 palettes × 2 schemes × 24 pairs; below AA the build throws. Mutation-verified (a broken `--muted-foreground` yields exactly 21 named failures). vitest 25/25. Verified separately: all 82 tokens the design's CSS consumes are emitted | ✅ Done |
-| T2 | Retire the pack machinery (`src/css/packs/`, `scripts/build-pack-entries.mjs`, `scripts/lib/packs-lib.mjs`, `style_preset`) → one `src/css/app.css` entry on `basecoat-css/base` | 🟡 In progress |
+| T2 | Retire the pack machinery (`src/css/packs/`, `scripts/build-pack-entries.mjs`, `scripts/lib/packs-lib.mjs`, `style_preset`) → one `src/css/app.css` entry on `basecoat-css/base` | ✅ Done |
 | T3 | Fonts (ADR-007): `scripts/build-fonts.mjs`, self-hosted Golos Text + IBM Plex Sans/Mono, `src/css/fonts.css`, OFL licenses. 20 woff2, **352 KB shipped / ~132 KB fetched** by a Russian page — over the ADR's original estimate, which is now restated with measured numbers + an M3 `pyftsubset` plan. Idempotency and all 20 built-CSS `url()`s verified by hand | ✅ Done |
 | T4 | Base + layout surfaces → `adapter/{base,header,hero,blocks,content,footer}.css` + template pass. Hero/category-tiles/promo CSS is ported but **not wired to any template** — no front-page merchandising markup exists yet | ✅ Done |
 | T5 | Component kit → `adapter/{buttons,forms,feedback,components}.css`, incl. tabs + accordion (the M1 §7 deferral). Basecoat's leftover tokens ruled on: nothing overridden, reasons in the plan | ✅ Done |
 | — | **Integration (orchestrator):** `adapter/index.css` rewired — 10 imports, superseded blocks deleted (skip-link, nav, scheme-toggle, entry-card bits, comment bits), container/layout/post-grid deliberately kept below the imports. Verified: no selector collides across the 10 files; build green; the ported CSS is in the bundle and inside `@layer adapter` | ✅ Done |
 | T6 | WooCommerce surfaces — shop/product/cart/checkout/account, hover-reveal CTA (static under `@media (hover: none)`), placeholder sprite. `woo.css` rewritten un-layered; Woo form controls + store notices live there, not in the adapter | ✅ Done |
 | T7 | Customizer — 5 settings: `palette` (7), `accent` (hex→oklch), `radius` (px, renamed from `radius_scale`), `font`, `cta_reveal`. Each sanitised and resolved by one function | ✅ Done |
-| T8 | Gate. **Critic: complete.** All four areas criticked and every fix re-criticked (s12, 10 Codex chunks): token generator ✅, Customizer ✅, Woo layer ✅, `woo.css` ✅, adapter CSS ✅, asset/build wiring ✅. Fixed on the current tree and self-verified: phpcs 0 · phpstan L8 0 · unit **204** · vitest **56** · eslint 0 · build. **Suites still to re-run on the current tree: base e2e, integration, integration-dev, e2e-dev, a clean e2e:woo.** Four e2e assertions are known to over-claim (pass with their fix reverted) and must be strengthened + mutation-verified. PR not opened | 🟡 Gate re-run + test strengthening left |
+| T8 | Gate. **Critic complete for s10–s12** (10 Codex chunks, every fix re-criticked). s13 ran the whole battery on the current tree — all green, numbers above — strengthened the over-claiming assertions with mutation verification, and opened **PR [#24](https://github.com/kalbac/woodev-base-theme/pull/24)**. Remaining before merge: `/codex:review` on s13's own three commits | ✅ Done, PR open |
 
 T0→T1→T2 sequential; T3 parallel with T1/T2; T4–T6 parallelisable once T1–T3 land; T7 after T1; T8 last. Then M2b + M3 (remaining Woo flow polish + release prep). i18n cross-cutting; `.pot` deferred to M3.
 
 ## Last session
 
-s12 (25.07.2026): finished T8's critic gate. Five Codex chunks covered the three areas s11
-left unreviewed (Woo layer, `woo.css`, adapter CSS, asset/build wiring); five re-critic
-chunks then read every fix, and **each one found defects inside the fixes**. Six commits on
-`feat/m2a-woo-storefront`, nothing merged, PR not opened.
+s13 (26.07.2026): ran the whole gate green on the current tree, researched and decided M2b
+(ADR-009 + plan), paid the test debt with mutation verification, and opened
+**PR [#24](https://github.com/kalbac/woodev-base-theme/pull/24)**. Three commits:
+`8b117a8` (ADR-009 + plan), `9b8162f` (reduced-motion), `b84e169` (tests).
 
 **Next session starts here:**
-1. Re-run on the current tree, ONE SUITE AT A TIME: base e2e (`navigation.spec.mjs` and
-   `components.spec.mjs` carry new assertions), integration, integration-dev, e2e-dev, and a
-   clean full `e2e:woo`. Two wp-env environments contend badly for Docker even on different
-   configs — a run stalled and had to be killed for exactly that.
-2. Strengthen the four e2e assertions that pass with their fix reverted, and the
-   non-idempotent gallery seeding, all listed in `next-session-promt.md`. Mutation-verify each.
-3. Add the missing coverage for a fix that already shipped: a page containing `[products]`
-   must receive `woo.css` and the `data-cta` attribute.
-4. Finish `prefers-reduced-motion` on the storefront (the CSS-reachable ones only — the rest
-   are jQuery animations CSS cannot stop; say so rather than implying coverage).
-5. Then push, open the PR, close #14/#15/#16. **Merge is Maksim's call.**
+1. **Run `/codex:review --base 8b117a8 --scope branch`.** It is the one merge-gate step s13
+   did not complete — the classifier that auto-approves Bash went down at the end of the
+   session. Present findings verbatim, fix nothing without Maksim's word, then re-critic any
+   fix. Merge is Maksim's call.
+2. Then M2b: implement `docs/plans/2026-07-25-block-cart-checkout.md` on a new branch.
+3. Open backlog worth pulling in: [#23](https://github.com/kalbac/woodev-base-theme/issues/23)
+   (e2e setup breaks on POSIX), [#25](https://github.com/kalbac/woodev-base-theme/issues/25)
+   (theme.json presets do not follow the Customizer or the dark scheme),
+   [#17](https://github.com/kalbac/woodev-base-theme/issues/17),
+   [#18](https://github.com/kalbac/woodev-base-theme/issues/18),
+   [#13](https://github.com/kalbac/woodev-base-theme/issues/13).
 
 See `next-session-promt.md` for the full handoff, including the traps this session paid for.
