@@ -1,6 +1,6 @@
 # Gotchas Index — Woodev Base
 
-> 22 entries. Each gotcha is a separate file in `docs/gotchas/`.
+> 24 entries. Each gotcha is a separate file in `docs/gotchas/`.
 
 | Gotcha | Area | Summary |
 |---|---|---|
@@ -26,3 +26,5 @@
 | [wp-org-plugin-zip-unversioned-serves-beta](gotchas/wp-org-plugin-zip-unversioned-serves-beta.md) | Tooling/wp-env | `downloads.wordpress.org/plugin/<slug>.zip` (unversioned) can serve a pre-release, not the latest stable — s8 got Woo `11.0.0-beta.2` while `10.9.4` was current stable. Always pin the versioned URL (`<slug>.<version>.zip`) in wp-env `plugins` |
 | [woo-loop-anchor-spans-the-card-hooks](gotchas/woo-loop-anchor-spans-the-card-hooks.md) | WooCommerce/templates | The shop-loop product `<a>` opens on `woocommerce_before_shop_loop_item` and closes on `woocommerce_after_shop_loop_item`@5, spanning flash+thumbnail+title+price; the add-to-cart button is emitted after it. A `<header>`/`<footer>` crossing that boundary is invalid overlapping HTML — put wrappers entirely inside the anchor (a body div) or outside (the button), and style the card in CSS |
 | [editorconfig-css-indent-is-spaces-and-no-gate-checks-it](gotchas/editorconfig-css-indent-is-spaces-and-no-gate-checks-it.md) | Tooling/QA | `.editorconfig` is 2-space for CSS/JS but tabs for PHP. A tab-indented CSS file builds, passes phpcs (PHP-only) and every test — nothing in the gate reads CSS whitespace, so the drift ships silently (s9 `woo.css`). Tell workers "tabs for PHP, 2 spaces for CSS/JS"; verify with `cat -A` after any CSS write |
+| [svg-use-shadow-boundary-needs-custom-props](gotchas/svg-use-shadow-boundary-needs-custom-props.md) | CSS/SVG | Document class selectors don't cross a `<use>` shadow boundary, so sprite shapes styled by class fall back to `fill:black` (solid black boxes). Theme `<use>`d content with **custom properties** (they inherit) referenced as presentation attributes, not classes. Also `.plate{width:100%}` overrides inline `width=` — pin small thumbnails with higher specificity |
+| [open-design-run-pitfalls](gotchas/open-design-run-pitfalls.md) | Tooling/Open Design | OD's `amr` agent spends a paid AMR wallet (not your sub — omit `agent` or use `claude`/`codex`); `fable-5` can stall at `waiting_for_first_output`; `hallmark` sticks to a project and hijacks a "refine" run into its own critique; reused projects + native-resume make the agent rework prior output (use a FRESH project, or edit the artifact files directly); the artifact HTML has its OWN inline tokens — editing `tokens.css` doesn't touch the preview |

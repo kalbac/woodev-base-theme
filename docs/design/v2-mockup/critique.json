@@ -1,0 +1,45 @@
+{
+  "kind": "critique-panel",
+  "score": 4,
+  "iteration": 2,
+  "artifact": "woodev-base-identity.html",
+  "axes": {
+    "clarity": {
+      "score": 5,
+      "notes": "15 numbered sections in build order: type → tokens → components → chrome → pages → rationale. Every screen carries its viewport label, and demo scaffolding is visually separated from theme output."
+    },
+    "hierarchy": {
+      "score": 4,
+      "notes": "Display/body/mono split carries the hierarchy; the compressed 15px UI base keeps tables dense while headings stay large with negative tracking. Section eyebrows are used sparingly and always stacked above the heading, never as a left-margin column."
+    },
+    "typography": {
+      "score": 5,
+      "notes": "Golos Text + IBM Plex Sans + IBM Plex Mono, all OFL 1.1, all full Cyrillic, all self-hosted as local woff2 (25 files, ~470 KB). Tabular numerals across every price, order number and total."
+    },
+    "motion": {
+      "score": 4,
+      "notes": "Three durations, three named easings, transform/opacity only, no bounce. prefers-reduced-motion collapses everything. Focus rings never animate."
+    },
+    "brand": {
+      "score": 4,
+      "notes": "Identity rides on rhythm, density, hairline-over-shadow and monospaced numerals rather than hue — verified by swapping all eight accent packs, which touch only --accent-h and --accent-c."
+    }
+  },
+  "fixed_iteration_1": [
+    "Replaced the Google Fonts CDN link with locally hosted woff2 — the self-hosted constraint was being violated.",
+    "Moved the default accent off templated indigo (h264) to petrol (h214) and lowered lightness to 47% so white button text clears 4.5:1.",
+    "Lifted the last colour literals into tokens: footer surfaces, scrim, sale foreground, focus halo, and the select chevron (now a mask coloured by --muted-foreground).",
+    "Raised every compact control to a 44x44 hit area without changing its visual size."
+  ],
+  "fixed_iteration_2": [
+    "Contrast audit of the token layer found three AA failures that iteration 1 asserted were clean: --warning as text (~3:1 on light), .status-badge.completed (~4.45:1, under threshold at 12px semibold), and .status-badge.pending on --secondary (~4.15:1).",
+    "Introduced --warning-text and --success-text: status colour as a FILL and the same status as TEXT are now separate tokens, and the pair inverts (lighter, not darker) in the dark scheme.",
+    "Retuned --muted-foreground from the bare --n-500 step to oklch(52% 0.012 264) so secondary text clears 4.5:1 on --surface-2 as well as on --background and --card.",
+    "Pointed .status-badge.pending at --secondary-foreground, and surfaced all three stock states in the component kit so .stock--low is demonstrated rather than dead CSS."
+  ],
+  "known_gaps": [
+    "Still no rendered screenshot: the desktop renderer returned daemon-not-running on both attempts, so layout remains statically verified (structure, reference resolution, container-query breakpoints, contrast arithmetic) rather than visually confirmed.",
+    "Contrast figures are computed from OKLCH lightness, not measured by a checker — margins were deliberately widened past the threshold rather than parked on it.",
+    "Variable products, mini-cart flyout and payment-failure checkout states remain out of scope for v1 of the system."
+  ]
+}

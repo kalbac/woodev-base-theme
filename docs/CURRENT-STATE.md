@@ -1,6 +1,6 @@
 # Current State — Woodev Base
 
-> Updated: 24.07.2026 (s9)
+> Updated: 25.07.2026 (s10)
 
 ## Phase status
 
@@ -11,7 +11,8 @@
 | M1 — Core theme | ✅ Done | 5 plans, all merged: icons `96df1db`, templates `f3f5f0a`, style packs `1fd9dd8`, Customizer `e480b3a`, scheme switcher `11ce459` |
 | Dev-mode coverage | ✅ Done | s7, PR [#10](https://github.com/kalbac/woodev-base-theme/pull/10) `e1cf31b` — the s3 debt, closed |
 | §7 component tail | ✅ Done | s7, PR [#11](https://github.com/kalbac/woodev-base-theme/pull/11) `6dfac28` — card/badge/alert/comment-form. tabs+accordion deferred to M2 |
-| M2a — Woo storefront | 🟡 Tasks 1–6 built on branch, Task 7 pending, NOT merged | s9: Tasks 1–6 done + reviewed on `feat/m2a-woo-storefront` (`820605d`). **UI is a scaffold, not final** (Maksim, 24.07.2026 — [#12](https://github.com/kalbac/woodev-base-theme/issues/12)). Remaining: Task 7 = full gate + Codex critic + PR, done AFTER the UI redesign. Merge is deferred |
+| Design — whole-theme visual identity | ✅ Approved (s10) | Refined V2 «Обиход» in `docs/design/v2-mockup/`. Golos Text + IBM Plex (OFL, Cyrillic), token-driven, 7 palette presets, hover-reveal CTA, all pages. Source of truth for implementation |
+| M2a — Woo storefront | 🟡 CSS done on branch (`faf7801`), superseded by the approved design; NOT merged | s10: `woo.css` rewritten un-layered + Woo sidebar removed (grid/cascade/sidebar fixes carry over). Visual skin will be **replaced** by the approved design during implementation. Task 7 (full gate + Codex + PR) still pending |
 | M2b — Woo checkout flow | ⬜ Not started | cart/checkout/account/store-notices + Woo Customizer section |
 | M3 — Public release prep | ⬜ Not started | |
 
@@ -61,15 +62,15 @@ s5 found and fixed one real defect after merging — the mobile-drawer focus-tra
 | Dev-mode coverage | ✅ `e1cf31b` (s7), PR #10 |
 | §7 component tail | ✅ `6dfac28` (s7), PR #11 |
 
-M2a Tasks 1–6 are built and reviewed on `feat/m2a-woo-storefront` (see SESSION-LOG s9). What remains, in order:
+**s10 changed the plan: the whole-theme VISUAL IDENTITY is now designed and approved** (refined V2 «Обиход», in `docs/design/v2-mockup/`). The storefront-only redesign (#12) is subsumed by it. What remains, in order:
 
-1. **UI redesign of the storefront** ([#12](https://github.com/kalbac/woodev-base-theme/issues/12)) — the current `woo.css` is a scaffold; do a real design pass (card, badges, single-product layout, gallery, tabs). The PHP layer / hooks / override / tests are reusable as-is; this reworks the visual layer only. Do this **before** Task 7.
-2. **Fold in the Customizer options** ([#13](https://github.com/kalbac/woodev-base-theme/issues/13) + the new AGENTS rule) — UI forks with ≥2 options ship as Customizer settings, starting with the thumbnail ratio (1:1 / 16:9). This seeds the Woo Customizer section (spec §8, otherwise M2b).
-3. **Task 7 — the M2a gate + merge** — full battery (phpcs · phpstan L8 · unit · vitest · build · integration · integration-dev · **base-isolation `npm run e2e` on :8888** · e2e-dev · e2e-woo), then Codex critic + re-critic, then push + PR. **base-isolation e2e was deferred from Task 6 into here** — the default env (:8888) must be recreated (`npm run wp:start`) first. Merge is Maksim's call.
-4. **Then M2b** — cart/checkout/account/store-notices + the rest of the Woo Customizer section.
+1. **Implement the approved design into the theme** — this is the big next effort. Port `docs/design/v2-mockup/tokens.css` into the theme's token layer (note the **`--n-h` neutral-temperature** var + the **7 palette presets** + `--accent-h/c` + `--radius` scale), then translate the mockup's markup/CSS into the theme's classic templates + `@layer adapter` (header/footer, home, shop archive + product card with the **hover-reveal-over-price** CTA, single product, cart, checkout, account, order-received, sidebars, blog, component kit). Reconcile with the existing `woo.css` (`faf7801`) — its grid/cascade/sidebar fixes carry over; the visual skin is replaced.
+2. **Customizer controls** — expose as settings: font, border-radius (rounded→zero, drive from `--radius`), accent colour, **colour-palette preset** (the 7, light+dark), add-to-cart reveal mode (`always`/`hover`, the `[data-cta="always"]` toggle). Each is a single-point token/class change by design.
+3. **Task 7 — the M2a/theme gate + merge** — full battery (phpcs · phpstan L8 · unit · vitest · build · integration · integration-dev · **base-isolation `npm run e2e` on :8888** · e2e-dev · e2e-woo), then Codex critic + re-critic, then push + PR. Merge is Maksim's call.
+4. **Then M2b + M3** — remaining Woo flow polish + release prep.
 
-i18n is cross-cutting — required in every task, `.pot` generation deferred to M3.
+Fonts: the design uses **Golos Text + IBM Plex Sans/Mono** (all OFL, Cyrillic, self-hosted) — this **revisits the v1 spec's system-font-only decision** (Maksim approved 25.07.2026; record an ADR when implementing). i18n cross-cutting; `.pot` deferred to M3.
 
 ## Last session
 
-s9 (24.07.2026): verified M2a Task 1 live (all 7 checklist steps green), then built Tasks 2–6 subagent-driven — each self-verified + two-stage reviewed, committed on `feat/m2a-woo-storefront`. Docker cleaned to one Woo env. Maksim's verdict on the storefront UI: **scaffold-quality, not final** — engineering caravan is solid, the visual layer (Task 5 `woo.css`) needs a real redesign before merge ([#12](https://github.com/kalbac/woodev-base-theme/issues/12)). New AGENTS rule: UI forks with ≥2 options become Customizer settings, not questions (`24b9805`); first instance = thumbnail ratio ([#13](https://github.com/kalbac/woodev-base-theme/issues/13)). Nothing merged; branch is 6 M2a commits ahead of `main`. See SESSION-LOG.
+s10 (25.07.2026): pivoted from patching the storefront CSS to designing the **whole-theme visual identity** via Open Design. Rewrote `woo.css` un-layered (beats Woo's un-layered CSS) + removed Woo sidebar (`faf7801`); wrote `DESIGN.md` (`fff851f`). Ran 3 OD mockups (v1/v2/v3) — **Maksim chose v2 «Обиход» and refined it** (warm palette + 7 colour-palette presets, plates fixed, hover-reveal over price, Customizer-ready tokens). **Approved mockup lives in `docs/design/v2-mockup/`** — the design source of truth. Next = implement it into the theme. Nothing merged. See SESSION-LOG.

@@ -1,5 +1,28 @@
 # Session Log — Woodev Base
 
+## s10 — 25.07.2026 — Storefront scaffold → whole-theme VISUAL IDENTITY (approved: refined V2 «Обиход»), via Open Design
+
+**The pivot.** Started by fixing the M2a storefront CSS (`woo.css`): the s9 scaffold was broken, not just plain — its rules sat in `@layer adapter` and **lose to WooCommerce's un-layered stylesheets regardless of specificity**, so the grid stayed a floated mess. Rewrote `woo.css` **un-layered + mirroring Woo's own selector specificity** (like `states.css`), fixed the grid (Woo `li.product` float/width + the `ul.products::before` clearfix becoming a grid item), built card/toolbar/single/tabs/pagination, and removed Woo's default sidebar in `Support.php` (implements the recorded "full-width, no sidebar" v1 decision). Committed `faf7801` on `feat/m2a-woo-storefront`; e2e-woo 8/8, phpcs, prettier green, verified live (light/dark/mobile/rose-accent).
+
+**But Maksim's verdict: still a scaffold, not a designed site.** Honest conversation about whether I can produce a genuinely beautiful design blind — conclusion: clean/correct yes, distinctive/beautiful under the theme's constraints (system font, neutral tokens, placeholder images) is at my edge. Agreed to do it the way real design is made: **a mockup first**, then implement. Chose **Open Design (OD)** as the "designer" (MCP → local daemon). Wrote `DESIGN.md` brief (committed `fff851f`).
+
+**Three OD mockups (all Golos Text + IBM Plex, self-hosted Cyrillic, token-driven, all pages):**
+- **v1 «Field & Form»** (opus, `high-end-visual-design` skill) — liked ("a real store design") but Space Grotesk (no Cyrillic), no cart/checkout/account, warm-clay near the AI cliché.
+- **v2 «Обиход»** (opus via `claude` agent, `hallmark` plugin) — neutral, Cyrillic (Golos Text), ALL pages incl. cart/checkout/account/order-received/sidebars, petrol accent, portable `tokens.css` + 8 packs. **Maksim: "This is INSANE", chosen as the base.** Bugs: solid-black plates, badges overflow, huge order thumbnails.
+- **v3 «Форма дома»** (Codex, fresh project) — fixed all v2 bugs + warmth + hover-reveal, but stylistically closer to v1 = more niche. Not chosen; confirmed **Codex ≥ Opus at design** (Maksim's own A/B).
+
+**Decision: base = v2, refine with the best of v3/v1.** OD refine got hijacked by the sticky hallmark plugin (did only a contrast pass), so I **edited the v2 mockup files directly**. Refinements: warm neutrals (`--n-h` 264→68) + clay accent; **plates fixed** (SVG `<use>` shadow-boundary → custom-property presentation attrs); **7 "цветовая палитра" presets** (each sets neutral temperature + accent: Тёплый·Глина default, Холодный·Петроль, Графит, Лес, Песок, Вино, Ночь·Индиго); **hover-reveal add-to-cart OVERLAYING the price** (zero layout space, `+focus-within`, `[data-cta="always"]` toggle, reduced-motion); badges inside; order thumbnails 48px; dropdown shown. All token-driven for the future Customizer.
+
+**Customizer scope locked (Maksim):** admin will pick — font, border-radius (rounded→zero), accent colour, colour palette (light+dark preset), add-to-cart reveal mode (always/hover), + more. The design exposes each as a single-point token/class change.
+
+**Approved mockup copied into repo:** `docs/design/v2-mockup/` (`woodev-base-identity.html` + `tokens.css` + `assets/` fonts). This is the design source of truth for implementation.
+
+**Gotchas:** +2 (`svg-use-shadow-boundary-needs-custom-props`, `open-design-run-pitfalls`). Index now **24**. Also cost: OD `amr` agent burned Maksim's paid AMR-wallet credits (my mistake — should have used his Codex default or `claude`).
+
+**Nothing merged.** `main` untouched at `27edbd6`. Branch `feat/m2a-woo-storefront` carries the storefront CSS work + `DESIGN.md`.
+
+**Next:** implement the approved refined-V2 design into the theme (token layer → templates → Customizer controls). See CURRENT-STATE + `next-session-promt.md`.
+
 ## s9 — 24.07.2026 — M2a Tasks 1–6 built on branch, UI judged scaffold, not merged
 
 **Docker cleanup first.** Prior sessions left 4 wp-env instances (15 containers) for this project. Kept only the Woo env (`.wp-env.woo.json`, :8891, needed for M2a); `wp-env destroy`'d the default / test / dev-mode envs (all recreate on demand). Other projects' old containers untouched.
