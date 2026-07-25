@@ -33,3 +33,6 @@ tests/integration/vendor/
 
 # Playwright MCP scratch output
 .playwright-mcp/
+
+# Regenerated every tests/e2e-woo/global-setup.mjs run — never a source of truth.
+tests/e2e-woo/.fixtures.json
