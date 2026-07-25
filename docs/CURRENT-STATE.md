@@ -12,7 +12,7 @@
 | Dev-mode coverage | ✅ Done | s7, PR [#10](https://github.com/kalbac/woodev-base-theme/pull/10) `e1cf31b` — the s3 debt, closed |
 | §7 component tail | ✅ Done | s7, PR [#11](https://github.com/kalbac/woodev-base-theme/pull/11) `6dfac28` — card/badge/alert/comment-form. tabs+accordion deferred to M2 |
 | Design — whole-theme visual identity | ✅ Approved (s10) | Refined V2 «Обиход» in `docs/design/v2-mockup/`. Golos Text + IBM Plex (OFL, Cyrillic), token-driven, 7 palette presets, hover-reveal CTA, all pages. Source of truth for implementation |
-| Identity implementation (T0–T8) | 🟡 In progress (s11) | ADR-007 (fonts) + ADR-008 (single identity replaces the 8 style packs) recorded. Plan: `docs/plans/2026-07-25-visual-identity.md`. **T0 (fix `tokens.css` export) done.** T1 (token layer) in progress. T3 (fonts, `scripts/fetch-fonts.mjs`) in progress. T2/T4–T8 not started |
+| Identity implementation (T0–T8) | 🟡 T0–T7 done, T8 (gate) in progress | ADR-007 (fonts) + ADR-008 (identity replaces the 8 style packs) recorded. Plan: `docs/plans/2026-07-25-visual-identity.md`. Committed `bb9d591` + post-critic fixes. **Not merged, not fully criticked** — see T8 below |
 | M2a — Woo storefront | 🟡 CSS done on branch (`faf7801`), superseded by the approved design; NOT merged | s10: `woo.css` rewritten un-layered + Woo sidebar removed (grid/cascade/sidebar fixes carry over). Visual skin will be **replaced** by the approved design during implementation. Folded into T6 of the identity plan; Task 7 (full gate + Codex + PR) is now T8 |
 | M2b — Woo checkout flow | ⬜ Not started | cart/checkout/account/store-notices + Woo Customizer section |
 | M3 — Public release prep | ⬜ Not started | |
@@ -21,7 +21,12 @@
 
 **None open.** `main` is green, verified on the MERGED commit `6dfac28` and not just per-branch: phpcs 0 · phpstan L8 · unit **146** · vitest 25 · integration **35** · integration-dev 4 · e2e **44** · e2e-dev 2 · build OK.
 
-**M2a branch caveat (`feat/m2a-woo-storefront`):** each M2a task was self-verified at its own level (s9 end: unit **156** · phpcs 72/72 · integration **36** (Woo `BootstrapTest` skips w/o Woo) · e2e-woo **9** green, grid guard mutation-verified · build OK), but the branch has **not** had the full merged-tree battery (no phpstan / vitest / base-isolation e2e / e2e-dev this session) and **no Codex critic** — that is Task 7, deliberately deferred until after the UI redesign. Treat the branch as unproven at the merge bar until Task 7 runs.
+**Branch state (`feat/m2a-woo-storefront`), s11.** Green and self-verified: phpcs · phpstan L8 · unit **195** · vitest **32** · integration **35** · integration-dev **4** · e2e-woo **8** · build. Base e2e reached **40/41** before the runner was killed at the last test; a clean re-run is the first thing to finish.
+
+**What is NOT yet at the merge bar, and why the branch must not be merged on today's evidence:**
+- **e2e-dev has not run this session at all.**
+- **The Codex critic covered ONE chunk** — the token generator (findings fixed, then re-criticked, fixes to the fixes also found and fixed). The **Customizer, the Woo layer, the adapter CSS and the asset/build wiring have had no critic pass.** Given that the one chunk reviewed produced four real defects including a PHP-injection path and a vacuous test, assuming the unreviewed chunks are clean would be unfounded.
+- Unit count moved 156 → 195 and phpcs 72 → 80 files; the drop in some suites is pack/preset tests legitimately removed with the feature, not lost coverage.
 
 s7's near-miss is worth carrying: the new `ScriptModuleGuard` reflected on `WP_Script_Modules::$done`, which **exists only from WP 6.9** while the theme declares `Requires at least: 6.8`. Every test using it would have died with `ReflectionException` on the floor we claim to support. Local runs cannot see this — wp-env uses `core: null`, i.e. latest — and neither can CI, which does not matrix the floor. **Nothing in this project currently tests the declared WP floor**; that is now the most valuable untested claim we make.
 
@@ -76,9 +81,9 @@ s5 found and fixed one real defect after merging — the mobile-drawer focus-tra
 | T4 | Base + layout surfaces → `adapter/{base,header,hero,blocks,content,footer}.css` + template pass. Hero/category-tiles/promo CSS is ported but **not wired to any template** — no front-page merchandising markup exists yet | ✅ Done |
 | T5 | Component kit → `adapter/{buttons,forms,feedback,components}.css`, incl. tabs + accordion (the M1 §7 deferral). Basecoat's leftover tokens ruled on: nothing overridden, reasons in the plan | ✅ Done |
 | — | **Integration (orchestrator):** `adapter/index.css` rewired — 10 imports, superseded blocks deleted (skip-link, nav, scheme-toggle, entry-card bits, comment bits), container/layout/post-grid deliberately kept below the imports. Verified: no selector collides across the 10 files; build green; the ported CSS is in the bundle and inside `@layer adapter` | ✅ Done |
-| T6 | WooCommerce surfaces — shop/product/cart/checkout/account; reconciles with `woo.css` (`faf7801`) | ⬜ Not started |
-| T7 | Customizer — 5 settings: `palette` (7), `accent`, `radius`, `font`, `cta_reveal` | ⬜ Not started |
-| T8 | Full gate (phpcs · phpstan L8 · unit · vitest · build · integration · integration-dev · base-isolation e2e · e2e-dev · e2e-woo) → Codex critic + re-critic → push + PR. Merge is Maksim's call | ⬜ Not started |
+| T6 | WooCommerce surfaces — shop/product/cart/checkout/account, hover-reveal CTA (static under `@media (hover: none)`), placeholder sprite. `woo.css` rewritten un-layered; Woo form controls + store notices live there, not in the adapter | ✅ Done |
+| T7 | Customizer — 5 settings: `palette` (7), `accent` (hex→oklch), `radius` (px, renamed from `radius_scale`), `font`, `cta_reveal`. Each sanitised and resolved by one function | ✅ Done |
+| T8 | Gate. **Green:** phpcs · phpstan L8 · unit 195 · vitest 32 · build · integration 35 · integration-dev 4 · e2e-woo 8. **Base e2e:** 40/41 on a killed run, clean re-run pending. **e2e-dev: not yet run.** Codex critic + re-critic done on the token generator; the other chunks (Customizer, Woo layer, assets) are NOT yet criticked. PR not opened | 🟡 In progress |
 
 T0→T1→T2 sequential; T3 parallel with T1/T2; T4–T6 parallelisable once T1–T3 land; T7 after T1; T8 last. Then M2b + M3 (remaining Woo flow polish + release prep). i18n cross-cutting; `.pot` deferred to M3.
 

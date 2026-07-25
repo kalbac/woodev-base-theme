@@ -64,6 +64,48 @@ const finite = (value, source) => {
   return value;
 };
 
+const DECIMAL = new RegExp(`^${NUMBER}$`);
+
+/**
+ * A number in the spelling this generator accepts: plain decimal, nothing else.
+ *
+ * That is deliberately NARROWER than CSS, and the distinction matters:
+ *
+ * - `0x10`, `0b110`, `''` and `Infinity` are **invalid CSS**. `Number()` reads
+ *   them as 16, 6, 0 and Infinity, so a token spelled that way would resolve to
+ *   a plausible number here while the browser drops the declaration at
+ *   computed-value time — the gate would be measuring a colour nobody sees.
+ * - `1e3` **is valid CSS** (CSS Syntax §4 admits scientific notation). We
+ *   reject it anyway, because a pattern permissive enough to accept it also
+ *   reads `6.3e-1` as `6.3` if anything downstream ever parses loosely, and
+ *   nothing in this design needs the notation. This is a project subset, not a
+ *   claim about the platform — do not "fix" it by widening the pattern to match
+ *   CSS unless something actually needs exponents.
+ */
+const decimal = (text, source) => {
+  const trimmed = text.trim();
+
+  if (!DECIMAL.test(trimmed)) {
+    throw new Error(`Not a plain decimal number in token value: ${source}`);
+  }
+
+  return finite(Number(trimmed), source);
+};
+
+// oklch() lightness is 0…1 (or 0%…100%). Chroma may legitimately exceed the
+// sRGB gamut — that is what the gamut mapping below is for — but lightness
+// cannot: a browser clamps it, so measuring an unclamped 101% would compute a
+// contrast ratio nothing on screen has. Refuse rather than clamp: out-of-range
+// lightness in OUR OWN token source is a typo, and silently correcting a typo
+// is how a design ships a colour nobody chose.
+const lightness = (value, source) => {
+  if (0 > value || 1 < value) {
+    throw new Error(`oklch lightness out of the 0…1 range: ${source}`);
+  }
+
+  return value;
+};
+
 /**
  * A scalar custom property (--n-h, --accent-c, --focus-ring-alpha …) as a number.
  */
@@ -89,10 +131,14 @@ function resolveScalar(value, vars, seen = []) {
   if (null !== asCalc) {
     const { name, factor } = asCalc.groups;
 
-    return resolveScalar(`var(--${name})`, vars, seen) * finite(Number(factor), value);
+    // Both operands are finite, and their PRODUCT still need not be: 1e308 * 10
+    // is Infinity. An unchecked Infinity here reaches formatColor() and lands
+    // in theme.json as `oklch(50% Infinity 0)` — a colour the editor cannot
+    // parse, emitted by a build that reported success.
+    return finite(resolveScalar(`var(--${name})`, vars, seen) * decimal(factor, value), value);
   }
 
-  return finite(Number(value.trim()), value);
+  return decimal(value, value);
 }
 
 /**
@@ -130,7 +176,7 @@ export function resolveColor(value, vars, seen = []) {
   const { l, pct, c, h, a } = match.groups;
 
   return {
-    l: '%' === pct ? finite(Number(l), value) / 100 : finite(Number(l), value),
+    l: lightness('%' === pct ? decimal(l, value) / 100 : decimal(l, value), value),
     c: resolveScalar(c, vars, seen),
     h: resolveScalar(h, vars, seen),
     a: undefined === a ? 1 : resolveScalar(a, vars, seen),
@@ -283,6 +329,12 @@ const CONTRAST_PAIRS = [
   ['primary-foreground', 'primary'],
   ['foreground', 'background'],
   ['foreground', 'card'],
+  // --card-foreground is a SEPARATE token that merely happens to equal
+  // --foreground today. Measuring only the pair that is currently a duplicate
+  // means the day someone tints card text, nothing checks it.
+  ['card-foreground', 'card'],
+  ['foreground', 'muted'],
+  ['muted-foreground', 'muted'],
   ['foreground', 'surface-2'],
   ['foreground', 'surface-3'],
   ['muted-foreground', 'background'],
@@ -313,6 +365,7 @@ const CONTRAST_PAIRS = [
  */
 export function contrastFailures(tokens) {
   const failures = [];
+  let measured = 0;
 
   for (const paletteSlug of Object.keys(tokens.palettes)) {
     for (const scheme of ['light', 'dark']) {
@@ -328,6 +381,8 @@ export function contrastFailures(tokens) {
           resolveColor(vars[surfaceToken], vars),
         );
 
+        measured += 1;
+
         if (!Number.isFinite(ratio) || ratio < MIN_CONTRAST) {
           failures.push(
             `${paletteSlug}/${scheme}: --${textToken} on --${surfaceToken} is ` +
@@ -336,6 +391,20 @@ export function contrastFailures(tokens) {
         }
       }
     }
+  }
+
+  // A gate that measured nothing also reports nothing, and "no failures" reads
+  // identically either way. An empty `palettes` map — a bad merge, a refactor
+  // that renames the key, a generator run against a half-written source — would
+  // otherwise sail through as a pass. The expected count is exact because both
+  // dimensions are known: every palette is measured in both schemes.
+  const expected = Object.keys(tokens.palettes).length * 2 * CONTRAST_PAIRS.length;
+
+  if (0 === measured || measured !== expected) {
+    throw new Error(
+      `The contrast gate measured ${measured} pairs, expected ${expected}. ` +
+        'A gate that measures nothing reports success — refusing to pretend it ran.',
+    );
   }
 
   return failures;
@@ -511,6 +580,14 @@ const PALETTE_SLUG = /^[a-z][a-z0-9-]*$/;
 // into a <style> block. Only bare numbers may make that trip.
 const PALETTE_VALUE = /^\d*\.?\d+$/;
 
+// A palette IS these three properties — that claim is the whole architecture
+// (ADR-008), and the PHP consumer reads exactly these keys. Validating only the
+// key's SHAPE lets a fourth, innocently-named key through: it would be emitted
+// into palettes.php, silently ignored by the consumer, and read by the next
+// person as a supported knob. An allowlist makes the claim enforceable rather
+// than aspirational.
+const PALETTE_PROPERTIES = ['n-h', 'accent-h', 'accent-c'];
+
 // PHPCS's WordPress.Arrays.MultipleStatementAlignment sniff requires every `=>`
 // in a contiguous block of array items to land in the same column, padded to the
 // widest key in that block. Computing it keeps the generated file PHPCS-clean
@@ -538,13 +615,30 @@ export function buildPalettesPhp(tokens) {
         throw new Error(`Refusing to emit a palette slug that is not a plain identifier: ${slug}`);
       }
 
+      const names = Object.keys(properties);
+
+      if (
+        names.length !== PALETTE_PROPERTIES.length ||
+        !PALETTE_PROPERTIES.every((expected) => names.includes(expected))
+      ) {
+        throw new Error(
+          `Palette '${slug}' must define exactly ${PALETTE_PROPERTIES.join(', ')} — got ${names.join(', ')}`,
+        );
+      }
+
       // Per BLOCK, not per file: the sniff aligns each contiguous run of array
       // items on the widest key IN THAT RUN. Padding to a wider key from
       // elsewhere is itself a violation, not a harmless surplus.
-      const propertyWidth = widestKey(Object.keys(properties));
+      const propertyWidth = widestKey(names);
 
       const body = Object.entries(properties)
         .map(([property, value]) => {
+          // No shape check on the key here: the allowlist above already fixes
+          // the key set exactly, so a hostile key can never reach this line and
+          // a pattern test would be unreachable code that reads like a guard.
+          // The allowlist IS the injection guard for keys — the key and the
+          // value are interpolated into single-quoted PHP by the same
+          // expression, and both halves have to be pinned or neither is.
           if (!PALETTE_VALUE.test(value)) {
             throw new Error(`Refusing to emit a non-numeric palette value: ${property} = ${value}`);
           }

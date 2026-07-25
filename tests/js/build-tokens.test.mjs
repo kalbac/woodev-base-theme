@@ -74,6 +74,47 @@ describe('resolveColor', () => {
     // false — an unmeasurable colour would pass the contrast gate.
     expect(() => resolveColor(`oklch(${'9'.repeat(309)} 0 0)`, {})).toThrow(/Not a finite number/);
   });
+
+  // `Number()` is far more permissive than CSS: `0x10`, `0b110`, `''` and
+  // `Infinity` all resolve to plausible numbers in JavaScript and are INVALID
+  // in a browser, which drops the declaration at computed-value time — the gate
+  // would be measuring a colour no visitor ever sees.
+  //
+  // `1e3` is the odd one out and is listed here deliberately: it IS valid CSS,
+  // and this generator rejects it anyway as a project subset. Keeping it in the
+  // same list without saying so is how a test starts asserting something untrue
+  // about the platform — which is exactly what the first version of this test
+  // did, and what the re-critic caught.
+  it('accepts only plain decimals, rejecting both invalid CSS and unused-but-valid exponents', () => {
+    for (const spelling of ['0x10', '0b110', '1e3', '', ' ', 'Infinity']) {
+      // Through a component slot, which is how a scalar token actually reaches
+      // the maths: oklch(…, …, var(--n-h)).
+      expect(
+        () => resolveColor('oklch(50% 0.1 var(--n-h))', { 'n-h': spelling }),
+        spelling,
+      ).toThrow(/Not a plain decimal number|Not a finite number/);
+    }
+  });
+
+  // Chroma may legitimately sit outside sRGB — that is what the gamut mapping
+  // is for. Lightness may not: a browser clamps it, so measuring an unclamped
+  // 101% computes a ratio nothing on screen has. A typo in the token source
+  // must fail the build, not be silently corrected into a colour nobody chose.
+  // Both operands finite does not make the product finite. Unchecked, this
+  // reaches formatColor() and lands in theme.json as `oklch(50% Infinity 0)` —
+  // emitted by a build that reported success.
+  it('refuses a calc() whose result overflows even though its operands did not', () => {
+    expect(() =>
+      resolveColor('oklch(50% calc(var(--c) * 10) 0)', { c: `1${'0'.repeat(308)}` }),
+    ).toThrow(/Not a finite number/);
+  });
+
+  it('refuses an out-of-range lightness', () => {
+    expect(() => resolveColor('oklch(101% 0.06 40)', {})).toThrow(/lightness out of the/);
+    expect(() => resolveColor('oklch(1.5 0.06 40)', {})).toThrow(/lightness out of the/);
+    expect(resolveColor('oklch(100% 0 0)', {}).l).toBe(1);
+    expect(resolveColor('oklch(0% 0 0)', {}).l).toBe(0);
+  });
 });
 
 describe('varsFor', () => {
@@ -108,11 +149,25 @@ describe('contrastRatio', () => {
   // changes the answer by a quarter of a ratio point — CSS Color 4 §14 permits
   // several algorithms. The gate keeps the WORSE of the naive per-channel clamp
   // and chroma reduction, so it can only ever be stricter than what ships.
+  // Two cases, deliberately pulling in OPPOSITE directions, because one case
+  // proves nothing: the earlier single assertion here would still have passed
+  // with mappedLuminance deleted entirely.
   it('takes the pessimistic of the two out-of-gamut readings', () => {
     const nearWhite = { l: 0.985, c: 0, h: 0, a: 1 };
-    // rose-600: 4.53:1 under chroma reduction alone — a pass. The clamped
-    // reading says 4.32:1, and that is the one that counts.
+
+    // rose-600: 4.53:1 under chroma reduction alone — a pass. The CLAMPED
+    // reading says 4.32:1, and that is the one that counts. Delete the clamped
+    // half and this goes green when it should not.
     expect(contrastRatio({ l: 0.586, c: 0.253, h: 17.585, a: 1 }, nearWhite)).toBeLessThan(4.5);
+
+    // The mirror image, measured rather than guessed: at oklch(58% .4 265) the
+    // clamped reading is 8.10:1 and the CHROMA-REDUCED one 4.33:1. Delete the
+    // mapped half and this colour passes AA on a reading no browser using
+    // MINDE-style mapping would agree with.
+    const ratio = contrastRatio({ l: 0.58, c: 0.4, h: 265, a: 1 }, nearWhite);
+
+    expect(ratio).toBeCloseTo(4.33, 1);
+    expect(ratio).toBeLessThan(4.5);
   });
 
   // A ratio against a colour whose appearance depends on what is behind it is a
@@ -158,11 +213,14 @@ describe('contrastFailures', () => {
 
     const failures = contrastFailures(broken);
 
-    // One per palette (7) times the three surfaces --muted-foreground is
+    // One per palette (7) times the four surfaces --muted-foreground is
     // asserted against. Dark redeclares --muted-foreground, so dark is clean.
-    expect(failures).toHaveLength(21);
-    expect(failures[0]).toMatch(
-      /^warm-clay\/light: --muted-foreground on --background is 2\.16:1, below AA \(4\.5:1\)$/,
+    expect(failures).toHaveLength(28);
+    // Asserted by membership, not by position: the pair table's ORDER is not a
+    // contract, and pinning failures[0] to it makes an unrelated reordering
+    // look like a regression.
+    expect(failures).toContain(
+      'warm-clay/light: --muted-foreground on --background is 2.16:1, below AA (4.5:1)',
     );
     expect(failures.some((line) => line.startsWith('night-indigo/light:'))).toBe(true);
   });
@@ -180,6 +238,29 @@ describe('contrastFailures', () => {
 
     expect(failures.every((line) => line.includes('/dark:'))).toBe(true);
     expect(failures).toHaveLength(Object.keys(tokens.palettes).length);
+  });
+
+  // "No failures" and "measured nothing" are the same output, and the second
+  // one is how a gate quietly stops guarding. An empty palette map is the
+  // cheapest way to reach it — a bad merge, a renamed key, a generator run
+  // against a half-written source.
+  it('refuses to report success when it measured nothing', () => {
+    const empty = { ...tokens, palettes: {} };
+
+    expect(() => contrastFailures(empty)).toThrow(/measured 0 pairs/);
+    expect(() => buildTokensCss(empty)).toThrow(/measured 0 pairs/);
+  });
+
+  it('measures every palette in both schemes, and says so in the count', () => {
+    const oneLess = {
+      ...tokens,
+      palettes: Object.fromEntries(Object.entries(tokens.palettes).slice(0, 3)),
+    };
+
+    // 3 palettes × 2 schemes × the pair table. If a future edit makes the loop
+    // skip a scheme or short-circuit a palette, the count stops matching and
+    // this throws rather than silently narrowing the gate.
+    expect(() => contrastFailures(oneLess)).not.toThrow();
   });
 
   it('throws on build when a palette is inaccessible', () => {
@@ -333,9 +414,43 @@ describe('buildPalettesPhp', () => {
   it('refuses to emit a value that is not a bare number', () => {
     const hostile = {
       ...tokens,
-      palettes: { evil: { 'n-h': "68'; system('rm -rf /'); '" } },
+      // All three required keys present, so this reaches the VALUE guard rather
+      // than being stopped earlier by the key allowlist.
+      palettes: {
+        evil: { 'n-h': "68'; system('rm -rf /'); '", 'accent-h': '40', 'accent-c': '0.088' },
+      },
     };
 
     expect(() => buildPalettesPhp(hostile)).toThrow(/non-numeric palette value/);
+  });
+
+  // Validating the value while trusting the KEY is validating neither: both are
+  // interpolated into single-quoted PHP in the same expression. A key carrying
+  // `' => '0']; …; return ['` closes the array literal and appends statements to
+  // a file the theme require()s on every single request. The allowlist is what
+  // stops it — there is deliberately no separate key-shape check, because the
+  // allowlist makes one unreachable.
+  it('refuses a key that would break out of the generated PHP', () => {
+    const hostile = {
+      ...tokens,
+      palettes: { safe: { "x' => '0']; phpinfo(); return ['y": '1' } },
+    };
+
+    expect(() => buildPalettesPhp(hostile)).toThrow(/must define exactly/);
+  });
+
+  // "A palette is three custom properties" is the architecture (ADR-008), and
+  // the PHP consumer reads exactly those three. A fourth key with an innocent
+  // name passes every syntactic check, gets emitted, is silently ignored at
+  // runtime, and reads to the next person as a supported knob.
+  it('refuses a palette that is not exactly the three architectural properties', () => {
+    const extra = {
+      ...tokens,
+      palettes: { safe: { 'n-h': '68', 'accent-h': '40', 'accent-c': '0.088', background: '0' } },
+    };
+    const missing = { ...tokens, palettes: { safe: { 'n-h': '68', 'accent-h': '40' } } };
+
+    expect(() => buildPalettesPhp(extra)).toThrow(/must define exactly/);
+    expect(() => buildPalettesPhp(missing)).toThrow(/must define exactly/);
   });
 });

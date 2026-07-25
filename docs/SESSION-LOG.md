@@ -1,5 +1,93 @@
 # Session Log — Woodev Base
 
+## s11 — 25.07.2026 — the approved visual identity implemented (T0–T7); critic gate run, fixes re-criticked
+
+**Scope decided up front, once.** The approved design conflicts with spec §6's eight
+Basecoat style packs — a pack overrides exactly what the identity defines, so the two are
+two answers to the same question, not composable features. Surfaced it as the session's one
+question; Maksim chose "the identity replaces the packs". Recorded as **ADR-008**, with
+**ADR-007** for the self-hosted fonts that supersede the v1 spec's system-font-only line.
+Everything after that was decided without interrupting him.
+
+**Plan:** `docs/plans/2026-07-25-visual-identity.md`, tasks T0–T8, including a binding
+mockup-section → file map so no worker re-derives it. Executed subagent-driven: T3+docs-audit,
+then T2, then T4/T5/T6/T7 in parallel with disjoint file ownership. `adapter/index.css` and
+the `data-cta` body attribute were kept as the orchestrator's, being the two places workers
+would otherwise collide.
+
+**T0 — the design source of truth was lying.** `docs/design/v2-mockup/tokens.css` was a
+stale export: eight accent-only `[data-palette]` packs and a hard-coded `--n-h`, while the
+approved artifact HTML had moved to **seven `[data-preset]` palettes that also set the
+neutral temperature**. Anyone porting from it would have implemented a design nobody
+approved. Re-exported from the HTML and wrote `scripts/export-mockup-tokens.mjs` with shape
+assertions so the drift cannot silently recur.
+
+**T1 — the token layer, and a contrast gate that had to be rebuilt.** `tokens.mjs` now
+carries the design's values verbatim as CSS strings, so what ships is character-for-character
+what was approved. The catch: those values are `var()`/`calc()` expressions, so contrast
+cannot be read off a literal any more. The generator therefore **resolves each palette
+numerically** and measures 7 palettes × 2 schemes × the pair table; below AA the build
+throws. Verified it is not vacuous: a deliberately broken `--muted-foreground` produces
+exactly 28 named failures. Separately verified that all **82 tokens the design's CSS
+consumes are emitted** — the one gap, `--sw`, turned out to be a demo swatch strip that
+still listed the retired eight accents, which is what settled §16 as demo-only.
+
+**T2 — `basecoat-css/base` is not what its name says.** Both the plan and ADR-008 asserted
+it was "structure only, no skin". The worker read the shipped file and proved otherwise: it
+declares a full un-layered token baseline (shadcn greyscale, `--radius: 0.625rem`, Geist
+Sans, `--chart-*`, `--sidebar-*`, icon tokens). Ours override it on source order; the ones we
+never declare keep a foreign grey default — worse than bare, because it looks deliberate.
+Corrected both documents. **T5 then ruled on the leftovers and I overrode one of its calls:**
+it wanted to emit our own `--check-icon`; reading `checkbox.css` showed the token is consumed
+as a *mask* (`bg-current`), so its baked-in colour never renders, and the default glyph is
+Lucide's check — this theme's own icon set. Overriding would have made it less consistent.
+Rule recorded: **read a vendor token's consumer before overriding it.**
+
+**T3 — fonts, and a number that was an estimate pretending to be a budget.** ADR-007 carried
+"≤ ~120 KB", written before anything was built. Measured reality: **352 KB shipped, ~132 KB
+fetched** by a Russian page (`unicode-range` means shipped ≠ downloaded). Restated the ADR
+with the real numbers and an M3 `pyftsubset` plan rather than quietly cutting weights.
+New gotcha: in dev mode Vite injects CSS through a JS-created `<style>`, which has no URL, so
+relative `url()` resolves against the *page* and 404s — and `font-display: swap` hides it.
+**Judge typography in a production build, never in dev.**
+
+**T4–T7 — the surfaces.** Base/header/hero/blocks/content/footer, the component kit
+(including tabs + accordion, the M1 §7 deferral), the whole WooCommerce storefront, and five
+Customizer settings. `woo.css` stays un-layered and mirrors Woo's specificity; Woo's own form
+controls and store notices live there too, because Basecoat's class contract simply does not
+appear on Woo pages. The hover-reveal add-to-cart falls back to a static button under
+`@media (hover: none)` **regardless of the admin's choice** — a touchscreen cannot fire
+`:hover`, so the default would otherwise ship an unreachable button to every phone visitor.
+
+**The critic gate earned its keep.** Codex, on the token generator, found four real defects:
+`--card-foreground` was never measured against `--card` (hidden today only because it equals
+`--foreground`); an empty palette map produced zero measurements and reported success; the
+palette property **name** was interpolated into generated PHP unvalidated while only the
+value was checked; and the "pessimistic of two readings" test would have passed with the
+chroma-reduction algorithm deleted entirely. All fixed, each guard mutation-verified.
+
+**The re-critic found a defect inside the fix** — the third session running to do so. My new
+comment and test name claimed `1e3` is "invalid CSS". It is valid; we reject it deliberately
+as a project subset. Asserting something false about the platform is this project's oldest
+recurring defect class, and it reappeared inside a fix for a review finding. Also caught: a
+`calc()` with finite operands whose product is `Infinity`, which reached `theme.json` as
+`oklch(50% Infinity 0)` from a build that reported success. Both fixed. Adding the exact-key
+allowlist then made the earlier key-shape check unreachable, so it was **deleted rather than
+left as decorative defence**.
+
+**The base e2e suite had never activated the theme.** It died in global-setup with
+`Invalid location primary`, which sends you to `register_nav_menus()` — the real cause was
+Twenty Twenty-Five still being active on a freshly created `:8888`. The gotcha had recorded
+this gap as "tolerated, it fails loudly". It does fail loudly; it fails loudly **pointing at
+the wrong thing**. Fixed the setup and rewrote that conclusion.
+
+**Gate:** phpcs · phpstan L8 (needed WooCommerce stubs, pinned to the same 10.9 the e2e
+environment installs) · unit **195** · vitest **32** · integration **35** · integration-dev
+**4** · e2e-woo **8** · build. Base e2e: 40/41 green on a run the harness killed at the last
+test; a clean re-run was still in flight at write time.
+
+**Not merged.** Commit `bb9d591` on `feat/m2a-woo-storefront` plus the post-critic fixes.
+
 ## s10 — 25.07.2026 — Storefront scaffold → whole-theme VISUAL IDENTITY (approved: refined V2 «Обиход»), via Open Design
 
 **The pivot.** Started by fixing the M2a storefront CSS (`woo.css`): the s9 scaffold was broken, not just plain — its rules sat in `@layer adapter` and **lose to WooCommerce's un-layered stylesheets regardless of specificity**, so the grid stayed a floated mess. Rewrote `woo.css` **un-layered + mirroring Woo's own selector specificity** (like `states.css`), fixed the grid (Woo `li.product` float/width + the `ul.products::before` clearfix becoming a grid item), built card/toolbar/single/tabs/pagination, and removed Woo's default sidebar in `Support.php` (implements the recorded "full-width, no sidebar" v1 decision). Committed `faf7801` on `feat/m2a-woo-storefront`; e2e-woo 8/8, phpcs, prettier green, verified live (light/dark/mobile/rose-accent).
