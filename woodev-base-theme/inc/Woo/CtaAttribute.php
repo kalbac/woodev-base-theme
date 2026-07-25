@@ -27,6 +27,15 @@ use Woodev\Theme\Base\Customizer\Settings;
  * at all, so woo.css forces the static treatment under `@media (hover: none)`
  * regardless of the value here. This setting is the admin's preference for
  * pointer devices, not a switch that can hide the button from a phone.
+ *
+ * Guarded on `is_admin()` AND `is_login()` (see `add_attribute()`) rather than
+ * emitted on every request that reaches `language_attributes()`:
+ * `language_attributes()` also runs on `/wp-login.php`, where `is_admin()` is
+ * FALSE (that check only detects `/wp-admin/`), so without the extra guard a
+ * WooCommerce-only attribute would land on the login screen for no reader.
+ * `is_login()` (WP 6.1+, this theme's floor is 6.8) closes that gap. Not
+ * every non-Woo document is excluded, though — see `add_attribute()` for the
+ * `wp_die()` case that still gets it.
  */
 final class CtaAttribute {
 
@@ -38,7 +47,32 @@ final class CtaAttribute {
 	}
 
 	/**
-	 * Append the `data-cta` attribute, on WooCommerce contexts only.
+	 * Append the `data-cta` attribute outside wp-admin and the login screen.
+	 *
+	 * Two guards: `is_admin()` — `language_attributes()` is also called by
+	 * `_wp_admin_html_begin()` in wp-admin, where the attribute is
+	 * meaningless — and `is_login()`, because `is_admin()` alone does NOT
+	 * cover `/wp-login.php`: that screen calls `language_attributes()` via
+	 * `login_header()` but is not inside `/wp-admin/`, so `is_admin()`
+	 * returns false there. Without `is_login()` a WooCommerce-only attribute
+	 * would print on the login page and read a theme_mod for a document
+	 * that never has a product loop on it.
+	 *
+	 * This is not exhaustive: `wp_die()`-generated HTML still calls
+	 * `language_attributes()` (via `_default_wp_die_handler()`'s header) and
+	 * will still receive the attribute. That is left as-is deliberately —
+	 * it is harmless (an inert `data-cta` on a document with no
+	 * `.card-actions` selector to match it does nothing) and `wp_die()` can
+	 * fire from front-end request paths that legitimately want the
+	 * attribute up to the point of failure, so excluding it would need a
+	 * broader, riskier check than this class exists to make.
+	 *
+	 * There is deliberately no Woo-context check beyond the two guards above
+	 * — see inc/Woo/Assets.php's docblock for why a Woo product loop
+	 * (shortcode or block) can render on any page, so `[data-cta]` needs to
+	 * be present wherever `.card-actions` might be, not only on
+	 * `is_woocommerce()`/`is_cart()`/`is_checkout()`/`is_account_page()`
+	 * pages.
 	 *
 	 * The value comes from the Customizer through the same resolver that
 	 * sanitises the setting, so a tampered theme_mod cannot reach the markup.
@@ -46,7 +80,7 @@ final class CtaAttribute {
 	 * @param string $output The filtered `language_attributes()` output.
 	 */
 	public function add_attribute( string $output ): string {
-		if ( ! ( is_woocommerce() || is_cart() || is_checkout() || is_account_page() ) ) {
+		if ( is_admin() || is_login() ) {
 			return $output;
 		}
 

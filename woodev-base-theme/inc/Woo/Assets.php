@@ -1,6 +1,6 @@
 <?php
 /**
- * Conditional Woo storefront asset loading via the Vite manifest.
+ * Woo storefront asset loading via the Vite manifest.
  *
  * @package Woodev\Theme\Base
  */
@@ -12,7 +12,9 @@ namespace Woodev\Theme\Base\Woo;
 use Woodev\Theme\Base\Assets as BaseAssets;
 
 /**
- * Enqueues the storefront CSS bundle only on WooCommerce contexts.
+ * Enqueues the storefront CSS bundle unconditionally on the front end (this
+ * class only ever loads when WooCommerce is active — see `enqueue()` for why
+ * that alone is guard enough).
  */
 final class Assets {
 
@@ -20,27 +22,36 @@ final class Assets {
 	private const WOO_ENTRY = 'src/css/woo.css';
 
 	/**
-	 * Hook the conditional storefront enqueue into WordPress.
+	 * Hook the storefront enqueue into WordPress.
 	 */
 	public function register(): void {
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue' ] );
 	}
 
 	/**
-	 * Enqueue the built storefront bundle on Woo contexts only.
+	 * Enqueue the built storefront bundle unconditionally on the front end.
 	 *
-	 * Dev-server delivery is intentionally not wired here: the Woo storefront is
-	 * only ever served/tested against built production assets (v1 YAGNI), so an
-	 * absent manifest on a fresh checkout degrades silently to "enqueue nothing".
+	 * There is no Woo-context guard here on purpose. `[products]`,
+	 * `[product_category]`, `[featured_products]` and the Woo product blocks
+	 * render `woocommerce/content-product.php` (our override, with all the
+	 * `wtb-*` classes) on ANY page — a shortcode/block loop is not itself a
+	 * "Woo context" (`is_woocommerce()` is `is_shop() || is_product_taxonomy()
+	 * || is_product()`, false there), so a conditional enqueue used to ship
+	 * that markup with no stylesheet. Unconditional is safe because every rule
+	 * in `src/css/woo.css` is nested inside a top-level `.woocommerce { … }`
+	 * block (plus two `.woocommerce`-prefixed rules) — the bundle is
+	 * completely inert on a page with no Woo markup, since Woo's own shortcode
+	 * wrapper (`<div class="woocommerce columns-N">`) and its `woocommerce`
+	 * body class are what supply that hook. WooCommerce itself enqueues its
+	 * front-end styles on every page for the same reason; being conditional
+	 * here only created an asymmetry where Woo markup could appear WITH Woo's
+	 * CSS but WITHOUT ours. And "unconditional" is narrower than it sounds:
+	 * this class only loads inside `class_exists( 'WooCommerce' )`
+	 * (inc/Theme.php), and `wp_enqueue_scripts` only fires on the front end —
+	 * so in practice this means "every front-end request of a site that runs
+	 * WooCommerce".
 	 */
 	public function enqueue(): void {
-		// is_woocommerce() is false on cart/checkout/account, so each must be
-		// checked explicitly (verified Woo 10.9.4 contract). Off a Woo context we
-		// enqueue nothing and never even read the manifest.
-		if ( ! ( is_woocommerce() || is_cart() || is_checkout() || is_account_page() ) ) {
-			return;
-		}
-
 		$dist     = get_template_directory() . '/assets/dist';
 		$dist_uri = get_template_directory_uri() . '/assets/dist';
 		$manifest = BaseAssets::read_manifest( $dist . '/.vite/manifest.json' );

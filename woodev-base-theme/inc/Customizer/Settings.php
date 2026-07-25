@@ -241,9 +241,14 @@ final class Settings {
 	 * or CTA_REVEAL_ALWAYS.
 	 *
 	 * Consumer: inc/Woo/CtaAttribute.php renders `data-cta="…"` on `<html>`
-	 * via the `language_attributes` filter, on WooCommerce contexts only, and
-	 * calls this method for the value — so a tampered theme_mod is sanitised
-	 * before it can reach markup. Nothing here touches CSS output:
+	 * via the `language_attributes` filter, on every front-end request
+	 * except wp-admin and `/wp-login.php` (see that file for the precise
+	 * guard and why `is_admin()` alone does not cover the login screen; a
+	 * product loop can render on any front-end page through a shortcode or
+	 * block, which is why the guard stops at those two exclusions rather
+	 * than narrowing to WooCommerce-specific contexts), and calls this
+	 * method for the value — so a tampered theme_mod is sanitised before it
+	 * can reach markup. Nothing here touches CSS output:
 	 * `[data-cta="always"]` is the escape-hatch selector the shipped
 	 * stylesheet already keys off.
 	 *

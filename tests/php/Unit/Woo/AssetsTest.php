@@ -9,26 +9,19 @@ use Woodev\Theme\Base\Woo\Assets;
 
 final class AssetsTest extends TestCase {
 
-	public function test_off_every_woo_context_enqueues_nothing_and_never_reads_the_manifest(): void {
-		Functions\when( 'is_woocommerce' )->justReturn( false );
-		Functions\when( 'is_cart' )->justReturn( false );
-		Functions\when( 'is_checkout' )->justReturn( false );
-		Functions\when( 'is_account_page' )->justReturn( false );
-
-		Functions\expect( 'wp_enqueue_style' )->never();
-		Functions\expect( 'wp_json_file_decode' )->never();
-
-		( new Assets() )->enqueue();
-	}
-
-	public function test_on_the_shop_enqueues_the_woo_bundle_with_the_resolved_hashed_url(): void {
-		$styles = $this->enqueue_on_context(
-			[
-				'is_woocommerce'  => true,
-				'is_cart'         => false,
-				'is_checkout'     => false,
-				'is_account_page' => false,
-			]
+	/**
+	 * The old contract — "off every Woo context, enqueue nothing" — is gone:
+	 * `[products]`/`[product_category]`/`[featured_products]` and the Woo
+	 * product blocks render our `content-product.php` override on ANY page,
+	 * not only on `is_woocommerce()`/`is_cart()`/`is_checkout()`/
+	 * `is_account_page()`, so the bundle now has to be there too. This test
+	 * proves the replacement: on a page carrying none of those Woo context
+	 * tags, the bundle is still enqueued, because a shortcode/block loop can
+	 * still render there.
+	 */
+	public function test_enqueues_the_bundle_on_a_page_with_no_woo_context(): void {
+		$styles = $this->enqueue_with_manifest(
+			[ 'src/css/woo.css' => [ 'file' => 'assets/woo-Abc123.css' ] ]
 		);
 
 		self::assertSame(
@@ -37,66 +30,39 @@ final class AssetsTest extends TestCase {
 		);
 	}
 
-	public function test_on_the_cart_alone_enqueues_the_woo_bundle(): void {
-		$styles = $this->enqueue_on_context(
-			[
-				'is_woocommerce'  => false,
-				'is_cart'         => true,
-				'is_checkout'     => false,
-				'is_account_page' => false,
-			]
-		);
+	/**
+	 * An absent manifest is the normal state of a fresh checkout
+	 * (assets/dist is gitignored). It must degrade to "enqueue nothing" —
+	 * never a fatal, never a PHP diagnostic — exactly like the base theme's
+	 * own Assets::enqueue() (inc/Assets.php).
+	 */
+	public function test_an_absent_manifest_enqueues_nothing_and_does_not_fatal(): void {
+		$root = \sys_get_temp_dir() . '/wtb-woo-' . \uniqid();
 
-		self::assertArrayHasKey( 'woodev-base-woo', $styles );
-	}
+		Functions\when( 'get_template_directory' )->justReturn( $root );
+		Functions\when( 'get_template_directory_uri' )->justReturn( 'https://example.test/wp-content/themes/woodev-base-theme' );
+		Functions\expect( 'wp_json_file_decode' )->never();
+		Functions\expect( 'wp_enqueue_style' )->never();
 
-	public function test_on_checkout_alone_enqueues_the_woo_bundle(): void {
-		$styles = $this->enqueue_on_context(
-			[
-				'is_woocommerce'  => false,
-				'is_cart'         => false,
-				'is_checkout'     => true,
-				'is_account_page' => false,
-			]
-		);
-
-		self::assertArrayHasKey( 'woodev-base-woo', $styles );
-	}
-
-	public function test_on_the_account_page_alone_enqueues_the_woo_bundle(): void {
-		$styles = $this->enqueue_on_context(
-			[
-				'is_woocommerce'  => false,
-				'is_cart'         => false,
-				'is_checkout'     => false,
-				'is_account_page' => true,
-			]
-		);
-
-		self::assertArrayHasKey( 'woodev-base-woo', $styles );
+		( new Assets() )->enqueue();
 	}
 
 	/**
-	 * Sets up a real, readable temp manifest so read_manifest() succeeds, stubs
-	 * the given Woo context tags, mocks the manifest decode to resolve the woo
-	 * bundle, runs Assets::enqueue(), and returns the styles that were enqueued.
+	 * Sets up a real, readable temp manifest decoding to the given content,
+	 * runs Assets::enqueue(), and returns the styles that were enqueued.
 	 *
-	 * @param array{is_woocommerce: bool, is_cart: bool, is_checkout: bool, is_account_page: bool} $context
+	 * @param array<string, array{file: string, css?: list<string>}> $manifest
 	 * @return array<string, string>
 	 */
-	private function enqueue_on_context( array $context ): array {
+	private function enqueue_with_manifest( array $manifest ): array {
 		$root = \sys_get_temp_dir() . '/wtb-woo-' . \uniqid();
 		\mkdir( $root . '/assets/dist/.vite', 0777, true );
 		\file_put_contents( $root . '/assets/dist/.vite/manifest.json', '{}' );
 
 		try {
-			Functions\when( 'is_woocommerce' )->justReturn( $context['is_woocommerce'] );
-			Functions\when( 'is_cart' )->justReturn( $context['is_cart'] );
-			Functions\when( 'is_checkout' )->justReturn( $context['is_checkout'] );
-			Functions\when( 'is_account_page' )->justReturn( $context['is_account_page'] );
 			Functions\when( 'get_template_directory' )->justReturn( $root );
 			Functions\when( 'get_template_directory_uri' )->justReturn( 'https://example.test/wp-content/themes/woodev-base-theme' );
-			Functions\expect( 'wp_json_file_decode' )->once()->andReturn( [ 'src/css/woo.css' => [ 'file' => 'assets/woo-Abc123.css' ] ] );
+			Functions\expect( 'wp_json_file_decode' )->once()->andReturn( $manifest );
 
 			$styles = [];
 			Functions\when( 'wp_enqueue_style' )->alias(

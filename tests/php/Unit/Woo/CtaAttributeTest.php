@@ -9,19 +9,6 @@ use Woodev\Theme\Base\Woo\CtaAttribute;
 
 final class CtaAttributeTest extends TestCase {
 
-	/**
-	 * Put every Woo conditional tag in a known state, with exactly one of them
-	 * true, so a test asserts about the context it names rather than about
-	 * whichever tag happened to be stubbed truthy.
-	 */
-	private function on_context( string $context ): void {
-		Functions\when( 'esc_attr' )->returnArg();
-
-		foreach ( [ 'is_woocommerce', 'is_cart', 'is_checkout', 'is_account_page' ] as $tag ) {
-			Functions\when( $tag )->justReturn( $tag === $context );
-		}
-	}
-
 	public function test_register_hooks_language_attributes(): void {
 		$attribute = new CtaAttribute();
 		$attribute->register();
@@ -29,8 +16,18 @@ final class CtaAttributeTest extends TestCase {
 		self::assertNotFalse( \has_filter( 'language_attributes', [ $attribute, 'add_attribute' ] ) );
 	}
 
-	public function test_appends_the_default_reveal_mode_on_the_shop(): void {
-		$this->on_context( 'is_woocommerce' );
+	/**
+	 * The Woo-context conditional (`is_woocommerce()`/`is_cart()`/
+	 * `is_checkout()`/`is_account_page()`) is gone: a Woo product loop
+	 * (shortcode or block) can render on any front-end page, so `[data-cta]`
+	 * has to be there too — see inc/Woo/Assets.php's docblock for the same
+	 * reasoning applied to the stylesheet. This test proves the attribute is
+	 * appended on a page carrying none of those Woo context tags.
+	 */
+	public function test_appends_the_default_reveal_mode_on_a_non_woo_front_end_page(): void {
+		Functions\when( 'is_admin' )->justReturn( false );
+		Functions\when( 'is_login' )->justReturn( false );
+		Functions\when( 'esc_attr' )->returnArg();
 		Functions\when( 'get_theme_mod' )->alias( static fn( $name, $default = false ) => $default );
 
 		$result = ( new CtaAttribute() )->add_attribute( 'lang="en-US"' );
@@ -38,13 +35,29 @@ final class CtaAttributeTest extends TestCase {
 		self::assertSame( 'lang="en-US" data-cta="hover"', $result );
 	}
 
-	public function test_appends_the_attribute_on_the_cart_alone(): void {
-		$this->on_context( 'is_cart' );
-		Functions\when( 'get_theme_mod' )->alias( static fn( $name, $default = false ) => $default );
+	public function test_not_appended_when_is_admin_is_true(): void {
+		Functions\when( 'is_admin' )->justReturn( true );
 
 		$result = ( new CtaAttribute() )->add_attribute( 'lang="en-US"' );
 
-		self::assertSame( 'lang="en-US" data-cta="hover"', $result );
+		self::assertSame( 'lang="en-US"', $result );
+	}
+
+	/**
+	 * `language_attributes()` also runs on `/wp-login.php` via
+	 * `login_header()`, where `is_admin()` is FALSE — that check only
+	 * detects `/wp-admin/`, not the login screen. Without the `is_login()`
+	 * guard a WooCommerce-only attribute would print there for a document
+	 * that never carries a product loop. This is the test that would have
+	 * caught the original defect: `is_admin()` alone lets this case through.
+	 */
+	public function test_not_appended_on_the_login_screen(): void {
+		Functions\when( 'is_admin' )->justReturn( false );
+		Functions\when( 'is_login' )->justReturn( true );
+
+		$result = ( new CtaAttribute() )->add_attribute( 'lang="en-US"' );
+
+		self::assertSame( 'lang="en-US"', $result );
 	}
 
 	/**
@@ -54,7 +67,9 @@ final class CtaAttributeTest extends TestCase {
 	 * that proves the wiring exists at all.
 	 */
 	public function test_the_attribute_follows_the_customizer_setting(): void {
-		$this->on_context( 'is_woocommerce' );
+		Functions\when( 'is_admin' )->justReturn( false );
+		Functions\when( 'is_login' )->justReturn( false );
+		Functions\when( 'esc_attr' )->returnArg();
 		Functions\when( 'get_theme_mod' )->justReturn( 'always' );
 
 		$result = ( new CtaAttribute() )->add_attribute( 'lang="en-US"' );
@@ -69,19 +84,13 @@ final class CtaAttributeTest extends TestCase {
 	 * failure of this guard would be visible instead of being escaped away.
 	 */
 	public function test_a_tampered_theme_mod_falls_back_to_the_default(): void {
-		$this->on_context( 'is_woocommerce' );
+		Functions\when( 'is_admin' )->justReturn( false );
+		Functions\when( 'is_login' )->justReturn( false );
+		Functions\when( 'esc_attr' )->returnArg();
 		Functions\when( 'get_theme_mod' )->justReturn( '" onload="alert(1)' );
 
 		$result = ( new CtaAttribute() )->add_attribute( 'lang="en-US"' );
 
 		self::assertSame( 'lang="en-US" data-cta="hover"', $result );
-	}
-
-	public function test_leaves_output_untouched_off_every_woo_context(): void {
-		$this->on_context( 'none' );
-
-		$result = ( new CtaAttribute() )->add_attribute( 'lang="en-US"' );
-
-		self::assertSame( 'lang="en-US"', $result );
 	}
 }
