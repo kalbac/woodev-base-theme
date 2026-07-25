@@ -6,6 +6,7 @@ namespace Woodev\Theme\Base\Tests\Unit\Customizer;
 use Brain\Monkey\Functions;
 use Mockery;
 use Woodev\Theme\Base\Customizer\Customizer;
+use Woodev\Theme\Base\Customizer\Palettes;
 use Woodev\Theme\Base\Tests\Unit\TestCase;
 
 final class CustomizerTest extends TestCase {
@@ -175,6 +176,36 @@ final class CustomizerTest extends TestCase {
 		self::assertSame(
 			[ 'warm-clay', 'cold-petrol', 'graphite', 'forest', 'sand', 'wine', 'night-indigo' ],
 			array_keys( $choices )
+		);
+	}
+
+	/**
+	 * Every shipped palette must have an EXPLICIT, translatable label.
+	 *
+	 * `palette_choices()` falls back to `ucwords( str_replace( '-', ' ', $slug ) )`
+	 * for a slug its label map has never heard of. That fallback is a reasonable
+	 * runtime safety net and a terrible early-warning system: adding an eighth
+	 * palette to `src/tokens/tokens.mjs` without adding a label here breaks
+	 * nothing, throws nothing and logs nothing — a Russian-locale admin simply
+	 * sees one English word among seven translated ones, which is the kind of
+	 * defect that ships.
+	 *
+	 * So the contract is asserted where it can fail loudly instead: the moment a
+	 * palette exists without a label, this test goes red.
+	 */
+	public function test_every_shipped_palette_has_an_explicit_translatable_label(): void {
+		Functions\when( '__' )->returnArg();
+		Functions\when( 'get_template_directory' )->justReturn( \dirname( __DIR__, 4 ) . '/woodev-base-theme' );
+
+		// Compared against the label MAP, not against the rendered choices: the
+		// labels are deliberately the title-cased slugs, so `Warm Clay` from the
+		// map and `Warm Clay` from the fallback are the same string. Only the
+		// keys can tell them apart.
+		self::assertSame(
+			Palettes::slugs(),
+			array_keys( Customizer::palette_labels() ),
+			'A palette exists without an explicit label, so palette_choices() will derive an ' .
+			'untranslatable one. Add it to Customizer::palette_labels().'
 		);
 	}
 

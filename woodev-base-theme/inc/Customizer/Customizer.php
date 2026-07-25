@@ -201,6 +201,30 @@ final class Customizer {
 	}
 
 	/**
+	 * The translated label for every palette this theme ships.
+	 *
+	 * Public and static so the contract "every shipped palette has an explicit,
+	 * translatable label" can be asserted directly. It cannot be asserted
+	 * through palette_choices(): the human labels are, by design, exactly the
+	 * title-cased slugs, so a derived fallback and a hand-written label are
+	 * indistinguishable in the rendered output — a test comparing the two
+	 * strings proves nothing.
+	 *
+	 * @return array<string, string>
+	 */
+	public static function palette_labels(): array {
+		return [
+			'warm-clay'    => __( 'Warm Clay', 'woodev-base-theme' ),
+			'cold-petrol'  => __( 'Cold Petrol', 'woodev-base-theme' ),
+			'graphite'     => __( 'Graphite', 'woodev-base-theme' ),
+			'forest'       => __( 'Forest', 'woodev-base-theme' ),
+			'sand'         => __( 'Sand', 'woodev-base-theme' ),
+			'wine'         => __( 'Wine', 'woodev-base-theme' ),
+			'night-indigo' => __( 'Night Indigo', 'woodev-base-theme' ),
+		];
+	}
+
+	/**
 	 * Palette choices for the `palette` control: slug => translated label,
 	 * restricted to whatever Palettes::slugs() actually returns.
 	 *
@@ -212,24 +236,16 @@ final class Customizer {
 	 * @return array<string, string>
 	 */
 	private function palette_choices(): array {
-		$labels = [
-			'warm-clay'    => __( 'Warm Clay', 'woodev-base-theme' ),
-			'cold-petrol'  => __( 'Cold Petrol', 'woodev-base-theme' ),
-			'graphite'     => __( 'Graphite', 'woodev-base-theme' ),
-			'forest'       => __( 'Forest', 'woodev-base-theme' ),
-			'sand'         => __( 'Sand', 'woodev-base-theme' ),
-			'wine'         => __( 'Wine', 'woodev-base-theme' ),
-			'night-indigo' => __( 'Night Indigo', 'woodev-base-theme' ),
-		];
-
+		$labels  = self::palette_labels();
 		$choices = [];
 
 		foreach ( Palettes::slugs() as $slug ) {
-			// The fallback only fires for a slug this list has never heard of
-			// (tokens.mjs grew an 8th palette without this list being
-			// updated) — a build-time contract miss, not a runtime input to
-			// sanitize, so it is not held to the translatable-string rule the
-			// seven named labels above are.
+			// A runtime safety net, not an accepted state: it fires only when
+			// src/tokens/tokens.mjs grew a palette that palette_labels() has
+			// never heard of, and a unit test goes red the moment that is true.
+			// Without that test the fallback is silent — nothing throws, nothing
+			// logs, and a Russian-locale admin just sees one English word among
+			// seven translated ones.
 			$choices[ $slug ] = $labels[ $slug ] ?? ucwords( str_replace( '-', ' ', $slug ) );
 		}
 
