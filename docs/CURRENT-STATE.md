@@ -1,6 +1,6 @@
 # Current State — Woodev Base
 
-> Updated: 26.07.2026 (s13)
+> Updated: 26.07.2026 (s14)
 
 ## Phase status
 
@@ -14,7 +14,7 @@
 | Design — whole-theme visual identity | ✅ Approved (s10) | Refined V2 «Обиход» in `docs/design/v2-mockup/`. Golos Text + IBM Plex (OFL, Cyrillic), token-driven, 7 palette presets, hover-reveal CTA, all pages. Source of truth for implementation |
 | Identity implementation (T0–T8) | ✅ T0–T8 done | ADR-007 (fonts) + ADR-008 (identity replaces the 8 style packs) recorded. Plan: `docs/plans/2026-07-25-visual-identity.md`. All four areas criticked and re-criticked (s12); test debt paid s13. **PR [#24](https://github.com/kalbac/woodev-base-theme/pull/24) open, 27 commits. Merge is Maksim's call** |
 | M2a — Woo storefront | ✅ Done, in PR #24 | Classic storefront on the approved identity. The block cart/checkout gap is M2b, see below |
-| M2b — Woo block cart & checkout | 🟡 Researched + decided, not implemented | [ADR-009](adr/ADR-009-block-cart-checkout-styling.md) + `docs/plans/2026-07-25-block-cart-checkout.md` written s13 from measurement. Next branch |
+| M2b — Woo block cart & checkout | ✅ Done (s14) | [ADR-009](adr/ADR-009-block-cart-checkout-styling.md) implemented B0–B6 on `feat/m2b-block-cart-checkout`, 7 commits. Criticked **and** re-criticked. Not merged, no PR yet — sits on top of the still-open PR #24 |
 | M3 — Public release prep | ⬜ Not started | |
 
 ## Known bugs
@@ -23,7 +23,13 @@
 
 **Branch `feat/m2a-woo-storefront` (PR [#24](https://github.com/kalbac/woodev-base-theme/pull/24)) — every suite run on the current tree, s13, one at a time:** phpcs **0** · phpstan L8 **0** · eslint **0** · prettier (on the files we own) · unit **204** (1 skip) · vitest **56** · integration **37** (1 skip) · integration-dev **4** · base e2e **57/57** in one pass · **e2e:woo 16/16 in one pass** · e2e-dev **2/2** · build OK.
 
-**The critic gate on s13's own three commits has NOT run.** s10–s12 were criticked and re-criticked; s13 (ADR-009 + plan, the `prefers-reduced-motion` completion, the test strengthening) has not been through `/codex:review`. A hand-rolled `codex exec` pass covered the CSS (clean) and produced two test findings — one disproved by measurement, one filed as [#23](https://github.com/kalbac/woodev-base-theme/issues/23) — but that is not the gate. **Run `/codex:review --base 8b117a8 --scope branch` before merge.**
+**Branch `feat/m2b-block-cart-checkout` (M2b, 7 commits on top of the above) — every suite run by the orchestrator, s14:** phpcs **0** · phpstan L8 **0** · eslint **0** · prettier clean on the files we own · unit **208** (1 skip) · vitest **56** · integration **40** (1 skip) · **e2e:woo 23/23** (16 storefront + 7 new block-surface tests) · build OK, `wooBlocks` bundle **11.91 KB**, zero Tailwind preflight, zero `!important`, zero rules outside the two block scopes.
+
+**The critic gate is CLOSED for s13 and for M2b.** Eight passes ran in s14 — s13's code, B0, B1 CSS, B1 PHP, B2, B3–B5, B6, plus a re-critic of the fixes. Six clean, two with findings (2 on B1 PHP, 2 on B6), all four resolved: two fixed, one rejected with an AGENTS.md carve-out, one an ADR-009 amendment. The re-critic came back clean — **the first round on this project that did not find a defect inside the fixes**, which is worth watching rather than trusting. One caveat recorded honestly: s13's own diff was criticked at the DEFAULT reasoning effort, not `high`, because the quota ran out mid-re-run. Everything M2b ran at `high`.
+
+**The gate was broken for the wrong reason all morning, and it is worth not re-learning.** `/codex:adversarial-review` returns `verdict: approve` whose body admits it read nothing — the sandbox denies Codex's shell, and the plugin asks Codex to go and read the diff. The working route is inline-on-stdin with a NO-TOOLS preamble and an explicit `model_reasoning_effort="high"`; see [`codex-critic-needs-inline-stdin-and-explicit-effort`](gotchas/codex-critic-needs-inline-stdin-and-explicit-effort.md). A `CODEX_OK` smoke test distinguishes "sandbox" from "quota" in one command — do that before concluding anything about the account.
+
+**Base e2e (:8888) was NOT run in s14.** Nothing in the base theme changed, but it has not been re-verified on this branch and should run before merge.
 
 **Suites still contend for Docker.** Run them ONE AT A TIME even on different wp-env configs — s12 lost a run to a stall, and s13 watched wp-cli calls slow to a crawl with 15 containers up. Stop the environments you are not using.
 
@@ -67,7 +73,7 @@ s5 found and fixed one real defect after merging — the mobile-drawer focus-tra
 
 ## Open items
 
-- **Use the `/codex:*` plugin, not a hand-rolled `codex exec`.** `/codex:review [--base <ref>] [--scope branch]` and `/codex:adversarial-review` run through `codex-companion.mjs`. They carry `disable-model-invocation: true`, so **Maksim triggers them** — an agent that needs a review asks for it rather than rebuilding the invocation (s13 wasted a pass doing exactly that, and the hand-rolled run could read nothing: Codex's shell is dead here and its sandbox is workdir-only, while `mcp_servers={}` removes the Serena fallback — see `docs/gotchas/codex-sandbox-blocks-shell-and-outside-files.md`). If you must go direct, **inline the content in the prompt** in <15 KB chunks.
+- **The `/codex:*` plugin does NOT work as the critic gate here — corrected s14.** It returns `verdict: approve` having read nothing, because it asks Codex to open the diff and the Windows sandbox denies every child process (`CreateProcessAsUserW failed: 5`). Run the critic directly instead: whole diff on **stdin**, a NO-TOOLS preamble, foreground, and an explicit `model_reasoning_effort="high"` — the default does ~1/3 the work and its verdict is indistinguishable. Chunks of 18–26 KB are fine; name the out-of-chunk guards in every chunk. Full recipe and the smoke test that tells "sandbox" from "quota" apart: `docs/gotchas/codex-critic-needs-inline-stdin-and-explicit-effort.md`.
 - **Bash needs a separate safety classifier in auto mode.** When `claude-sonnet-5[1m]` is unavailable, every Bash call is refused with "auto mode cannot determine the safety" — nothing to do with the session model or with Codex. Read-only tools keep working. Wait it out, switch permission mode, or have Maksim run the command with `! …`.
 - **Codex history (still true when going direct): use the DEFAULT profile with MCP disabled.** `codex exec -c 'mcp_servers={}' "…"`. The s3 recipe's clean `CODEX_HOME=~/.codex-review-clean` has its **own** `auth.json`, which goes stale independently — s6 lost an hour to "refresh token already used" there while the default profile was freshly authorised. The 403s that appear alongside come from an **MCP worker**, not the model, which is what `mcp_servers={}` silences. Everything else from the s3 recipe still holds: foreground, prompt inline and **under ~15 KB**, stdin closed, smoke-test with `"Reply with exactly: CODEX_OK"` first (every failure mode exits 0 — `codex-cli-dies-silently.md`), and name the out-of-chunk guards in every chunk prompt (`codex-split-diff-false-positives.md`).
 - **Re-critic the fixes, always.** s6's two re-critic passes each found defects *inside* the fixes written for the previous round — including one in a fix for a finding the critic had just made. See `three-rounds-of-fixes-means-change-the-approach.md`.
@@ -111,21 +117,27 @@ T0→T1→T2 sequential; T3 parallel with T1/T2; T4–T6 parallelisable once T1�
 
 ## Last session
 
-s13 (26.07.2026): ran the whole gate green on the current tree, researched and decided M2b
-(ADR-009 + plan), paid the test debt with mutation verification, and opened
-**PR [#24](https://github.com/kalbac/woodev-base-theme/pull/24)**. Three commits:
-`8b117a8` (ADR-009 + plan), `9b8162f` (reduced-motion), `b84e169` (tests).
+s14 (26.07.2026): built M2b end to end (B0–B6, 7 commits on
+`feat/m2b-block-cart-checkout`), closed the critic gate for both s13 and M2b through a
+working direct-`codex exec` route, and corrected ADR-009's button finding.
 
 **Next session starts here:**
-1. **Run `/codex:review --base 8b117a8 --scope branch`.** It is the one merge-gate step s13
-   did not complete — the classifier that auto-approves Bash went down at the end of the
-   session. Present findings verbatim, fix nothing without Maksim's word, then re-critic any
-   fix. Merge is Maksim's call.
-2. Then M2b: implement `docs/plans/2026-07-25-block-cart-checkout.md` on a new branch.
-3. Open backlog worth pulling in: [#23](https://github.com/kalbac/woodev-base-theme/issues/23)
-   (e2e setup breaks on POSIX), [#25](https://github.com/kalbac/woodev-base-theme/issues/25)
-   (theme.json presets do not follow the Customizer or the dark scheme),
-   [#17](https://github.com/kalbac/woodev-base-theme/issues/17),
+1. **Merge decisions are Maksim's, and there are two.** PR
+   [#24](https://github.com/kalbac/woodev-base-theme/pull/24) (M1 identity + M2a) is still
+   open; `feat/m2b-block-cart-checkout` sits on top of it with no PR yet. Before either
+   merges: run the base e2e (`npm run e2e`, :8888) — it was not run in s14 — and, if you
+   want the belt-and-braces version, re-critic s13's own diff at `high` effort, since its
+   only pass ran at the default.
+2. **Then M3, release prep** — the last milestone. `pyftsubset` re-instancing (ADR-007,
+   closes [#17](https://github.com/kalbac/woodev-base-theme/issues/17)), the `.pot` file,
+   wp.org Theme Review compliance sweep.
+3. **Backlog worth pulling in:** [#26](https://github.com/kalbac/woodev-base-theme/issues/26)
+   (core's theme.json paints every `.wp-element-button` — already in Бэклог),
+   [#25](https://github.com/kalbac/woodev-base-theme/issues/25) (theme.json presets follow
+   neither the Customizer nor the dark scheme — solve with #26 in one pass),
+   [#23](https://github.com/kalbac/woodev-base-theme/issues/23) (e2e setup breaks on POSIX),
+   [#27](https://github.com/kalbac/woodev-base-theme/issues/27),
+   [#28](https://github.com/kalbac/woodev-base-theme/issues/28),
    [#18](https://github.com/kalbac/woodev-base-theme/issues/18),
    [#13](https://github.com/kalbac/woodev-base-theme/issues/13).
 

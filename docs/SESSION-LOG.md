@@ -1,5 +1,56 @@
 # Session Log — Woodev Base
 
+## s14 — 26.07.2026 — M2b built, criticked and re-criticked; the critic gate itself was the real bug
+
+**M2b is done: B0-B6, seven commits on `feat/m2b-block-cart-checkout`.** The block Cart and
+Checkout now join the identity through `src/css/woo-blocks.css` — a new un-layered
+stylesheet scoped to the WP-generated block wrappers, with its own Vite entry and a
+`has_block()`-gated enqueue (`inc/Woo/BlockAssets.php`). Final battery: phpcs 0 · phpstan L8
+0 · eslint 0 · prettier clean · unit **208** · vitest 56 · integration **40** · **e2e:woo
+23/23** · built bundle 11.91 KB with zero Tailwind preflight and zero `!important`.
+
+**The morning's "expired subscription" was not one, and the measurement settled it in one
+command.** `/codex:adversarial-review` returned `verdict: approve` whose own body admitted
+it had read nothing — the sandbox denies Codex's shell, and the plugin route is built on
+asking Codex to go and read the diff. A `CODEX_OK` smoke test returned with tokens billed,
+so the account was fine. The working recipe came from Maksim's own other project
+(`autodev-harness`), which has run this gate for dozens of sessions by never asking Codex to
+read anything: whole diff on stdin, NO-TOOLS preamble, foreground. Two further measurements
+worth keeping: `model_reasoning_effort="high"` does **3.6x** the work of the default on the
+identical chunk (16,767 vs 4,605 tokens) with no way to tell the two apart from the verdict
+alone; and five real passes later the quota genuinely did run out, which is a different
+failure with a different message. Eight critic passes ran in total — six clean, two with
+findings, plus a clean re-critic on the fixes.
+
+**Four findings, and the two that mattered were about honesty rather than behaviour.** A
+docblock claimed the Cart/Checkout blocks "cannot appear anywhere else" — `"multiple":
+false` stops a second instance in one post, not the block appearing in another post, and the
+code never relied on the claim. And an e2e that called itself both-scheme asserted only dark
+values for the input, the select and every notice role, so a light-only regression would
+have passed. One finding was **rejected**: AGENTS.md demanded first-class callables
+everywhere, which for hook callbacks is actively wrong — a `Closure` cannot be removed by
+`remove_action()` from a child theme — so the rule got the carve-out, not the code.
+
+**Workers found more than the critic did, three times.** The high-effort pass over B1's CSS
+came back clean; the next worker, reading the vendor stylesheet for unrelated rules, found
+that our resting `color` override tied WooCommerce's `.has-error` rule and silently erased
+an invalid select's red text. Another traced the place-order button's `rgb(50,55,60)` to
+**WordPress core's** `theme.json`, not WooCommerce at all — zero occurrences of `#32373c` in
+the three pinned Woo bundles — which corrects ADR-009's finding-4 table and opened #26,
+since the same core default paints every `.wp-element-button` site-wide. A third settled by
+browser measurement what two tasks had settled by inference.
+
+**One of my own calls was wrong and the critic caught it.** I narrowed the address-card rule
+to checkout because B6 measured the component absent from the cart. The measurement was
+sound; the inference was not — a selector matching nothing does not imply the cart has
+address cards, it says "if this mounts here, the radius is ours", which is what WooCommerce
+itself does by shipping the rule in the shared bundle. Reverted.
+
+Commits: `3976987` (B0 fixtures), `62394c0` (B1), `6cd8606` (B2), `ab0a64e` (B3-B5),
+`50586e5` (B6 e2e), `728dc5a` (AGENTS.md carve-out + ADR-009 amendment), `6459f59` (review
+fixes). New issues: #26 (core button default site-wide), #27 (highlight-checked radio group
+written but uncovered), #28 (payment-gateway card field). Three gotchas compiled.
+
 ## s13 — 26.07.2026 — the gate run green, M2b researched and decided, the test debt paid, PR opened
 
 **Every suite green on one tree, one at a time.** phpcs 0 · phpstan L8 0 · eslint 0 ·
