@@ -6,7 +6,6 @@ import {
   buildTokensCss,
   contrastFailures,
   contrastRatio,
-  formatColor,
   resolveColor,
   varsFor,
 } from '../../scripts/lib/build-tokens-lib.mjs';
