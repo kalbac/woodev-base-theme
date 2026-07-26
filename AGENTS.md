@@ -104,7 +104,7 @@ This is a well-trodden domain. **Follow WordPress/WooCommerce canon and establis
 
 - `declare(strict_types=1)` in every PHP file under `inc/` and `tests/`.
 - `[]` — never `array()`.
-- Arrow functions `fn() =>` for single-expression closures; first-class callable syntax (`$obj->method(...)`) over `[$obj, 'method']`.
+- Arrow functions `fn() =>` for single-expression closures; first-class callable syntax (`$obj->method(...)`) over `[$obj, 'method']` — **except for callbacks passed to `add_action()`/`add_filter()`, which stay `[$this, 'method']`**. A first-class callable is a `Closure`, and WordPress identifies hook callbacks by identity, so a closure can only be removed by `remove_action()` if the caller holds that exact closure object — which a child theme or plugin never does. The array form is removable from anywhere that can reach the object, and it is what every hook registration in this theme uses. (Raised as a Codex review finding in s14 and rejected for this reason; the rule as originally written demanded the wrong thing.)
 - Constructor property promotion; `readonly` properties where state must not change.
 - Backed `enum`s for closed value sets — not class constants.
 - `match` over `switch` where it fits; null coalescing / nullsafe operators over `isset()` chains.
