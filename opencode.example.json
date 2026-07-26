@@ -1,0 +1,62 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": ["opencode-with-claude"],
+  "provider": {
+    "anthropic": {
+      "options": {
+        "baseURL": "http://127.0.0.1:3456",
+        "apiKey": "dummy"
+      }
+    }
+  },
+  "instructions": [
+    "CLAUDE.md",
+    "AGENTS.md",
+    "docs/CURRENT-STATE.md",
+    "docs/GOTCHAS.md",
+    "docs/SESSION-LOG.md"
+  ],
+  "watcher": {
+    "ignore": ["node_modules/**", ".idea/**", ".playwright-mcp/**", ".serena/**"]
+  },
+  "mcp": {
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "{env:CONTEXT7_API_KEY}"
+      },
+      "enabled": true
+    },
+    "serena": {
+      "type": "local",
+      "command": [
+        "uvx",
+        "--from",
+        "git+https://github.com/oraios/serena",
+        "serena",
+        "start-mcp-server",
+        "--context=claude-code",
+        "--project-from-cwd"
+      ],
+      "environment": {},
+      "enabled": true
+    },
+    "supermemory": {
+      "type": "remote",
+      "url": "https://mcp.supermemory.ai/mcp",
+      "headers": {
+        "Authorization": "Bearer {env:SUPERMEMORY_API_KEY}"
+      },
+      "enabled": true
+    },
+    "obsidian-mcp-tools": {
+      "type": "local",
+      "command": ["{env:OBSIDIAN_VAULT}/.obsidian/plugins/mcp-tools/bin/mcp-server.exe"],
+      "environment": {
+        "OBSIDIAN_API_KEY": "{env:OBSIDIAN_API_KEY}"
+      },
+      "enabled": true
+    }
+  }
+}

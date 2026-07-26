@@ -11,6 +11,10 @@ woodev-base-theme/assets/dist/
 *.local
 .wp-env.override.json
 
+# Personal opencode config — holds live MCP credentials.
+# Copy opencode.example.json and fill in your own keys.
+opencode.json
+
 # Tooling caches
 .vite/
 .phpunit.result.cache
