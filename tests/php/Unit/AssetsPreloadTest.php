@@ -43,6 +43,9 @@ final class AssetsPreloadTest extends TestCase {
 		Functions\expect( 'add_action' )
 			->once()
 			->with( 'after_setup_theme', \Mockery::type( 'array' ) );
+		Functions\expect( 'add_action' )
+			->once()
+			->with( 'enqueue_block_editor_assets', \Mockery::type( 'array' ) );
 		Functions\expect( 'add_filter' )
 			->once()
 			->with( 'wp_preload_resources', \Mockery::type( 'array' ) );

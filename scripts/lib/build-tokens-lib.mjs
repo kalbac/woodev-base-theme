@@ -518,13 +518,22 @@ ${darkBlock(tokens, '    ')}
 }
 
 /**
- * The editor palette. Generated from the DEFAULT palette resolved to literals,
- * because theme.json is static JSON that cannot follow a custom property.
+ * The editor palette, emitted as `var()` references to the live tokens (ADR-010).
  *
- * Spec §5 listed "the block-editor palette does not follow the runtime pack
- * choice" as a known v1 limitation of the eight-pack world. With one identity
- * the limitation shrinks to "does not follow a non-default palette or a custom
- * accent" — still real, still documented, but no longer eight-ways wrong.
+ * This file used to say "theme.json is static JSON that cannot follow a custom
+ * property" and resolve every entry to a literal. That was measured false in s15:
+ * WordPress serialises a `var()` into `--wp--preset--color--*` verbatim, fallback
+ * form included, and `add_editor_style()` puts the defining stylesheet inside the
+ * editor canvas iframe so it resolves there too.
+ *
+ * The literals were the whole of #25 — a frozen snapshot of the default palette in
+ * the light scheme, which followed neither the Customizer nor `.dark`. References
+ * cannot desync because there is only one value in existence.
+ *
+ * No fallback value is emitted on purpose. `var(--primary, oklch(…))` would look
+ * safer and is worse: the fallback is a second copy that can drift, and it drifts
+ * silently, showing a stale colour exactly when the token is missing. Nothing is a
+ * visible failure; a stale literal is an invisible one.
  */
 const EDITOR_PALETTE = [
   'background',
@@ -545,17 +554,20 @@ const EDITOR_PALETTE = [
 ];
 
 export function buildThemeJson(tokens) {
-  const vars = varsFor(tokens, 'warm-clay', 'light');
-
   return {
     $schema: 'https://schemas.wp.org/trunk/theme.json',
     version: 3,
     settings: {
       color: {
+        // Not "hide core's presets" — measured (core's `prevent_override` entry for
+        // ['color','defaultPalette']): it stops core's 12 being offered in the picker
+        // and lets ours override same-slug defaults. Their CSS custom properties are
+        // emitted regardless; no theme.json setting removes them.
+        defaultPalette: false,
         palette: EDITOR_PALETTE.map((slug) => ({
           slug,
           name: titleCase(slug),
-          color: formatColor(resolveColor(vars[slug], vars)),
+          color: `var(--${slug})`,
         })),
       },
       typography: {
@@ -564,6 +576,21 @@ export function buildThemeJson(tokens) {
           name: titleCase(role.replace(/^font-/, '')),
           fontFamily,
         })),
+      },
+    },
+    // With `styles` absent, WP_Theme_JSON contributes WordPress core's own default —
+    // background #32373c on every .wp-element-button, site-wide, in both schemes (#26).
+    // Declaring ours REPLACES that rule rather than adding to it (measured), so this is
+    // the only way to stop core painting buttons. `styles.blocks` stays empty: ADR-009
+    // decision 5, which is about blocks, not elements.
+    styles: {
+      elements: {
+        button: {
+          color: {
+            background: 'var(--primary)',
+            text: 'var(--primary-foreground)',
+          },
+        },
       },
     },
   };

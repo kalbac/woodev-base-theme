@@ -16,9 +16,10 @@ use Woodev\Theme\Base\Customizer\Settings;
  */
 final class Assets {
 
-	private const DEV_SERVER = 'http://localhost:5173';
-	private const JS_ENTRY   = 'src/js/app.js';
-	private const CSS_ENTRY  = 'src/css/app.css';
+	private const DEV_SERVER          = 'http://localhost:5173';
+	private const JS_ENTRY            = 'src/js/app.js';
+	private const CSS_ENTRY           = 'src/css/app.css';
+	private const EDITOR_TOKENS_ENTRY = 'src/css/editor-tokens.css';
 
 	/**
 	 * Hook asset enqueuing into WordPress.
@@ -27,6 +28,7 @@ final class Assets {
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue' ] );
 		add_filter( 'wp_preload_resources', [ $this, 'preload_display_font' ] );
 		add_action( 'after_setup_theme', [ $this, 'register_editor_style' ] );
+		add_action( 'enqueue_block_editor_assets', [ $this, 'enqueue_editor_tokens' ] );
 	}
 
 	/**
@@ -60,11 +62,15 @@ final class Assets {
 	/**
 	 * Give the block editor the stylesheet that defines the theme's tokens.
 	 *
-	 * ADR-010 makes every theme.json colour a `var()` reference to a live token.
-	 * Those references resolve to nothing unless the CSS that DEFINES the tokens is
-	 * present, and the WP 6.8+ editor canvas is an iframe that loads only core's own
-	 * stylesheets — measured: `--primary` reads empty inside it without this call,
-	 * and resolves with it.
+	 * ADR-010 makes every theme.json colour a `var()` reference to a live token, and
+	 * the editor consumes those values in TWO different documents:
+	 *
+	 * - the CANVAS, an iframe that loads only core's own stylesheets. Measured:
+	 *   `--primary` reads empty inside it, and resolves once add_editor_style() puts
+	 *   the built bundle there. That is this method.
+	 * - the SIDEBAR colour picker, which lives in the wp-admin document and is handled
+	 *   by enqueue_editor_tokens() below — a different hook, a different file, and the
+	 *   full bundle must never go there.
 	 *
 	 * The filename is hashed by Vite, so it is resolved through the manifest, never
 	 * written out. If the manifest or the entry is missing the editor simply keeps
@@ -75,8 +81,7 @@ final class Assets {
 			return;
 		}
 
-		$manifest = self::read_manifest( get_template_directory() . '/assets/dist/.vite/manifest.json' );
-		$css      = self::entry_file( $manifest, self::CSS_ENTRY );
+		$css = $this->dist_entry( self::CSS_ENTRY );
 
 		if ( null === $css ) {
 			return;
@@ -84,6 +89,46 @@ final class Assets {
 
 		add_theme_support( 'editor-styles' );
 		add_editor_style( "assets/dist/{$css}" );
+	}
+
+	/**
+	 * Give the wp-admin document the token declarations the colour picker needs.
+	 *
+	 * Gutenberg paints each palette swatch from the RAW preset value, which is now
+	 * `var(--primary)`. The admin document carries none of the theme's CSS, so every
+	 * swatch computed to `rgba(0, 0, 0, 0)` — measured in a browser, not inferred.
+	 *
+	 * This enqueues the tokens-only entry, never the full bundle: that one carries
+	 * Basecoat's base layer and the site chrome and would restyle wp-admin itself.
+	 */
+	public function enqueue_editor_tokens(): void {
+		if ( \defined( 'WOODEV_BASE_DEV' ) && WOODEV_BASE_DEV ) {
+			return;
+		}
+
+		$css = $this->dist_entry( self::EDITOR_TOKENS_ENTRY );
+
+		if ( null === $css ) {
+			return;
+		}
+
+		wp_enqueue_style(
+			'woodev-base-editor-tokens',
+			get_template_directory_uri() . "/assets/dist/{$css}",
+			[],
+			null
+		);
+	}
+
+	/**
+	 * Resolve one manifest entry to its built file name, or null if unavailable.
+	 *
+	 * @param string $entry Manifest entry key, e.g. `src/css/app.css`.
+	 */
+	private function dist_entry( string $entry ): ?string {
+		$manifest = self::read_manifest( get_template_directory() . '/assets/dist/.vite/manifest.json' );
+
+		return self::entry_file( $manifest, $entry );
 	}
 
 	/**

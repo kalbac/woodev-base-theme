@@ -1,0 +1,23 @@
+/* src/css/editor-tokens.css
+ * The identity tokens, and nothing else, for the block editor's ADMIN document.
+ *
+ * ADR-010 makes every theme.json colour a `var()` reference. Two editor surfaces
+ * consume those values and they are different documents:
+ *
+ *   - the editor CANVAS, an iframe, which `add_editor_style()` reaches — it gets
+ *     the whole built stylesheet and resolves the references there;
+ *   - the editor SIDEBAR (the colour picker), which lives in the wp-admin document.
+ *     Gutenberg paints each swatch from the raw preset value, so with no tokens in
+ *     that document every swatch computes to `rgba(0, 0, 0, 0)` — measured, and the
+ *     reason this file exists.
+ *
+ * The whole bundle must NOT be enqueued into wp-admin: it carries Basecoat's base
+ * layer, our resets and the site chrome, and would restyle the admin itself. This
+ * entry is deliberately only `tokens.generated.css` — custom-property declarations,
+ * which are inert until something references them.
+ *
+ * It is the DEFAULT palette in the light scheme. That is a snapshot, and here that
+ * is correct rather than a compromise: it exists so a swatch is visible, not to
+ * decide what the site looks like. The site's real values still come from one place.
+ */
+@import './tokens.generated.css';

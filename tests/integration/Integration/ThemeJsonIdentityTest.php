@@ -153,4 +153,26 @@ final class ThemeJsonIdentityTest extends WP_UnitTestCase {
 			'The editor stylesheet is not the built bundle: ' . implode( ', ', $stylesheets )
 		);
 	}
+
+	/**
+	 * The canvas iframe and the wp-admin sidebar are different documents, and only the
+	 * first is reached by add_editor_style(). Gutenberg paints each palette swatch from
+	 * the raw preset value — now `var(--primary)` — so without tokens in the ADMIN
+	 * document every swatch computed to rgba(0, 0, 0, 0). Measured in a browser; this
+	 * pins the wiring that fixes it.
+	 *
+	 * Asserted as "tokens only, never the full bundle": enqueuing app.css here would
+	 * restyle wp-admin itself.
+	 */
+	public function test_the_admin_document_gets_the_tokens_the_colour_picker_needs(): void {
+		do_action( 'enqueue_block_editor_assets' );
+
+		self::assertTrue(
+			wp_style_is( 'woodev-base-editor-tokens', 'enqueued' ),
+			'The editor token stylesheet is not enqueued, so palette swatches render transparent.'
+		);
+
+		$src = wp_styles()->registered['woodev-base-editor-tokens']->src ?? '';
+		self::assertStringContainsString( 'editorTokens', $src, "Enqueued the wrong file: {$src}" );
+	}
 }

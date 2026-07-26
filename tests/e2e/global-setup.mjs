@@ -62,6 +62,40 @@ function reseedPage(title, slug) {
   );
 }
 
+/**
+ * Reseed a page carrying a core Button block (ADR-010 / #26).
+ *
+ * Attribute quoting is SINGLE quotes on purpose: `wp()` builds one shell string, so a
+ * double quote inside the content would close the argument. See issue #23 — the same
+ * shell-assembly weakness, here worked around rather than fixed.
+ *
+ * `core/button` is a static block: the saved markup IS the rendered output, which is why
+ * the classes below are written out rather than expected from a render filter.
+ */
+function reseedButtonPage(title, slug) {
+  const existing = wp(`post list --post_type=page --name=${slug} --field=ID --format=ids`);
+  for (const id of existing.split(/\s+/).filter(Boolean)) {
+    wpTry(`post delete ${id} --force`);
+  }
+
+  const markup = [
+    '<!-- wp:buttons -->',
+    "<div class='wp-block-buttons'>",
+    '<!-- wp:button -->',
+    "<div class='wp-block-button'>",
+    "<a class='wp-block-button__link wp-element-button'>E2E Core Button</a>",
+    '</div>',
+    '<!-- /wp:button -->',
+    '</div>',
+    '<!-- /wp:buttons -->',
+  ].join('');
+
+  return wp(
+    `post create --post_type=page --post_title="${title}" --post_name=${slug} ` +
+      `--post_status=publish --post_content="${markup}" --porcelain`,
+  );
+}
+
 /** Delete a menu by slug if it exists (also clears its location assignment). */
 function deleteMenu(slug) {
   wpTry(`menu delete ${slug}`);
@@ -130,7 +164,8 @@ export default function globalSetup() {
   const aboutId = reseedPage('About', 'about');
   const teamId = reseedPage('Team', 'team');
   const contactId = reseedPage('Contact', 'contact');
-  log(`pages: About=${aboutId} Team=${teamId} Contact=${contactId}`);
+  const buttonPageId = reseedButtonPage('Core Button', 'core-button');
+  log(`pages: About=${aboutId} Team=${teamId} Contact=${contactId} CoreButton=${buttonPageId}`);
 
   // Fresh menus every run — the cheapest way to stay idempotent.
   deleteMenu('primary-nav');
