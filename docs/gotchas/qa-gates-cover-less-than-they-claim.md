@@ -14,6 +14,21 @@
 
 Two shapes recur: **the gate's scope is narrower than the work**, and **the gate's result differs per platform**. The second is the nastier one, because CI green plus developer red reads as "the developer's machine is broken" rather than "the gate is misconfigured".
 
+## s15 added a third shape: a gate written off in the docs, and a success message that meant nothing
+
+Two more instances, both in one hour, both about **believing a sentence instead of a measurement**.
+
+| Gate | What was believed | What was true |
+|---|---|---|
+| **Prettier, in CI** | `docs/CURRENT-STATE.md` had said for two sessions: "`npm run format` is red on 5 files no session has touched. **Not in the documented gate battery.**" So every session skipped it. | `.github/workflows/ci.yml` runs `npm run format` inside `js-qa`. It had been failing on PR #24 the whole time — and because the `e2e` job declares `needs: js-qa`, **CI had never once run the base e2e on that PR**. A red gate was hiding a gate that never ran. |
+| **Prettier, locally** | `npx prettier --check opencode.json` printed `All matched files use Prettier code style!`, which was read as "the file is clean" and written into the docs as a measured fact. | The file had just been added to `.gitignore`, and **Prettier 3 reads `.gitignore` as well as `.prettierignore`**. It matched *zero* files. That message is emitted for an empty match set and is byte-identical to a real pass. The file was in fact red. |
+
+The second one is the more dangerous, because it is a **success message produced by checking nothing** — the same failure shape as `codex-cli-dies-silently`, only in a tool nobody suspects. `prettier --check` on an ignored path exits 0 and congratulates you.
+
+- **Confirm a path is actually being checked** before trusting a per-file result: `npx prettier --check <path> --ignore-path /dev/null`, or `git check-ignore -v <path>` to see which rule excluded it. On a directory run, compare the file count against what you expected to be scanned.
+- **A docs note claiming a check "is not in the gate battery" is a claim about CI that only CI can settle.** Read `.github/workflows/ci.yml`. The note was written by someone who did not check either, and it propagated for two sessions.
+- **A skipped CI job is not a passing one.** `gh pr checks` reported `e2e  skipping` next to three passes, which scans as "fine". Any job with `needs:` disappears silently when its dependency fails — check for `skipping` explicitly before calling a PR green.
+
 ## How to apply here
 
 - **Check what a gate scanned, not just what it returned.** PHPCS prints `20 / 20`; if that number does not roughly match the files you touched plus their neighbours, the gate is not covering your work. `vendor/bin/phpcs --report=summary` lists them.
