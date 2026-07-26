@@ -12,14 +12,23 @@
 | Dev-mode coverage | ✅ Done | s7, PR [#10](https://github.com/kalbac/woodev-base-theme/pull/10) `e1cf31b` — the s3 debt, closed |
 | §7 component tail | ✅ Done | s7, PR [#11](https://github.com/kalbac/woodev-base-theme/pull/11) `6dfac28` — card/badge/alert/comment-form. tabs+accordion deferred to M2 |
 | Design — whole-theme visual identity | ✅ Approved (s10) | Refined V2 «Обиход» in `docs/design/v2-mockup/`. Golos Text + IBM Plex (OFL, Cyrillic), token-driven, 7 palette presets, hover-reveal CTA, all pages. Source of truth for implementation |
-| Identity implementation (T0–T8) | ✅ T0–T8 done | ADR-007 (fonts) + ADR-008 (identity replaces the 8 style packs) recorded. Plan: `docs/plans/2026-07-25-visual-identity.md`. All four areas criticked and re-criticked (s12); test debt paid s13. **PR [#24](https://github.com/kalbac/woodev-base-theme/pull/24) open, 27 commits. Merge is Maksim's call** |
-| M2a — Woo storefront | ✅ Done, in PR #24 | Classic storefront on the approved identity. The block cart/checkout gap is M2b, see below |
-| M2b — Woo block cart & checkout | ✅ Done (s14) | [ADR-009](adr/ADR-009-block-cart-checkout-styling.md) implemented B0–B6 on `feat/m2b-block-cart-checkout`, 7 commits. Criticked **and** re-criticked. Not merged, no PR yet — sits on top of the still-open PR #24 |
+| Identity implementation (T0–T8) | ✅ **Merged s15** | ADR-007 (fonts) + ADR-008 (identity replaces the 8 style packs). Plan: `docs/plans/2026-07-25-visual-identity.md`. All four areas criticked and re-criticked (s12); test debt paid s13. PR [#24](https://github.com/kalbac/woodev-base-theme/pull/24) squashed onto `main` as `f040eaa` |
+| M2a — Woo storefront | ✅ **Merged s15**, in `f040eaa` | Classic storefront on the approved identity. The block cart/checkout gap was M2b |
+| M2b — Woo block cart & checkout | ✅ **Merged s15** | [ADR-009](adr/ADR-009-block-cart-checkout-styling.md) implemented B0–B6, criticked **and** re-criticked. PR [#29](https://github.com/kalbac/woodev-base-theme/pull/29) squashed onto `main` as `1d769ae` |
 | M3 — Public release prep | ⬜ Not started | |
 
 ## Known bugs
 
-**None open.** `main` is green, verified on the MERGED commit `6dfac28` and not just per-branch: phpcs 0 · phpstan L8 · unit **146** · vitest 25 · integration **35** · integration-dev 4 · e2e **44** · e2e-dev 2 · build OK.
+**None open.** `main` is green on the MERGED commit **`1d769ae`** (M1 identity + M2a + M2b), not per-branch.
+
+Two sources, and the split is worth knowing because it is where the s15 blind spot lived:
+
+- **CI on `1d769ae`** (`gh run 30212031669`, all four jobs success) — phpcs 0 · phpstan L8 0 · eslint 0 · prettier 0 · **unit 208** (611 assertions, 0 skipped) · vitest 56 · **integration 40** (106 assertions, 4 skipped) · **base e2e 57 passed** · build OK.
+- **Local on the same tree** — **e2e:woo 23/23** (1.4m), integration-dev 4/4, e2e-dev 2/2. CI runs none of these three, so they only ever exist as a local measurement.
+
+Note the skip counts differ by platform: unit skips 1 locally (Windows) and 0 in CI; integration skips 4 in CI and 1 locally. Neither is a failure, but "208 tests" means slightly different work on each.
+
+Merged `main` was verified tree-identical (`git diff --quiet`) to the CI-green PR head `0a27273`, which is what lets CI's result stand as a measurement of `main` rather than of a branch.
 
 **Branch `feat/m2a-woo-storefront` (PR [#24](https://github.com/kalbac/woodev-base-theme/pull/24)) — every suite run on the current tree, s13, one at a time:** phpcs **0** · phpstan L8 **0** · eslint **0** · prettier (on the files we own) · unit **204** (1 skip) · vitest **56** · integration **37** (1 skip) · integration-dev **4** · base e2e **57/57** in one pass · **e2e:woo 16/16 in one pass** · e2e-dev **2/2** · build OK.
 
