@@ -843,16 +843,23 @@ body:not(.woocommerce-block-theme-has-button-styles)
  * is set on this component at all — it is transparent, showing whatever is
  * behind it — so there is nothing to restate there.
  *
- * CHECKOUT ONLY, on measurement rather than on the shared-bundle reasoning
- * this rule originally used. B6 looked at the live seeded store (26.07.2026):
- * the address card renders on `/checkout/` unprompted — a real "CA, United
- * States (US)" summary — and is ABSENT from `/cart/`, count 0, checked with
- * zero, one and two shipping methods configured. The shared bundle does load
- * the vendor rule on both pages, but the component never mounts on the cart,
- * so a cart-scoped selector here matched nothing and merely implied the cart
- * has address cards. Limit of that measurement, stated rather than hidden:
- * it covers this store's configuration, not every possible one. If a cart
- * layout that does render the card turns up, widen this back and say why. */
+ * BOTH PAGES, deliberately, and the measurement below is why that needed
+ * saying rather than assuming. B6 looked at the live seeded store
+ * (26.07.2026): the address card renders on `/checkout/` unprompted — a real
+ * "CA, United States (US)" summary — and is ABSENT from `/cart/`, count 0,
+ * with zero, one and two shipping methods configured. That measurement is
+ * sound; the conclusion first drawn from it was not. The rule was briefly
+ * narrowed to checkout on the grounds that a selector matching nothing on the
+ * cart is dead code implying the cart has address cards — but it implies no
+ * such thing. It says "if this component mounts here, its radius is ours",
+ * which is exactly right, costs a few dozen bytes, and matches what the
+ * VENDOR does: `packages-style.css` is the shared bundle, so WooCommerce
+ * itself ships the `4px` rule to both pages. One store's guest flow is not a
+ * contract that no cart configuration can ever mount the component, and if
+ * one does, the narrowed version would have silently left it on the vendor's
+ * radius. Restored after a Codex review finding, s14 — the narrowing was the
+ * orchestrator's own call, not a worker's. */
+.wp-block-woocommerce-cart .wc-block-components-address-card,
 .wp-block-woocommerce-checkout .wc-block-components-address-card {
   border-radius: var(--radius);
 }

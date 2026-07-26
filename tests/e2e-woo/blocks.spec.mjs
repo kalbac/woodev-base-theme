@@ -187,6 +187,8 @@ test.describe('block Checkout', () => {
 
     const light = await read();
     const lightBgExpected = await resolveToken(page, 'background-color', 'var(--background)');
+    const lightBorderExpected = await resolveToken(page, 'border-color', 'var(--border)');
+    const lightColorExpected = await resolveToken(page, 'color', 'var(--foreground)');
 
     await setDark(page, true);
     const dark = await read();
@@ -199,6 +201,8 @@ test.describe('block Checkout', () => {
     );
     expect(dark.bg, 'scheme must actually change the computed background').not.toBe(light.bg);
     expect(light.bg, 'light background follows --background').toBe(lightBgExpected);
+    expect(light.border, 'light border follows --border').toBe(lightBorderExpected);
+    expect(light.color, 'light text colour follows --foreground').toBe(lightColorExpected);
     expect(dark.bg, 'dark background follows --background').toBe(darkBgExpected);
     expect(dark.border, 'dark border follows --border').toBe(darkBorderExpected);
     expect(dark.color, 'dark text colour follows --foreground').toBe(darkColorExpected);
@@ -220,6 +224,9 @@ test.describe('block Checkout', () => {
     });
 
     const light = await read();
+    const lightBorderExpected = await resolveToken(page, 'border-color', 'var(--border)');
+    const lightColorExpected = await resolveToken(page, 'color', 'var(--foreground)');
+
     await setDark(page, true);
     const dark = await read();
 
@@ -232,6 +239,10 @@ test.describe('block Checkout', () => {
     );
     expect(dark.containerBg, 'scheme must actually change the computed background').not.toBe(
       light.containerBg,
+    );
+    expect(light.selectBorder, 'light select border follows --border').toBe(lightBorderExpected);
+    expect(light.selectColor, 'light select text colour follows --foreground').toBe(
+      lightColorExpected,
     );
     expect(dark.containerBg, 'container background follows --background').toBe(bgExpected);
     expect(dark.selectBorder, 'select border follows --border').toBe(borderExpected);
@@ -292,75 +303,124 @@ test.describe('block Checkout', () => {
     }
   });
 
-  test('notice banners use the destructive/success/warning/info roles, never the vendor literals, and the four roles stay visually distinct', async ({
+  test('notice banners use the destructive/success/warning/info roles, never the vendor literals, and the four roles stay visually distinct, in both schemes', async ({
     page,
   }) => {
     // Guards src/css/woo-blocks.css's B4 rules: the shared base rule (file
     // lines ~754-760) plus all four `.is-*` role overrides (lines ~774-830).
     // Covers all four roles on purpose — s12's own notice test mounted only
     // `.woocommerce-error` and passed with its fix reverted (this file's own
-    // B4 header cites the same lesson).
+    // B4 header cites the same lesson). Checked in BOTH schemes: mount once,
+    // read in light, toggle the runtime `.dark` class, read the SAME elements
+    // again — proving the cascade keeps following its tokens across the
+    // switch, not merely that it happened to be right in whichever scheme the
+    // test ran in.
     await gotoCheckoutHydrated(page);
 
     const roles = ['error', 'warning', 'success', 'info'];
-    const results = {};
+    const bannerLocator = (role) =>
+      page.locator(`.wp-block-woocommerce-checkout [data-wtb-test-notice="${role}"]`);
+
     for (const role of roles) {
       await mountNoticeBanner(page, '.wp-block-woocommerce-checkout', role);
-      const banner = page.locator(
-        `.wp-block-woocommerce-checkout [data-wtb-test-notice="${role}"]`,
-      );
-      await expect(banner).toBeVisible();
-      results[role] = {
-        bg: await computed(banner, 'background-color'),
-        border: await computed(banner, 'border-color'),
-        color: await computed(banner, 'color'),
-        radius: await computed(banner, 'border-top-left-radius'),
-      };
+      await expect(bannerLocator(role)).toBeVisible();
     }
 
-    // Shared base rule (file lines ~754-760): text colour and radius are set
-    // ONCE on the un-suffixed selector, not per role — checked on a single
-    // role here rather than duplicated four times.
-    expect(results.error.color, 'notice text colour follows --foreground').toBe(
-      await resolveToken(page, 'color', 'var(--foreground)'),
-    );
-    expect(results.error.radius, 'notice radius follows --radius').toBe(
-      await resolveToken(page, 'border-top-left-radius', 'var(--radius)'),
-    );
+    const readAll = async () => {
+      const out = {};
+      for (const role of roles) {
+        const banner = bannerLocator(role);
+        out[role] = {
+          bg: await computed(banner, 'background-color'),
+          border: await computed(banner, 'border-color'),
+          color: await computed(banner, 'color'),
+          radius: await computed(banner, 'border-top-left-radius'),
+        };
+      }
+      return out;
+    };
 
-    // The task brief's explicit ask: the destructive role.
-    const destructiveBorderExpected = await resolveToken(
-      page,
-      'border-color',
-      'var(--destructive)',
-    );
-    expect(results.error.border, 'error role never the vendor #cc1818 literal').not.toBe(
+    // Each role's background/border tie the EXACT `color-mix()` expression
+    // src/css/woo-blocks.css declares for it (file lines ~774-830), not a
+    // bare `var(--role)` — the latter would still pass if the mix percentage
+    // or base colour drifted from what the stylesheet actually resolves.
+    const roleTokens = {
+      error: {
+        border: 'var(--destructive)',
+        bg: 'color-mix(in oklab, var(--destructive) 9%, var(--card))',
+      },
+      warning: {
+        border: 'var(--warning)',
+        bg: 'color-mix(in oklab, var(--warning) 9%, var(--card))',
+      },
+      success: {
+        border: 'var(--success)',
+        bg: 'color-mix(in oklab, var(--success) 9%, var(--card))',
+      },
+      info: {
+        border: 'var(--primary)',
+        bg: 'color-mix(in oklab, var(--primary) 8%, var(--card))',
+      },
+    };
+
+    // Shared base rule (file lines ~754-760): text colour and radius are set
+    // ONCE on the un-suffixed selector, not per role — checked via a single
+    // role, in each scheme, rather than duplicated four times per scheme.
+    async function assertScheme(results, scheme) {
+      const foregroundExpected = await resolveToken(page, 'color', 'var(--foreground)');
+      const radiusExpected = await resolveToken(page, 'border-top-left-radius', 'var(--radius)');
+      expect(results.error.color, `${scheme}: notice text colour follows --foreground`).toBe(
+        foregroundExpected,
+      );
+      expect(results.error.radius, `${scheme}: notice radius follows --radius`).toBe(
+        radiusExpected,
+      );
+
+      for (const role of roles) {
+        const { border: borderExpr, bg: bgExpr } = roleTokens[role];
+        const borderExpected = await resolveToken(page, 'border-color', borderExpr);
+        const bgExpected = await resolveToken(page, 'background-color', bgExpr);
+        expect(results[role].border, `${scheme}: ${role} border follows its role token`).toBe(
+          borderExpected,
+        );
+        expect(results[role].bg, `${scheme}: ${role} background follows its role token`).toBe(
+          bgExpected,
+        );
+      }
+
+      // Four roles, four distinct backgrounds — not one shared default that
+      // happens to satisfy every per-role assertion above (same shape as
+      // storefront.spec.mjs's classic-notice test's own distinctness check).
+      const distinctBackgrounds = new Set(Object.values(results).map((r) => r.bg));
+      expect(distinctBackgrounds.size, `${scheme}: four distinct backgrounds`).toBe(4);
+    }
+
+    const light = await readAll();
+    // The task brief's explicit ask: the destructive role, checked against
+    // the vendor's own hardcoded literals in the scheme actually rendered —
+    // a token-mix result could coincidentally match a vendor literal in one
+    // scheme without this check catching it there.
+    expect(light.error.border, 'light: error role never the vendor #cc1818 literal').not.toBe(
       VENDOR_NOTICE_ERROR_BORDER,
     );
-    expect(results.error.bg, 'error role never the vendor #fff0f0 literal').not.toBe(
+    expect(light.error.bg, 'light: error role never the vendor #fff0f0 literal').not.toBe(
       VENDOR_NOTICE_ERROR_BG,
     );
-    expect(results.error.border, 'error border follows --destructive').toBe(
-      destructiveBorderExpected,
-    );
+    await assertScheme(light, 'light');
 
-    // The other three roles, checked against their own tokens too — not only
-    // "present", which is what let the s12 gap through.
-    expect(results.warning.border, 'warning border follows --warning').toBe(
-      await resolveToken(page, 'border-color', 'var(--warning)'),
+    await setDark(page, true);
+    const dark = await readAll();
+    expect(dark.error.border, 'dark: error role never the vendor #cc1818 literal').not.toBe(
+      VENDOR_NOTICE_ERROR_BORDER,
     );
-    expect(results.success.border, 'success border follows --success').toBe(
-      await resolveToken(page, 'border-color', 'var(--success)'),
+    expect(dark.error.bg, 'dark: error role never the vendor #fff0f0 literal').not.toBe(
+      VENDOR_NOTICE_ERROR_BG,
     );
-    expect(results.info.border, 'info border follows --primary (no dedicated --info token)').toBe(
-      await resolveToken(page, 'border-color', 'var(--primary)'),
-    );
+    await assertScheme(dark, 'dark');
 
-    // Four roles, four distinct backgrounds — not one shared default that
-    // happens to satisfy every per-role assertion above (same shape as
-    // storefront.spec.mjs's classic-notice test's own distinctness check).
-    const distinctBackgrounds = new Set(Object.values(results).map((r) => r.bg));
-    expect(distinctBackgrounds.size).toBe(4);
+    expect(dark.error.bg, 'scheme must actually change the computed background').not.toBe(
+      light.error.bg,
+    );
   });
 });
 
