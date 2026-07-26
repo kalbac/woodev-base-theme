@@ -13,22 +13,38 @@ import { expect, test } from '@playwright/test';
 /** Core's default button background, the thing #26 was about. */
 const CORE_DEFAULT_BG = 'rgb(50, 55, 60)'; // #32373c
 
-/** What an unresolvable custom property — or a `transparent` one — computes to. */
-const TRANSPARENT = 'rgba(0, 0, 0, 0)';
+/**
+ * Alpha of a computed colour string. Compared numerically rather than against the literal
+ * `rgba(0, 0, 0, 0)`: `rgba(255, 0, 0, 0)` is equally invisible and equally wrong, and a
+ * string comparison waves it through. Raised in the third critic round.
+ */
+const alphaOf = (computed) => {
+  const match = /^rgba?\([^)]*?(?:,\s*|\/\s*)([\d.]+)\s*\)$/.exec(computed);
+  return match ? Number(match[1]) : 1;
+};
 
 /**
  * Resolve a token to the value the browser computes for it, in whatever scheme the
  * document is currently in. Comparing against this — rather than against "not core's
  * grey" — is what makes the assertion about the TOKEN rather than about some colour.
  */
-const resolveToken = (page, token) =>
-  page.evaluate((name) => {
+const resolveToken = (button, token) =>
+  button.evaluate((el, name) => {
     const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+    // The probe goes in the BUTTON'S OWN PARENT, not in <body>. A value that resolves
+    // against inherited context — `currentColor` is the obvious one — computes
+    // differently in the two places, and the earlier version measured the wrong one.
+    // No token spells itself that way today (the generator resolves every token to an
+    // oklch literal and throws on anything else, so the trigger is impossible by
+    // construction) but a probe measuring in the wrong context is fragile regardless of
+    // whether it is currently wrong. Third critic round.
     const probe = document.createElement('div');
     probe.style.backgroundColor = raw;
-    document.body.append(probe);
+    el.parentElement.append(probe);
     const value = getComputedStyle(probe).backgroundColor;
     probe.remove();
+
     return { raw, computed: value };
   }, token);
 
@@ -57,8 +73,8 @@ test('a core Button block is painted by the theme, not by core, in both schemes'
     }
 
     const computed = await read();
-    const primary = await resolveToken(page, '--primary');
-    const primaryForeground = await resolveToken(page, '--primary-foreground');
+    const primary = await resolveToken(button, '--primary');
+    const primaryForeground = await resolveToken(button, '--primary-foreground');
 
     expect(primary.raw, `--primary is undefined in ${scheme}`).not.toBe('');
 
@@ -67,8 +83,14 @@ test('a core Button block is painted by the theme, not by core, in both schemes'
     // exactly, and is invisible on screen. The first version of this fix dropped this
     // guard while adding the token comparison — caught by the re-critic. Both claims
     // have to hold at once.
-    expect(computed.bg, `background is invisible in ${scheme}`).not.toBe(TRANSPARENT);
-    expect(computed.fg, `text is invisible in ${scheme}`).not.toBe(TRANSPARENT);
+    expect(alphaOf(computed.bg), `background is invisible in ${scheme}`).toBeGreaterThan(0);
+    expect(alphaOf(computed.fg), `text is invisible in ${scheme}`).toBeGreaterThan(0);
+
+    // Both guards above are satisfied by an opaque button whose text is the same colour
+    // as its background — visible, and unreadable. The real defence is the build-time
+    // contrast gate (assertAccessiblePalettes, every palette in both schemes, throws
+    // below AA); this is the cheap sanity check that the pair did not collapse here.
+    expect(computed.fg, `text is the background colour in ${scheme}`).not.toBe(computed.bg);
 
     expect(computed.bg, `background in ${scheme}`).toBe(primary.computed);
     expect(computed.fg, `text colour in ${scheme}`).toBe(primaryForeground.computed);
