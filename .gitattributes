@@ -16,6 +16,18 @@
 # reason `eol=lf` exists in the first place (PHPCS on Windows) does not apply.
 .serena/** -text
 
+# Vendored third-party licence texts, copied byte-for-byte from upstream
+# (scripts/build-fonts.mjs vendors the inputs and copies them to the shipped
+# theme). IBM's own OFL.txt uses CRLF upstream; `eol=lf` above would silently
+# renormalise it, so the file we ship as "the licence, verbatim" would stop
+# being byte-identical to the licence its authors published. `-text` stores
+# exactly the bytes upstream serves. Same reasoning as `.serena/**`: nothing
+# lints these, so the PHPCS-on-Windows problem `eol=lf` exists to solve does
+# not apply. The point of vendoring them at all is that the previous version
+# was reproduced from memory — see the script header.
+docs/design/v2-mockup/assets/fonts/OFL-*.txt -text
+woodev-base-theme/assets/fonts/LICENSE-*.txt -text
+
 # Binary: never touch these.
 *.png binary
 *.jpg binary

@@ -14,7 +14,7 @@ get_header();
 <div class="wtb-layout<?php echo Layout::has_sidebar() ? ' wtb-layout--has-sidebar' : ''; ?>">
 	<div class="wtb-layout__content">
 		<header class="wtb-archive-header mb-8">
-			<h1 class="wtb-archive-title text-3xl font-semibold tracking-tight">
+			<h1 class="wtb-archive-title">
 				<?php the_archive_title(); ?>
 			</h1>
 			<div class="wtb-archive-description mt-2 text-[var(--muted-foreground)]">

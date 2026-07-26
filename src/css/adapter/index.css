@@ -1,36 +1,54 @@
 /* src/css/adapter/index.css
- * The ONLY place Basecoat components are overridden/extended and where
- * project component classes live (spec §5). Loaded into @layer adapter.
+ * The adapter layer's entry point. Everything here and in the files it imports
+ * is loaded into @layer adapter by src/css/app.css.
+ *
+ * This is where the approved visual identity lives (ADR-008): Basecoat ships
+ * component STRUCTURE and its vanilla JS, our tokens supply every value, and
+ * these files supply the skin. Ported from the approved mockup —
+ * docs/design/v2-mockup/woodev-base-identity.html, section by section per
+ * docs/plans/2026-07-25-visual-identity.md.
+ *
+ * Import order is not cosmetic: these all land in one layer, so a later file
+ * beats an earlier one at equal specificity. Base first, then chrome, then
+ * content, then components. The rules kept at the BOTTOM of this file are the
+ * ones that must win over all of them — see each one's comment for why.
  */
 
-body {
-  background-color: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans);
-}
+/* Reset, typography base, focus ring, skip link. */
+@import './base.css';
 
-/*
- * Accessible skip-link (spec §9, WCAG 2.1 AA): off-screen until it receives
- * keyboard focus, then moves fully into view.
- */
-.wtb-skip-link {
-  position: absolute;
-  top: -100%;
-  left: 0.5rem;
-  z-index: 50;
-  padding: 0.5rem 1rem;
-  background-color: var(--background);
-  color: var(--foreground);
-  border: 1px solid var(--border);
-  border-radius: 0.375rem;
-  transition: top 0.15s ease-in-out;
-}
+/* Site chrome. */
+@import './header.css';
+@import './footer.css';
 
-.wtb-skip-link:focus {
-  top: 0.5rem;
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
-}
+/* Page furniture. hero.css and blocks.css are ported but not yet wired to any
+ * template — see docs/plans/2026-07-25-visual-identity.md (T4 report). They
+ * still cost their bytes — shipped in the bundle, downloaded, parsed, and in
+ * the CSSOM regardless of whether any markup matches them — but porting them
+ * once, with the rest of their section, beats re-deriving them later from a
+ * mockup nobody is reading any more. */
+@import './hero.css';
+@import './blocks.css';
+
+/* Long-form content: article, blog cards, sidebar widgets, comments. */
+@import './content.css';
+
+/* Components (T5): Basecoat's classes, our skin. */
+@import './buttons.css';
+@import './forms.css';
+@import './feedback.css';
+@import './components.css';
+
+/* ---------------------------------------------------------------------------
+   Layout primitives that deliberately outlive the port.
+
+   These stay HERE, after the imports, because they are not the mockup's to
+   decide: the container cap and the grid breakpoints are a Customizer setting
+   and an e2e-asserted contract respectively. The mockup uses static values for
+   both; adopting them would silently drop an admin feature and break the
+   breakpoint tests. Two grid systems for one job is the 'two vocabularies'
+   mistake the plan warns about — so there is one, and it is this one.
+   --------------------------------------------------------------------------- */
 
 /*
  * Centered max-width wrapper shared by the header, footer and main content
@@ -76,166 +94,6 @@ body {
 }
 
 /*
- * Primary navigation (Task 4). The menu's flex layout lives HERE, not as
- * utilities on the <ul>: the mobile responsive rules below must flip the menu
- * between shown and hidden, and a `display` utility (utilities layer) would beat
- * an adapter-layer `display` rule (layer-precedence gotcha). Keeping display in
- * the adapter layer for BOTH the base layout and the responsive overrides means
- * they compete on equal footing and specificity decides — no states.css needed.
- */
-.wtb-nav {
-  position: relative;
-}
-
-.wtb-nav__menu {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 1.5rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-/* Icon-only disclosure toggle. Hidden by default so the no-JS path (menu always
- * visible) never shows a dead control; the responsive rule reveals it only on
- * narrow viewports once Alpine has added `.wtb-nav--enhanced`. */
-.wtb-nav__toggle {
-  display: none;
-  align-items: center;
-  justify-content: center;
-  padding: 0.5rem;
-  color: var(--foreground);
-  background-color: var(--background);
-  border: 1px solid var(--border);
-  border-radius: 0.375rem;
-  cursor: pointer;
-}
-
-.wtb-nav__toggle:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
-}
-
-.wtb-nav__toggle-icon {
-  display: inline-flex;
-}
-
-/* Desktop submenus: CSS-only reveal, no JS. A positioned dropdown shown on
- * hover AND focus-within, so keyboard users reach it by tabbing into the parent
- * item — satisfying progressive enhancement with zero script. */
-.wtb-nav__menu .menu-item-has-children {
-  position: relative;
-}
-
-/* Decorative chevron next to parent items (Lucide chevron-down as a currentColor
- * mask — purely presentational, so a pseudo-element keeps it out of the a11y
- * tree). */
-.wtb-nav__menu .menu-item-has-children > a::after {
-  display: inline-block;
-  width: 1em;
-  height: 1em;
-  margin-inline-start: 0.25rem;
-  vertical-align: middle;
-  content: '';
-  background-color: currentColor;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
-    center / contain no-repeat;
-}
-
-.wtb-nav__menu .sub-menu {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  z-index: 40;
-  display: none;
-  min-width: 12rem;
-  margin: 0;
-  padding: 0.5rem;
-  list-style: none;
-  background-color: var(--background);
-  border: 1px solid var(--border);
-  border-radius: 0.375rem;
-}
-
-.wtb-nav__menu .menu-item-has-children:hover > .sub-menu,
-.wtb-nav__menu .menu-item-has-children:focus-within > .sub-menu {
-  display: block;
-}
-
-/*
- * Responsive collapse, keyed on `.wtb-nav--enhanced` (added by Alpine on init).
- * Without that class — i.e. JS disabled — none of this applies: the menu stays
- * visible and the toggle stays `display: none` (its base rule), so the nav is
- * fully reachable server-rendered.
- */
-@media (max-width: 48rem) {
-  .wtb-nav--enhanced .wtb-nav__toggle {
-    display: inline-flex;
-  }
-
-  .wtb-nav--enhanced .wtb-nav__menu {
-    display: none;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.75rem;
-    margin-top: 0.75rem;
-  }
-
-  .wtb-nav--enhanced.wtb-nav--open .wtb-nav__menu {
-    display: flex;
-  }
-
-  /* In the drawer the submenu is a static, always-open block, not a floating
-   * dropdown — there is no hover on touch and the parent row already has focus. */
-  .wtb-nav--enhanced .wtb-nav__menu .sub-menu {
-    position: static;
-    display: block;
-    min-width: 0;
-    padding: 0.25rem 0 0.25rem 1rem;
-    border: 0;
-  }
-}
-
-/*
- * Colour-scheme switcher (M1-05, spec §6). Same progressive-enhancement
- * pattern as .wtb-nav__toggle above: `display: none` is the permanent base
- * rule here rather than a utility class, because the responsive/enhanced
- * override below only wins the cascade if it competes with another
- * adapter-layer rule on equal footing — a `hidden` utility on the element
- * would sit in the utilities layer and beat this one regardless of
- * specificity (see docs/gotchas/tailwind-v4-layer-precedence.md). The button
- * also carries a plain HTML `hidden` attribute removed by Alpine on init, so
- * a JS-disabled visitor never sees it even before this stylesheet loads.
- */
-.wtb-scheme-toggle {
-  display: none;
-  align-items: center;
-  justify-content: center;
-  padding: 0.5rem;
-  color: var(--foreground);
-  background-color: var(--background);
-  border: 1px solid var(--border);
-  border-radius: 0.375rem;
-  cursor: pointer;
-}
-
-/* Unlike .wtb-nav__toggle, this reveal is not viewport-gated: the scheme
- * switcher is offered on every screen size once Alpine has enhanced it. */
-.wtb-scheme-toggle--enhanced {
-  display: inline-flex;
-}
-
-.wtb-scheme-toggle:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
-}
-
-.wtb-scheme-toggle__icon {
-  display: inline-flex;
-}
-
-/*
  * Post grid (§7 card tail). Explicit breakpoints rather than
  * `repeat(auto-fill, minmax(…))`: an intrinsic grid adapts to the sidebar for
  * free, but its column count at a given width becomes an emergent property of
@@ -267,56 +125,4 @@ body {
   .wtb-layout--has-sidebar .wtb-post-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-}
-
-/* Cards are flex columns and grid items stretch to equal height, so giving the
- * body the free space is all that is needed to align footers across a row of
- * posts with excerpts of different lengths. */
-.wtb-entry-card > section {
-  flex: 1;
-}
-
-/* Category badges are printed back-to-back (`</a><a>`), so a post with two or
- * more categories would otherwise have them touching. A flex row with a gap
- * spaces them and lets them wrap; the margin lifts the row off the meta line
- * above it. */
-.wtb-entry-categories {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.375rem;
-  margin-top: 0.5rem;
-}
-
-/* Featured images arrive at whatever aspect ratio the author uploaded. Without
- * a fixed ratio a row of cards is ragged; `cover` crops rather than distorts. */
-.wtb-entry-card > img:first-child {
-  aspect-ratio: 16 / 9;
-  width: 100%;
-  object-fit: cover;
-}
-
-/*
- * Core's wp_list_comments() walker emits <p class="comment-awaiting-moderation">
- * for a held comment. Mapping it onto the alert look here is the adapter layer
- * doing its job — styling what a third party rendered. Replacing the walker to
- * change one paragraph would be a much larger surface to maintain across WP
- * releases for the same result.
- */
-.comment-awaiting-moderation {
-  display: block;
-  margin-top: 0.5rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg, 0.5rem);
-  padding: 0.75rem 1rem;
-  background-color: var(--card);
-  color: var(--muted-foreground);
-  font-size: 0.875rem;
-}
-
-/* The comment form's cookie-consent row: core emits the checkbox and its label
- * as siblings inside .comment-form-cookies-consent. */
-.comment-form-cookies-consent {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
 }

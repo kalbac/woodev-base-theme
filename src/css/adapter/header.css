@@ -1,0 +1,343 @@
+/* src/css/adapter/header.css
+ * Mockup §7 "Header + nav", retargeted onto the theme's existing wtb-*
+ * markup: template-parts/header/{inline,centered,navigation,scheme-toggle}.php.
+ *
+ * NOT ported (no template renders the markup, and it is storefront content,
+ * not generic WordPress chrome — see the T4 report):
+ * - `.utility-bar` (shipping/phone strip above the header)
+ * - `.header-search` (a search field inside the header)
+ * - `.icon-btn .count` (the cart-count badge)
+ * - the off-canvas `.drawer` / `.drawer-backdrop` overlay — the theme's
+ *   mobile nav is an inline disclosure (existing x-trap focus-trap flow,
+ *   e2e-pinned in navigation.spec.mjs), not a fixed slide-in panel. Restyled
+ *   in place rather than replaced, to keep that tested behaviour.
+ */
+
+.wtb-header {
+  background-color: var(--background);
+  border-bottom: var(--rule);
+}
+
+/*
+ * The bar that used to be plain Tailwind utilities (`flex items-center
+ * justify-between gap-4`) directly on the container div in the templates.
+ * Promoted to a component class (AGENTS.md: 3+ occurrences) because the
+ * design needs a `min-height` and a `gap` utilities don't already give it,
+ * and because utilities beat this layer regardless of specificity
+ * (docs/gotchas/tailwind-v4-layer-precedence.md) — leaving the old utility
+ * classes in the template would have silently kept overriding this file.
+ */
+.wtb-header__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  min-height: 72px;
+}
+
+.wtb-header--centered .wtb-header__bar {
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+
+.wtb-wordmark {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--text-lg);
+  letter-spacing: -0.035em;
+}
+
+.wtb-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.wtb-header--centered .wtb-header__actions {
+  margin-left: 0;
+}
+
+/*
+ * Primary navigation. Layout stays in THIS layer (not utilities) because the
+ * responsive rules below must flip `display` on the same properties, and an
+ * adapter-layer override only beats another adapter-layer rule on equal
+ * footing (tailwind-v4-layer-precedence.md).
+ */
+.wtb-nav {
+  position: relative;
+}
+
+.wtb-nav__menu {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wtb-nav__menu > li {
+  position: relative;
+}
+
+.wtb-nav__menu > li > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 44px;
+  padding: 0.55rem 0.7rem;
+  border-radius: var(--radius-md);
+  color: var(--secondary-foreground);
+  font-weight: 500;
+  font-size: var(--text-base);
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.wtb-nav__menu > li > a:hover {
+  background-color: var(--accent);
+  color: var(--foreground);
+}
+
+/* Icon-only disclosure toggle (mobile). `display: none` is the permanent base
+ * rule so a JS-disabled visitor never sees a dead control; the media query
+ * below reveals it only once Alpine has added `.wtb-nav--enhanced`. */
+.wtb-nav__toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  color: var(--secondary-foreground);
+  background-color: transparent;
+  border: 0;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.wtb-nav__toggle:hover {
+  background-color: var(--accent);
+  color: var(--foreground);
+}
+
+.wtb-nav__toggle-icon {
+  display: inline-flex;
+}
+
+/* Desktop submenus: CSS-only reveal on hover AND focus-within, so keyboard
+ * users reach them by tabbing into the parent item — no JS required. */
+.wtb-nav__menu .menu-item-has-children {
+  position: relative;
+}
+
+/* Decorative chevron: purely presentational, so it is a pseudo-element and
+ * stays out of the a11y tree. */
+.wtb-nav__menu .menu-item-has-children > a::after {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  margin-inline-start: 0.25rem;
+  vertical-align: middle;
+  content: '';
+  background-color: currentColor;
+  mask: var(--icon-chevron) center / contain no-repeat;
+  transition: transform var(--dur) var(--ease-out);
+}
+
+.wtb-nav__menu .menu-item-has-children:hover > a::after,
+.wtb-nav__menu .menu-item-has-children:focus-within > a::after {
+  transform: rotate(180deg);
+}
+
+/* The submenu stays `display: none` while closed, and the reveal is animated
+ * with `transition-behavior: allow-discrete` + `@starting-style` — the two
+ * features that make a transition run across a `display` change at all.
+ * Before those existed the declared opacity/transform transition here was
+ * dead code: a transition cannot start from `display: none`, so the submenu
+ * snapped open and shut while claiming to fade.
+ *
+ * `visibility: hidden` would also transition, and is more widely supported,
+ * but it is the WRONG mechanism for this menu: a hidden-but-visible-box
+ * submenu still contributes to its containing block's scrollable overflow,
+ * and `min-width: 12rem` anchored at the parent item's `left: 0` then pushes
+ * past the viewport for any item near the right edge — which is exactly where
+ * the `inline` header variant puts the whole menu. That would trade a dead
+ * animation for a horizontal scrollbar on every page. `display: none` cannot
+ * do that, because it produces no box at all.
+ *
+ * Degradation is graceful and is the status quo: a browser without
+ * `allow-discrete` ignores that transition component and shows the submenu
+ * instantly — today's behaviour, minus the pretence. */
+.wtb-nav__menu .sub-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 60;
+  display: none;
+  min-width: 12rem;
+  margin: 0;
+  padding: var(--space-xs);
+  list-style: none;
+  background-color: var(--popover);
+  color: var(--popover-foreground);
+  border: var(--rule);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity var(--dur) var(--ease-out),
+    transform var(--dur) var(--ease-out),
+    display var(--dur) allow-discrete;
+}
+
+.wtb-nav__menu .menu-item-has-children:hover > .sub-menu,
+.wtb-nav__menu .menu-item-has-children:focus-within > .sub-menu {
+  display: block;
+  opacity: 1;
+  transform: translateY(0);
+
+  /* The from-state for the open transition. Without it the submenu is already
+   * at its end values the moment it starts being rendered, and there is
+   * nothing to interpolate from. */
+  @starting-style {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.wtb-nav__menu .sub-menu a {
+  display: block;
+  min-height: 44px;
+  padding: 0.55rem 0.7rem;
+  border-radius: var(--radius-md);
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+.wtb-nav__menu .sub-menu a:hover {
+  background-color: var(--accent);
+}
+
+/*
+ * Responsive collapse, keyed on `.wtb-nav--enhanced` (Alpine adds it on
+ * init) — without JS the menu stays visible and the toggle stays hidden, so
+ * the nav is fully reachable server-rendered.
+ *
+ * Breakpoint is 48rem/768px, NOT the mockup's 860px: this is the theme's
+ * existing, e2e-pinned value (components.spec.mjs, navigation.spec.mjs).
+ * Changing it is a behaviour change with no design reason behind it, so the
+ * existing value wins — see the T4 report.
+ */
+@media (max-width: 48rem) {
+  .wtb-nav--enhanced .wtb-nav__toggle {
+    display: inline-flex;
+  }
+
+  .wtb-nav--enhanced .wtb-nav__menu {
+    display: none;
+    flex-direction: column;
+    /* The base rule sets `flex-wrap: wrap`, for the desktop inline row; a
+     * column-direction flex container that is STILL wrapping fills up to
+     * `max-height` and then wraps into a SECOND column instead of needing
+     * to scroll — scrollHeight stays equal to clientHeight because the
+     * overflow becomes horizontal columns, not vertical content. `nowrap`
+     * is what makes the max-height/overflow-y fix above actually scroll. */
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+  }
+
+  /* x-trap locks body scroll while the menu is open, so the menu must
+   * scroll itself or a long menu (or a phone in landscape) leaves items
+   * below the viewport unreachable. `dvh` (not `vh`) so mobile browser
+   * chrome doesn't lie about available height.
+   *
+   * P0 fix: this used to subtract a hand-computed sum ("bar padding-top +
+   * toggle height + menu margin-top") from 100dvh — but `.wtb-header__bar`
+   * has no `padding-top` at all (it is `min-height: 72px`, see above), so
+   * the subtrahend was wrong from the start, and it also assumed the
+   * `inline` header's layout while `.wtb-header--centered .wtb-header__bar`
+   * stacks wordmark + nav + actions in a column, starting the menu much
+   * lower on that variant while inheriting the exact same cap. Any of
+   * those values changing — the bar's height, the header variant, an
+   * admin's radius/font Customizer settings, the toggle's rendered size —
+   * silently reintroduces the same bug. A flat viewport fraction has no
+   * dependency on any other declaration: the header always sits at the top
+   * of the page, so menu-start + 60% of the viewport is on screen for
+   * either variant at any viewport height, and it still leaves a real
+   * scrollable area instead of collapsing to near-nothing at a short
+   * viewport. `overscroll-behavior: contain` stops the menu's scroll from
+   * chaining into the locked body. */
+  .wtb-nav--enhanced.wtb-nav--open .wtb-nav__menu {
+    display: flex;
+    max-height: 60dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  /* In the collapsed menu the submenu is a static, always-open block, not a
+   * floating dropdown — there is no hover on touch and the parent row
+   * already has focus. */
+  .wtb-nav--enhanced .wtb-nav__menu .sub-menu {
+    position: static;
+    display: block;
+    min-width: 0;
+    padding: 0.25rem 0 0.25rem 1rem;
+    border: 0;
+    box-shadow: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/*
+ * Colour-scheme switcher — styled as the mockup's `.icon-btn`. `display:
+ * none` stays the permanent base rule for the same progressive-enhancement
+ * reason as `.wtb-nav__toggle` above; Alpine reveals it via
+ * `.wtb-scheme-toggle--enhanced` once JS has run.
+ */
+.wtb-scheme-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  color: var(--secondary-foreground);
+  background-color: transparent;
+  border: 0;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.wtb-scheme-toggle:hover {
+  background-color: var(--accent);
+  color: var(--foreground);
+}
+
+.wtb-scheme-toggle--enhanced {
+  display: inline-flex;
+}
+
+.wtb-scheme-toggle__icon {
+  display: inline-flex;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wtb-nav__menu .menu-item-has-children > a::after,
+  .wtb-nav__menu .sub-menu {
+    transition: none;
+  }
+}

@@ -1,0 +1,375 @@
+/* src/css/adapter/content.css
+ * Mockup §14 "Sidebar layouts + blog + article", retargeted onto the
+ * existing wtb-* markup: template-parts/sidebar.php, content/{loop,
+ * content,content-excerpt}.php, comments.php, and core's widget/comment
+ * output (Setup.php's `before_widget`/`before_title`, WordPress's own
+ * default HTML5 comment-list template).
+ *
+ * NOT ported (no matching markup — see the T4 report):
+ * - `.widget-search`'s inline search icon (the core search widget renders
+ *   its own default form, not the mockup's custom markup)
+ * - `.recent-post`'s thumbnail + time layout (core's Recent Posts widget has
+ *   no thumbnail)
+ * `.tagcloud` below targets WordPress's REAL class for the tag-cloud widget
+ * (`wp_tag_cloud()`), not the mockup's invented `.tag-cloud` — this is a
+ * retarget, not an omission. Per-tag colour/shape is `.tag`'s job (T5).
+ *
+ * `.with-sidebar`'s grid (280px sidebar column) is NOT redefined here: the
+ * theme's existing `.wtb-layout--has-sidebar` (adapter/index.css) already
+ * does this job, e2e-pinned to a different column width and to a `.left`
+ * variant that does not exist (`sidebar_position` only supports `none` /
+ * `right` — see inc/Templates/Layout.php). Two container-layout systems for
+ * the same job is the "two vocabularies" mistake; the existing one wins.
+ * Likewise `.wtb-post-grid`'s grid-template-columns/breakpoints stay in
+ * index.css, pinned by components.spec.mjs/theme-mods.spec.mjs at specific
+ * column counts the mockup's static `repeat(3,1fr)` does not match.
+ */
+
+/* ---- Sidebar / widgets ------------------------------------------------- */
+
+.wtb-widget {
+  margin-bottom: var(--space-xl);
+}
+
+.wtb-widget:last-child {
+  margin-bottom: 0;
+}
+
+.wtb-widget__title {
+  margin-bottom: var(--space-sm);
+  padding-bottom: var(--space-sm);
+  color: var(--muted-foreground);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-bottom: var(--rule);
+}
+
+.wtb-widget ul li {
+  padding: 0;
+}
+
+.wtb-widget ul li a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  min-height: 44px;
+  color: var(--secondary-foreground);
+  font-size: var(--text-sm);
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.wtb-widget ul li a:hover {
+  color: var(--primary);
+}
+
+/* wp_tag_cloud()'s real markup — see the file header note. */
+.wtb-widget .tagcloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* ---- Blog list: post grid + card --------------------------------------- */
+
+.wtb-entry-card {
+  transition:
+    box-shadow var(--dur) var(--ease-out),
+    transform var(--dur) var(--ease-out);
+}
+
+.wtb-entry-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-3px);
+}
+
+/* Cards are flex columns and grid items stretch to equal height, so giving
+ * the body the free space is all that is needed to align footers across a
+ * row of posts with excerpts of different lengths. */
+.wtb-entry-card > section {
+  flex: 1;
+}
+
+/* Featured images arrive at whatever aspect ratio the author uploaded.
+ * Without a fixed ratio a row of cards is ragged; `cover` crops rather than
+ * distorts. */
+.wtb-entry-card > img:first-child {
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  object-fit: cover;
+}
+
+/* Category badges are printed back-to-back (`</a><a>`), so a post with two
+ * or more categories would otherwise have them touching. */
+.wtb-entry-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-top: 0.5rem;
+}
+
+.wtb-entry--excerpt .wtb-entry-title {
+  font-size: var(--text-md);
+  letter-spacing: -0.01em;
+}
+
+.wtb-entry--excerpt .wtb-entry-meta {
+  color: var(--muted-foreground);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.wtb-entry-summary {
+  color: var(--muted-foreground);
+  font-size: var(--text-sm);
+}
+
+.wtb-entry-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--primary);
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+
+.wtb-entry-more svg {
+  width: 15px;
+  height: 15px;
+  transition: transform var(--dur) var(--ease-out);
+}
+
+.wtb-entry-more:hover svg {
+  transform: translateX(3px);
+}
+
+/* ---- List-view page heading (index/archive/search) --------------------- */
+
+.wtb-archive-title {
+  font-size: var(--text-3xl);
+  letter-spacing: -0.03em;
+}
+
+/* ---- Single article ----------------------------------------------------- */
+
+.wtb-entry:not(.wtb-entry--excerpt) .wtb-entry-title {
+  font-size: var(--text-3xl);
+  letter-spacing: -0.03em;
+}
+
+.wtb-entry:not(.wtb-entry--excerpt) .wtb-entry-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.8rem;
+  margin-top: var(--space-xs);
+  color: var(--muted-foreground);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* `.prose`, retargeted onto the theme's existing content wrapper. */
+.wtb-entry-content {
+  max-width: var(--measure);
+  font-size: var(--text-md);
+  line-height: var(--lh-body);
+}
+
+.wtb-entry-content > * + * {
+  margin-top: var(--space-md);
+}
+
+.wtb-entry-content h2 {
+  margin-top: var(--space-xl);
+  font-size: var(--text-xl);
+}
+
+.wtb-entry-content h3 {
+  margin-top: var(--space-lg);
+  font-size: var(--text-lg);
+}
+
+.wtb-entry-content a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.wtb-entry-content blockquote {
+  margin-inline: 0;
+  padding-left: var(--space-lg);
+  border-left: 3px solid var(--primary);
+  color: var(--foreground);
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: var(--text-lg);
+  letter-spacing: -0.01em;
+}
+
+.wtb-entry-content ul {
+  padding-left: 1.4rem;
+  list-style: disc;
+}
+
+.wtb-entry-content ul li {
+  margin-top: 0.4rem;
+}
+
+.wtb-entry-content code {
+  padding: 0.15em 0.4em;
+  background-color: var(--secondary);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+}
+
+/* ---- Comments ------------------------------------------------------------
+ * Targets WordPress core's documented default HTML5 comment-list template
+ * (`add_theme_support( 'html5', [ …, 'comment-list' ] )`, declared in
+ * Setup.php): `.comment-body`, `.comment-author`, `.avatar`,
+ * `.comment-metadata`, `.comment-content`, `.comment-reply-link`,
+ * `.children` for nested replies. Not verified against a rendered page (no
+ * browser in this task) — verified against core's markup contract only.
+ */
+
+.wtb-comment-list > li + li {
+  margin-top: var(--space-lg);
+}
+
+.comment-body {
+  padding-top: var(--space-lg);
+  border-top: var(--rule);
+}
+
+.wtb-comment-list > li:first-child > .comment-body {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.comment-author {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xs);
+}
+
+.comment-author .avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+}
+
+.comment-author .fn {
+  color: var(--foreground);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-style: normal;
+}
+
+.comment-metadata {
+  color: var(--muted-foreground);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.comment-metadata a {
+  color: inherit;
+}
+
+.comment-content {
+  margin-top: var(--space-sm);
+  font-size: var(--text-sm);
+  line-height: var(--lh-body);
+}
+
+.comment-content > * + * {
+  margin-top: var(--space-sm);
+}
+
+.comment-reply-link {
+  display: inline-block;
+  margin-top: var(--space-sm);
+  color: var(--primary);
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+
+.wtb-comment-list .children {
+  margin-top: var(--space-lg);
+  margin-left: var(--space-xl);
+  list-style: none;
+}
+
+/* Finding 4 (P1): `margin-left` on `.children` compounds per level with no
+ * cap — WordPress permits deeper threads than any fixed-width column can
+ * indent legibly, and at 320px a few levels already squeeze the text to
+ * nothing. Chained descendant selectors are how CSS expresses "depth" here
+ * (there is no depth counter): from the third nested `.children` on, stop
+ * adding further indent, so the total stays capped at two levels' worth
+ * (deeper replies still read as nested — the border/spacing above still
+ * marks each `.comment-body` — they just stop marching further right). The
+ * chain also matches every depth beyond 3, not only exactly 3, because a
+ * depth-5 reply still has 3+ `.children` ancestors. */
+.wtb-comment-list .children .children .children {
+  margin-left: 0;
+}
+
+@media (max-width: 30rem) {
+  .wtb-comment-list .children {
+    margin-left: var(--space-md);
+  }
+
+  .wtb-comment-list .children .children {
+    margin-left: var(--space-sm);
+  }
+
+  .wtb-comment-list .children .children .children {
+    margin-left: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wtb-entry-card,
+  .wtb-entry-more svg {
+    transition: none;
+  }
+}
+
+/* ---- Comment form -------------------------------------------------------
+ * Not mockup-derived (the mockup has no comment-form section) — these two
+ * rules already existed in adapter/index.css and are moved here as part of
+ * this file taking over "comment form" (T4's task overview lists it
+ * explicitly). Comments preserved verbatim; they are still accurate.
+ */
+
+/*
+ * Core's wp_list_comments() walker emits <p class="comment-awaiting-moderation">
+ * for a held comment. Mapping it onto the alert look here is the adapter layer
+ * doing its job — styling what a third party rendered. Replacing the walker to
+ * change one paragraph would be a much larger surface to maintain across WP
+ * releases for the same result.
+ */
+.comment-awaiting-moderation {
+  display: block;
+  margin-top: 0.5rem;
+  padding: 0.75rem 1rem;
+  color: var(--muted-foreground);
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 0.5rem);
+  font-size: 0.875rem;
+}
+
+/* The comment form's cookie-consent row: core emits the checkbox and its
+ * label as siblings inside .comment-form-cookies-consent. */
+.comment-form-cookies-consent {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}

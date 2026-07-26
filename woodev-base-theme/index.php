@@ -15,7 +15,7 @@ get_header();
 	<div class="wtb-layout__content">
 		<?php if ( is_home() && ! is_front_page() ) : ?>
 			<header class="wtb-archive-header mb-8">
-				<h1 class="wtb-archive-title text-3xl font-semibold tracking-tight"><?php echo esc_html( single_post_title( '', false ) ); ?></h1>
+				<h1 class="wtb-archive-title"><?php echo esc_html( single_post_title( '', false ) ); ?></h1>
 			</header>
 		<?php else : ?>
 			<?php

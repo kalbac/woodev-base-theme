@@ -7,9 +7,9 @@
 
 declare(strict_types=1);
 ?>
-<footer class="wtb-footer border-t border-[var(--border)]">
-	<div class="wtb-container flex flex-col items-center gap-2 text-sm text-[var(--muted-foreground)]">
-		<p class="font-semibold text-[var(--foreground)]"><?php echo esc_html( get_bloginfo( 'name' ) ); ?></p>
+<footer class="wtb-footer">
+	<div class="wtb-container wtb-footer__simple">
+		<p class="wtb-footer__brand"><?php echo esc_html( get_bloginfo( 'name' ) ); ?></p>
 
 		<?php if ( has_nav_menu( 'footer' ) ) : ?>
 			<?php
@@ -19,14 +19,14 @@ declare(strict_types=1);
 					'container'            => 'nav',
 					'container_class'      => 'wtb-footer-nav',
 					'container_aria_label' => __( 'Footer', 'woodev-base-theme' ),
-					'menu_class'           => 'wtb-footer-nav__menu flex flex-wrap items-center gap-4 list-none',
+					'menu_class'           => 'wtb-footer-nav__menu',
 					'fallback_cb'          => false,
 				]
 			);
 			?>
 		<?php endif; ?>
 
-		<p>
+		<p class="wtb-footer__copy">
 			<?php
 			printf(
 				/* translators: 1: current year, 2: site name. */

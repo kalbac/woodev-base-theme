@@ -1,0 +1,132 @@
+/* src/css/adapter/base.css
+ * Mockup §2 "Base / reset": global element defaults.
+ *
+ * `.wrap` / `.wrap-wide` from the mockup are deliberately NOT ported: the
+ * theme already has a container wrapper, `.wtb-container` (defined in
+ * adapter/index.css), and it is wired to a Customizer setting
+ * (`--wtb-container-max`, spec §6 "Layout") that predates this design. Adding
+ * a second, static-width container class would be the "two vocabularies"
+ * mistake the port instructions warn about. See the T4 report for the full
+ * reasoning.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  overflow-x: clip;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  overflow-x: clip;
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--lh-body);
+  font-feature-settings: 'cv05' 1;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  transition:
+    background-color var(--dur) var(--ease-out),
+    color var(--dur) var(--ease-out);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--foreground);
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: var(--lh-tight);
+  letter-spacing: -0.02em;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+button,
+input,
+select,
+textarea {
+  color: inherit;
+  font: inherit;
+}
+
+/*
+ * The design's own focus ring (--ring + --ring-halo, mockup §17 rationale):
+ * one rule, :where()-wrapped so a more specific component focus-visible rule
+ * can still win without needing !important.
+ */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  border-radius: var(--radius-sm);
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+::selection {
+  background-color: var(--select-bg);
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/*
+ * Accessible skip-link (WCAG 2.1 SC 2.4.1 Bypass Blocks): off-screen until it
+ * receives keyboard focus, then moves into view. This rule is only the
+ * visual half — conformance also needs the skip target to be focusable
+ * (header.php's `#wtb-content` carries `tabindex="-1"` for that). The
+ * `top`-based reveal (rather than the mockup's `position: fixed`) is the
+ * theme's existing, e2e-pinned mechanism (navigation.spec.mjs) — this is a
+ * restyle of it, not a re-mechanism.
+ */
+.wtb-skip-link {
+  position: absolute;
+  top: -100%;
+  left: var(--space-md);
+  z-index: 200;
+  padding: 0.6rem 1rem;
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  border-radius: var(--radius-md);
+  transition: top var(--dur) var(--ease-out);
+}
+
+.wtb-skip-link:focus {
+  top: var(--space-md);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body,
+  .wtb-skip-link {
+    transition: none;
+  }
+}

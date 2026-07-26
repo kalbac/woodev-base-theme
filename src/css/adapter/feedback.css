@@ -1,0 +1,311 @@
+/* src/css/adapter/feedback.css
+ * Mockup §6 "Badges · tags · alerts · breadcrumbs · pagination", ported onto
+ * Basecoat's real component contracts (dist/components/{badge,alert,
+ * breadcrumb}.css) plus two components Basecoat does not ship at all (`.tag`,
+ * a plain project class) and WordPress/WooCommerce's own markup (pagination,
+ * store notices) where that is what actually renders.
+ */
+
+/* -- Badges ---------------------------------------------------------------
+ * Basecoat's badge.css already supplies overflow/whitespace/focus-ring via
+ * `@apply` — colour is `data-variant`, exactly as this codebase already uses
+ * it (inc/template-tags.php emits `data-variant="secondary"` on category
+ * badges; content-product.php's out-of-stock badge is bare, i.e. the
+ * default). `data-variant` values below follow Basecoat's own pack
+ * convention (dist/styles/vega.css: `.badge:not([data-variant])` /
+ * `[data-variant='primary']` is the default; secondary/outline/destructive/
+ * ghost are the others) rather than the mockup's `.badge--sale` etc. BEM
+ * classes, per the "class-name mapping is part of the port" instruction —
+ * `.badge[data-variant]` is already live in this codebase, the mockup's BEM
+ * names are not. */
+.badge {
+  gap: 0.35em;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.4;
+}
+
+.badge:not([data-variant]),
+.badge[data-variant='primary'] {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.badge[data-variant='secondary'] {
+  background-color: var(--secondary);
+  color: var(--secondary-foreground);
+}
+
+.badge[data-variant='outline'] {
+  background-color: transparent;
+  color: var(--foreground);
+  border: 1px solid var(--border);
+}
+
+.badge[data-variant='destructive'] {
+  background-color: var(--destructive);
+  color: var(--destructive-foreground);
+}
+
+.badge[data-variant='ghost'] {
+  background-color: var(--accent);
+  color: var(--accent-foreground);
+}
+
+/* -- Tags -------------------------------------------------------------
+ * Not a Basecoat class at all (grep of node_modules/basecoat-css confirms no
+ * `.tag` anywhere) — a plain project component for filter chips / post tags.
+ * Forward groundwork: nothing in the template hierarchy renders `.tag` yet. */
+.tag {
+  position: relative;
+  display: inline-flex;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  color: var(--secondary-foreground);
+  background-color: var(--card);
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+/* Tap-target floor (mockup §18b): the visible chip stays compact, the hit
+ * area does not shrink below 44px. */
+.tag::after {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
+}
+
+.tag:hover {
+  border-color: var(--foreground);
+  color: var(--foreground);
+}
+
+.tag:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* -- Alerts -----------------------------------------------------------
+ * Basecoat's `.alert` itself is `position:relative; width:100%` only — no
+ * display, no colour. Its real child contract: `> :is(h2..h6, strong,
+ * [data-title])` is the title, `> section` the body, `> svg` an optional
+ * leading icon. All three ARE what renders today: 404.php / content-none.php
+ * use `<h1 data-title>` / `<h2>` + `<section>` + a leading `woodev_base_icon()`
+ * SVG; Setup.php's password-protected wrapper uses `<h2>` + `<section>`
+ * with no icon. `data-variant='destructive'` is forward groundwork (e.g. a
+ * future validation-error alert) — nothing emits it yet. */
+/* Finding 2 (P1): the live markup (404.php, content-none.php) is icon +
+ * title + section — THREE siblings — but a single flex row lays all three
+ * out side by side, so the heading and body text sit next to each other
+ * instead of stacking (worse at 320px, worse again with ~30% longer Russian
+ * copy). Basecoat's own `.alert` (dist/components/alert.css) supplies NO
+ * icon layout at all — it is `position: relative; width: 100%` only, plus a
+ * `grid` on `.alert > section` for that section's OWN internal paragraph
+ * stacking — so there is no icon/title/section contract to inherit; the
+ * grid below is this file's addition, reconciled with the markup that
+ * actually renders rather than the two-child shape the mockup assumed. */
+.alert {
+  display: grid;
+  gap: 0.25rem;
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background-color: var(--card);
+}
+
+/* `h1` is explicit here, not incidental: 404.php's alert IS that page's
+ * main heading (`<h1 class="wtb-archive-title" data-title>`) — correct
+ * HTML, since a 404 has no other h1 on the page — while content-none.php's
+ * is an `<h2>` (that view already owns a page-level h1 elsewhere). Both
+ * would still match via `[data-title]` alone, but naming `h1`/`h2`
+ * explicitly means the selector's coverage is stated, not a side effect of
+ * the attribute selector happening to catch it. */
+.alert > :is(h1, h2, h3, h4, h5, h6, strong, [data-title]) {
+  font-weight: 600;
+}
+
+.alert > section {
+  font-size: var(--text-sm);
+  color: var(--muted-foreground);
+}
+
+/* With no icon (Setup.php's password-protected wrapper: just `<h2>` +
+ * `<section>`) the grid above stays a single implicit column, so title and
+ * body already stack correctly with no extra rule needed. With an icon, add
+ * a second column and pin title + section into it (both, explicitly — grid
+ * auto-placement would otherwise walk the section into a phantom second
+ * icon row instead of under the title) so the icon sits beside two STACKED
+ * rows rather than one flattened row. */
+.alert:has(> svg) {
+  grid-template-columns: auto 1fr;
+  column-gap: 0.75rem;
+  align-items: start;
+}
+
+.alert:has(> svg) > svg {
+  grid-column: 1;
+  grid-row: span 2;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+}
+
+/* Finding (P2): pinning this to `:is(h1..h6, strong, [data-title]), section`
+ * only worked for exactly the three siblings the live templates render
+ * today (icon + title + section) — any FOURTH ordinary child (a retry
+ * button, a trailing paragraph, a form placed after `<section>`) matched
+ * neither selector, so grid auto-placement walked it into the first
+ * available cell scanning row-by-row, which is column 1 — the narrow icon
+ * column, not the content column. `:not(svg)` covers every non-icon child
+ * regardless of element type or how many there are: column 2 stacks all of
+ * them in DOM order via ordinary auto-placement, column 1 keeps exactly the
+ * icon. */
+.alert:has(> svg) > :not(svg) {
+  grid-column: 2;
+}
+
+.alert[data-variant='destructive'] {
+  border-color: color-mix(in oklab, var(--destructive) 45%, var(--border));
+  background-color: color-mix(in oklab, var(--destructive) 8%, var(--card));
+}
+
+.alert[data-variant='destructive'] > svg {
+  color: var(--destructive);
+}
+
+.alert[data-variant='success'] {
+  border-color: color-mix(in oklab, var(--success) 40%, var(--border));
+  background-color: color-mix(in oklab, var(--success) 8%, var(--card));
+}
+
+.alert[data-variant='success'] > svg {
+  color: var(--success);
+}
+
+.alert[data-variant='info'] {
+  border-color: color-mix(in oklab, var(--primary) 40%, var(--border));
+  background-color: color-mix(in oklab, var(--primary) 7%, var(--card));
+}
+
+.alert[data-variant='info'] > svg {
+  color: var(--primary);
+}
+
+/* WooCommerce's store notices (`.woocommerce-message` / `-info` / `-error`)
+ * deliberately do NOT live here. They are declared un-layered in src/css/woo.css
+ * instead: WooCommerce ships those same classes in its own un-layered stylesheet,
+ * and un-layered CSS beats @layer adapter regardless of specificity
+ * (docs/gotchas/tailwind-v4-layer-precedence.md). A copy here would be dead code
+ * that reads like coverage. The generic `.alert` above is Basecoat's class and
+ * genuinely belongs to this file. */
+
+/* -- Breadcrumbs --------------------------------------------------------
+ * Basecoat's real contract: `.breadcrumb > ol`, `li`, `a`,
+ * `[aria-current='page']` — element/attribute based, not the mockup's flat
+ * `.sep`/`[aria-current]` shorthand. Forward groundwork: no template calls a
+ * breadcrumb function yet (grepped — none exists in inc/template-tags.php). */
+.breadcrumb {
+  flex-wrap: wrap;
+  font-size: var(--text-sm);
+  color: var(--muted-foreground);
+}
+
+.breadcrumb a:hover {
+  color: var(--foreground);
+}
+
+.breadcrumb li > span[aria-hidden='true'] {
+  color: var(--border-strong);
+}
+
+.breadcrumb [aria-current='page'] {
+  color: var(--foreground);
+}
+
+/* -- Pagination -----------------------------------------------------------
+ * `the_posts_pagination()` / `the_comments_pagination()` (template-parts/
+ * content/pagination.php, comments.php) are WordPress core functions and
+ * render core's OWN markup and classes, not the mockup's `.pagination a` /
+ * `.pagination span` / `.is-current` / `.dots`: a <nav class="navigation
+ * pagination"> wrapping <div class="nav-links"> of `.page-numbers` links/
+ * spans, current page as `.page-numbers.current`, the ellipsis as
+ * `.page-numbers.dots`. Retargeted onto that real contract. */
+/* Finding 3 (P1): core prints prev + first/last + up to two ellipses +
+ * neighbours + next mid-list; at the 44px minimum hit size that row needs
+ * roughly 440px and overflows horizontally at 320-375px with no wrap. */
+.pagination .nav-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+}
+
+.pagination .page-numbers {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  background-color: var(--card);
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
+}
+
+a.page-numbers:hover {
+  border-color: var(--foreground);
+  background-color: var(--accent);
+}
+
+a.page-numbers:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.page-numbers.current {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
+}
+
+.page-numbers.dots {
+  border: 0;
+  background-color: transparent;
+}
+
+/* Core's pagination heading (`<h2 class="screen-reader-text">`) has nowhere
+ * else to be visually hidden: this theme defines no site-wide
+ * `.screen-reader-text` utility (only Tailwind's own `.sr-only`, used
+ * elsewhere), so without this it renders visibly. Scoped to `.pagination`
+ * only — the class is undefined outside it too, which is a base.css/T4
+ * gap beyond this file's ownership; see the task report. */
+.pagination .screen-reader-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tag,
+  .breadcrumb a,
+  .pagination .page-numbers {
+    transition-duration: 0.01ms;
+  }
+}

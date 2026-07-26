@@ -117,12 +117,14 @@ final class AssetsProductionTest extends WP_UnitTestCase {
 		$dist_uri = get_template_directory_uri() . '/assets/dist';
 		$html     = self::render_front_end_assets();
 
-		// The default style_preset is vega, and this suite never changes it.
+		// One bundle (ADR-008): no per-pack theme_mod resolution, so the manifest
+		// key is a fixed string, not something this suite has to keep in sync
+		// with a stored setting.
 		AssetMarkup::assert_stylesheet_link(
 			$html,
 			'woodev-base-style-css',
-			$dist_uri . '/' . $manifest['src/css/packs/vega.css']['file'],
-			'Expected wp_enqueue_style( \'woodev-base-style\', … ) to print the exact file the manifest names for the vega pack.'
+			$dist_uri . '/' . $manifest['src/css/app.css']['file'],
+			'Expected wp_enqueue_style( \'woodev-base-style\', … ) to print the exact file the manifest names for the CSS entry.'
 		);
 
 		AssetMarkup::assert_script_module(
@@ -131,5 +133,117 @@ final class AssetsProductionTest extends WP_UnitTestCase {
 			$dist_uri . '/' . $manifest['src/js/app.js']['file'],
 			'Expected wp_enqueue_script_module( \'woodev-base-app\', … ) to print the exact file the manifest names for the JS entry.'
 		);
+	}
+
+	/**
+	 * Assets::preload_display_font() (T3): core's own wp_preload_resources()
+	 * (hooked to wp_head, WP 6.1+) must have turned our filtered entry into a
+	 * real `<link rel="preload">` element — this is the only level that
+	 * proves core actually consumed the array shape our unit tests pin,
+	 * rather than merely proving our own filter callback returns the right
+	 * PHP array.
+	 *
+	 * The expected subset is computed the same way the production code
+	 * computes it (Russian locale → cyrillic, else latin) rather than
+	 * hardcoded, so this assertion is correct under whatever locale the
+	 * integration harness actually runs with instead of assuming en_US.
+	 */
+	public function test_the_display_font_preload_link_is_printed_with_crossorigin(): void {
+		$subset        = \str_starts_with( determine_locale(), 'ru' ) ? 'cyrillic' : 'latin';
+		$expected_href = get_template_directory_uri() . '/assets/fonts/golos-text-500-800-' . $subset . '.woff2';
+
+		self::assert_font_preload_link( self::render_front_end_assets(), $expected_href );
+	}
+
+	/**
+	 * Re-critic finding (B1, 25.07.2026): integration-level proof that the
+	 * `system` font Customizer setting actually suppresses the preload link
+	 * a real WordPress request prints — not just that
+	 * Assets::preload_display_font() returns the right bare PHP array in
+	 * isolation, which the unit suite (AssetsPreloadTest) already covers.
+	 *
+	 * Runs in its own process because render_front_end_assets() memoizes its
+	 * markup in a function-static for the lifetime of the PHPUnit process
+	 * (see that method's docblock): every OTHER test in this file relies on
+	 * that shared cache reflecting the harness's DEFAULT font setting (no
+	 * theme_mod stored -> Settings::FONT_IDENTITY). Setting the `font`
+	 * theme_mod to `system` and rendering in the SAME process would poison
+	 * that cache — whichever test ran next would see this test's markup
+	 * instead of its own render. Isolating this test avoids that entirely.
+	 *
+	 * DOC-COMMENT annotations, not PHP 8 attributes: this suite runs on
+	 * PHPUnit ^9.6 (see tests/integration/composer.json and the note atop
+	 * phpunit.xml.dist — the WordPress core test suite is PHPUnit-9-only),
+	 * and `PHPUnit\Framework\Attributes\RunInSeparateProcess` does not exist
+	 * before PHPUnit 10. Using the attribute here silently no-ops instead of
+	 * erroring (this was caught by the mutation check: it let the test see
+	 * an earlier test's memoized, non-system-mode markup and go green for
+	 * the wrong reason) — the classic annotations below are what PHPUnit
+	 * 9.6 actually understands.
+	 *
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_the_system_font_mode_prints_no_display_font_preload_link(): void {
+		set_theme_mod( 'font', 'system' );
+
+		self::assertStringNotContainsString(
+			'golos-text-500-800',
+			self::render_front_end_assets(),
+			'A preload link for the display font was printed even though the "font" Customizer setting is "system" — Assets::preload_display_font() should have skipped it entirely.'
+		);
+	}
+
+	/**
+	 * Parses the captured markup with DOMDocument (see AssetMarkup's docblock
+	 * for why: regex-parsing HTML attributes has already cost this codebase
+	 * three review rounds) and asserts a `rel="preload"` link with this exact
+	 * `href` carries `as="font"` and `crossorigin="anonymous"`.
+	 *
+	 * Not folded into AssetMarkup itself: that class is shared with other
+	 * suites this task does not own, and duplicating the small DOMDocument
+	 * fragment-parsing idiom here is cheaper than widening a shared file's
+	 * surface for one caller.
+	 *
+	 * @param string $html Captured wp_head/wp_footer markup.
+	 * @param string $href The exact preload `href` that must be present.
+	 */
+	private static function assert_font_preload_link( string $html, string $href ): void {
+		if ( '' === $html ) {
+			throw new \RuntimeException(
+				'AssetsProductionTest: the captured wp_head/wp_footer markup is empty. Nothing was rendered at all.'
+			);
+		}
+
+		$dom      = new \DOMDocument();
+		$previous = \libxml_use_internal_errors( true );
+
+		try {
+			$loaded = $dom->loadHTML( '<body>' . $html . '</body>', \LIBXML_HTML_NOIMPLIED | \LIBXML_HTML_NODEFDTD );
+		} finally {
+			\libxml_clear_errors();
+			\libxml_use_internal_errors( $previous );
+		}
+
+		self::assertTrue( $loaded, 'AssetsProductionTest: DOMDocument::loadHTML() reported failure on the captured wp_head/wp_footer markup.' );
+
+		$found = false;
+
+		foreach ( $dom->getElementsByTagName( 'link' ) as $link ) {
+			if ( ! $link instanceof \DOMElement ) {
+				continue;
+			}
+
+			if ( 'preload' !== \strtolower( $link->getAttribute( 'rel' ) ) || $href !== $link->getAttribute( 'href' ) ) {
+				continue;
+			}
+
+			self::assertSame( 'font', $link->getAttribute( 'as' ), 'The preload link is missing as="font".' );
+			self::assertSame( 'anonymous', $link->getAttribute( 'crossorigin' ), 'The preload link is missing crossorigin="anonymous".' );
+			$found = true;
+			break;
+		}
+
+		self::assertTrue( $found, "Expected a rel=\"preload\" link with href \"{$href}\" in the rendered markup, none found." );
 	}
 }

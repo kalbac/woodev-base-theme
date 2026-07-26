@@ -83,12 +83,12 @@ final class AssetsDevModeTest extends WP_UnitTestCase {
 		$html = self::render_front_end_assets();
 
 		self::assertStringContainsString( 'http://localhost:5173/@vite/client', $html );
-		self::assertStringContainsString( 'http://localhost:5173/src/css/packs/vega.css', $html );
+		self::assertStringContainsString( 'http://localhost:5173/src/css/app.css', $html );
 		self::assertStringContainsString( 'http://localhost:5173/src/js/app.js', $html );
 	}
 
 	/**
-	 * The pack CSS is the one that fails silently: Vite declares it a separate
+	 * The CSS entry is the one that fails silently: Vite declares it a separate
 	 * Rollup input, so app.js never imports it, and omitting it renders a 200
 	 * with working JavaScript and no Tailwind, Basecoat or tokens at all.
 	 * See docs/gotchas/vite-css-entry-is-not-imported-by-the-js-entry.md.
@@ -99,11 +99,11 @@ final class AssetsDevModeTest extends WP_UnitTestCase {
 	 * and matched `<scripture` on the tag name. See
 	 * docs/gotchas/three-rounds-of-fixes-means-change-the-approach.md.
 	 */
-	public function test_the_pack_css_is_a_script_module_not_a_stylesheet(): void {
+	public function test_the_style_bundle_is_a_script_module_not_a_stylesheet(): void {
 		AssetMarkup::assert_script_module(
 			self::render_front_end_assets(),
 			'woodev-base-style-js-module',
-			'http://localhost:5173/src/css/packs/vega.css',
+			'http://localhost:5173/src/css/app.css',
 			'The dev server serves the CSS entry as a JS module; a plain stylesheet element would apply nothing.'
 		);
 	}

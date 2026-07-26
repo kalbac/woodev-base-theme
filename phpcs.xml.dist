@@ -14,6 +14,14 @@
 	<exclude-pattern>tests/integration/vendor/*</exclude-pattern>
 	<exclude-pattern>tests/e2e/*</exclude-pattern>
 	<exclude-pattern>tests/js/*</exclude-pattern>
+	<!--
+	DEVIATION: this one fixture is deliberately, permanently invalid PHP — it
+	stands in for a palettes.php truncated mid-write (PalettesTest's
+	broken-syntax-theme case), proving Palettes::require_file() catches a real
+	ParseError rather than merely a well-formed-but-wrong file. Every other
+	fixture under tests/php/fixtures/ is valid PHP and stays linted.
+	-->
+	<exclude-pattern>tests/php/fixtures/broken-syntax-theme/*</exclude-pattern>
 
 	<arg name="extensions" value="php"/>
 	<arg name="basepath" value="."/>

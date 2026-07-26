@@ -1,0 +1,173 @@
+/* src/css/adapter/components.css
+ * The rest of the T5 component kit: cards, tabs, accordion — restyled onto
+ * Basecoat's real contracts (dist/components/{card,tabs,accordion}.css).
+ * No single mockup section maps to this file (see the T5 task report for
+ * the file-layout decision); it groups what mockup §4–§6 buttons/forms/
+ * feedback files don't cover.
+ *
+ * table, dialog, drawer, dropdown-menu and tooltip are deliberately absent:
+ * the mockup never draws Basecoat's generic `.table`/`.dialog` classes (only
+ * `.shop_table`, a WooCommerce-specific shape that is T6's), and
+ * dropdown-menu/drawer only appear in the mockup's header section (T4's).
+ * ADR-008's own policy — "components the mockup does not draw... must be
+ * styled in the identity's language as they are FIRST USED" — applies:
+ * styling them speculatively now would be exactly the untested-by-
+ * construction dead weight docs/specs/2026-07-23-component-tail-design.md
+ * warned about for the previous component pass.
+ */
+
+/* -- Cards ------------------------------------------------------------
+ * Basecoat's `.card` is `display:flex; flex-direction:column` with element
+ * children (`> header`, `> section`, `> footer`) — structural only, no
+ * border/radius/background of its own. `.card` IS what renders today:
+ * content-excerpt.php's `wtb-entry-card card` and content-product.php's
+ * `wtb-product-card card` (mockup itself never uses the class `.card` at
+ * all — it invents `.post-card` and styles raw `li.product` instead, so this
+ * is a retarget onto the class the templates actually emit, not a port of
+ * any single mockup rule).
+ *
+ * HANDOFF: this generic skin is real for the blog card (`.wtb-entry-card`,
+ * T4/content.css layers its specifics on top, no competing un-layered CSS).
+ * It is NOT reliable for the product card: WooCommerce's own plugin CSS, if
+ * still enqueued, is un-layered and beats `@layer adapter` regardless of
+ * specificity (docs/gotchas/tailwind-v4-layer-precedence.md) — src/css/woo.css
+ * already re-declares `.wtb-product-card`'s shell un-layered for exactly
+ * this reason (see its "Product card" section, pre-existing from `faf7801`)
+ * and T6 owns reconciling that skin with this one, per the plan. */
+.card {
+  border: var(--rule);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background-color: var(--card);
+  transition:
+    box-shadow var(--dur) var(--ease-out),
+    transform var(--dur) var(--ease-out),
+    border-color var(--dur) var(--ease-out);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-3px);
+  border-color: var(--border-strong);
+}
+
+/* Cards are commonly link wrappers (a post title link inside `> header`) —
+ * giving the whole card a visible ring when that inner link is keyboard-
+ * focused is the a11y equivalent of the hover lift above. */
+.card:has(a:focus-visible) {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition-duration: 0.01ms;
+  }
+
+  .card:hover {
+    transform: none;
+  }
+}
+
+/* -- Tabs -------------------------------------------------------------
+ * Styled against Basecoat's real ARIA contract (`.tabs > [role='tablist']
+ * > [role='tab']`, `[role='tabpanel']`), per this task's explicit
+ * instruction — not the mockup's own `.tablist`/`.tab` classes, and not
+ * reimplemented: Basecoat's own vanilla JS (basecoat-css/tabs, ADR-004)
+ * drives selection/keyboard nav; this only supplies colour, spacing and
+ * the missing focus style.
+ *
+ * Deferred from M1 (docs/specs/2026-07-23-component-tail-design.md: "tabs
+ * and accordion → M2 ... in M2 they have a real home, the WooCommerce
+ * single-product tabs"). That home (single-product template) has not landed
+ * yet — T6's scope, PHP templates, out of this task's CSS-only reach — so
+ * nothing in this theme currently renders `role="tablist"`. This is forward
+ * groundwork, matching the brief's explicit instruction to build it now
+ * against Basecoat's contract so the single-product template gets a
+ * finished component the moment it emits the markup. */
+.tabs > [role='tablist'] {
+  gap: 2px;
+  border-bottom: var(--rule);
+  overflow-x: auto;
+}
+
+.tabs > [role='tablist'] > [role='tab'] {
+  padding: 0.8rem 1rem;
+  min-height: 48px;
+  border-bottom: 2px solid transparent;
+  font-weight: 500;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.tabs > [role='tablist'] > [role='tab']:hover {
+  color: var(--foreground);
+}
+
+.tabs > [role='tablist'] > [role='tab'][aria-selected='true'] {
+  color: var(--foreground);
+  border-bottom-color: var(--primary);
+}
+
+/* Basecoat's `[role='tab']` sets `outline-none` with no replacement — same
+ * a11y gap as `.btn`. Inset offset because the tab sits flush against the
+ * tablist's bottom border; an outer ring would clip against neighbours. */
+.tabs > [role='tablist'] > [role='tab']:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+
+.tabs > [role='tabpanel'] {
+  padding-top: var(--space-lg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tabs > [role='tablist'] > [role='tab'] {
+    transition-duration: 0.01ms;
+  }
+}
+
+/* -- Accordion --------------------------------------------------------
+ * Basecoat's `.accordion > details > summary` contract, driven by the
+ * browser's native `<details>` disclosure behaviour (no JS at all needed for
+ * open/close — Basecoat only adds the chevron-rotate animation via
+ * `basecoat-css/accordion` for the "only one open at a time" variant, which
+ * this theme does not currently opt into). Same forward-groundwork status as
+ * tabs: no template renders `.accordion` yet. */
+.accordion > details {
+  border-bottom: var(--rule);
+}
+
+.accordion > details > summary {
+  padding: var(--space-md) 0;
+  font-weight: 600;
+  gap: var(--space-sm);
+}
+
+.accordion > details > summary:hover {
+  color: var(--primary);
+}
+
+/* Basecoat's `.accordion > details > summary` also sets `outline-none`. */
+.accordion > details > summary:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.accordion > details > :not(summary) {
+  padding-bottom: var(--space-md);
+  color: var(--muted-foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Basecoat's collapsible.css (dist/components/collapsible.css) animates
+   * EVERY <details> element's open/close via `::details-content` — scoped
+   * to `.accordion` here because that is this file's ownership boundary;
+   * nothing else in the current template hierarchy renders a bare
+   * <details>. */
+  .accordion > details::details-content,
+  .accordion > details > summary > svg:last-child {
+    transition-duration: 0.01ms;
+  }
+}

@@ -7,9 +7,9 @@
 
 declare(strict_types=1);
 ?>
-<header class="wtb-header wtb-header--centered border-b border-[var(--border)]">
-	<div class="wtb-container flex flex-col items-center gap-4 text-center">
-		<a class="font-semibold" href="<?php echo esc_url( home_url( '/' ) ); ?>"><?php echo esc_html( get_bloginfo( 'name' ) ); ?></a>
+<header class="wtb-header wtb-header--centered">
+	<div class="wtb-container wtb-header__bar">
+		<a class="wtb-wordmark" href="<?php echo esc_url( home_url( '/' ) ); ?>"><?php echo esc_html( get_bloginfo( 'name' ) ); ?></a>
 
 		<?php get_template_part( 'template-parts/header/navigation' ); ?>
 

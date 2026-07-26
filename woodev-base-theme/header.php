@@ -21,4 +21,4 @@ declare(strict_types=1);
 
 <?php get_template_part( 'template-parts/header/' . \Woodev\Theme\Base\Templates\Layout::header_variant() ); ?>
 
-<main id="wtb-content" class="wtb-container">
+<main id="wtb-content" class="wtb-container" tabindex="-1">

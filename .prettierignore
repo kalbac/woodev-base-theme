@@ -17,6 +17,12 @@ woodev-base-theme/theme.json
 # artifacts and burying real edits in whitespace noise.
 *.md
 
+# The approved visual-identity mockup: verbatim exports from the design tool,
+# and the source of truth ADR-008 points at. They are read as a record of what
+# was approved, never executed, so reformatting them would mutate an approved
+# artifact to satisfy a linter that has no claim on it.
+docs/design/v2-mockup/
+
 # Serena's own project state. It rewrites these files itself, with native line
 # endings by design, so Prettier reformatting them would be a standing fight
 # between two tools over a file neither of them owns. .gitattributes exempts

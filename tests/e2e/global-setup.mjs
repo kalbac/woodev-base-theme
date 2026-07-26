@@ -29,6 +29,8 @@
 
 import { execSync } from 'node:child_process';
 
+/** The theme under test. Must match style.css's directory name. */
+const THEME_SLUG = 'woodev-base-theme';
 /** Number of posts to seed — comfortably over the default 10/page. */
 const POST_COUNT = 12;
 /** Slug of the category every seeded post is filed under. */
@@ -98,6 +100,30 @@ function reseedSidebarWidget() {
 
 export default function globalSetup() {
   const log = (...args) => console.log('[e2e:seed]', ...args);
+
+  // Activate the theme FIRST, and assert it took.
+  //
+  // wp-env's `themes` key installs a theme without activating it, leaving a
+  // bundled default active (docs/gotchas/wp-env-installs-themes-without-
+  // activating-them.md). This setup used to assume someone had already
+  // activated ours, which held only as long as the environment survived
+  // between sessions. On a freshly created :8888 the very next line fails with
+  // `Invalid location primary` — because Twenty Twenty-Five registers no such
+  // menu location — and the error names the menu, not the real cause. Every
+  // minute spent reading that message is a minute spent on the wrong problem.
+  //
+  // The Woo suite has always done this; the base suite simply never did.
+  log(`activating ${THEME_SLUG} on http://localhost:8888 …`);
+  wp(`theme activate ${THEME_SLUG}`);
+  const activeTheme = wp('theme list --status=active --field=name');
+
+  if (activeTheme !== THEME_SLUG) {
+    throw new Error(
+      `[e2e:seed] expected "${THEME_SLUG}" to be the active theme on :8888, got "${activeTheme}"`,
+    );
+  }
+
+  log(`confirmed active theme: ${activeTheme}`);
 
   log('seeding nav fixtures on http://localhost:8888 …');
 

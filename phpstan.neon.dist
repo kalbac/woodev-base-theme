@@ -3,6 +3,17 @@ includes:
 
 parameters:
 	level: 8
+	# The WooCommerce layer is optional at runtime (Theme::boot() guards on
+	# class_exists), but PHPStan still has to know what is_woocommerce(),
+	# is_cart(), is_checkout() and is_account_page() are — without stubs it
+	# reports every Woo conditional tag as function.notFound, which is eight
+	# errors of pure noise that would train us to ignore the gate.
+	#
+	# The stub package is pinned to the same MAJOR.MINOR as the WooCommerce
+	# version .wp-env.woo.json installs (10.9), so what PHPStan checks against
+	# and what e2e-woo runs against do not drift apart. Bump both together.
+	bootstrapFiles:
+		- vendor/php-stubs/woocommerce-stubs/woocommerce-stubs.php
 	paths:
 		- woodev-base-theme/functions.php
 		- woodev-base-theme/inc

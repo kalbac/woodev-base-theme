@@ -2,6 +2,14 @@
 
 > Status: **Approved draft** (brainstorm session s1, 17.07.2026).
 > Supersedes nothing; refines `PROJECT.md`. Architecture decisions are recorded as ADRs in `docs/adr/`.
+>
+> **Superseded (25.07.2026):** §6's `style_preset` (8 Basecoat style packs) and
+> `primary_preset` (curated accent list) are replaced by one whole-theme visual
+> identity — see [ADR-008](../adr/ADR-008-single-visual-identity.md). §9's "Fonts
+> (v1): system font stack" is replaced by self-hosted Golos Text + IBM Plex — see
+> [ADR-007](../adr/ADR-007-self-hosted-fonts.md). The rest of this spec (hybrid
+> architecture, PHP layout, Basecoat-as-npm-adapter, testing baseline, milestones)
+> still holds. Implementation plan: `docs/plans/2026-07-25-visual-identity.md`.
 
 ## 1. Identity
 
@@ -112,6 +120,9 @@ Layer order (explicit, single source of truth in `app.css`):
 - WordPress Customizer, settings stored as `theme_mods`. Every control has a sanitize callback; capability and nonce handling per WP core conventions.
 - Sections (v1): Colors (style pack, scheme, primary preset), Typography, Layout (container width, radius scale, sidebar), Header variants, Footer variants, and a WooCommerce section that registers only when Woo is active.
 
+> **Superseded (25.07.2026):** the "Basecoat style packs" and "Primary color
+> presets" subsections below are retired — [ADR-008](../adr/ADR-008-single-visual-identity.md).
+
 **Basecoat style packs.** Basecoat ships 8 standalone visual styles; the admin picks one:
 
 | Setting | Values | Default |
@@ -175,7 +186,7 @@ Fixed s1 so M1 needs no scoping questions.
 
 - **Accessibility:** WCAG 2.1 AA target; keyboard navigation, visible focus, reduced-motion support, correct semantics/labels/states per component. Verified per component, not "at the end".
 - **Browsers:** evergreen — last 2 versions of Chrome/Firefox/Safari/Edge; no IE.
-- **Fonts (v1):** system font stack (`system-ui` based) — zero payload, zero licensing, good Cyrillic. A bundled OFL font (served locally, never from Google CDN) may be added as a Customizer option in M1+. Icons: **Lucide** (ISC license, the shadcn/Basecoat companion set) — inlined as SVG server-side via a PHP helper, only the icons actually used ship in the markup; no icon-font, no full-set bundle.
+- **Fonts (v1):** system font stack (`system-ui` based) — zero payload, zero licensing, good Cyrillic. **Superseded (25.07.2026) by [ADR-007](../adr/ADR-007-self-hosted-fonts.md):** self-hosted Golos Text + IBM Plex Sans/Mono replace this, with the system stack kept as the Customizer's non-default "system" font option. Icons: **Lucide** (ISC license, the shadcn/Basecoat companion set) — inlined as SVG server-side via a PHP helper, only the icons actually used ship in the markup; no icon-font, no full-set bundle.
 - **Testing (mandatory, all three levels):**
   - *Unit* — PHPUnit + Brain\Monkey for PHP (no WP bootstrap), Vitest for JS modules.
   - *Integration* — WordPress test suite (`WP_UnitTestCase`) under wp-env; Woo integration tests in M2.

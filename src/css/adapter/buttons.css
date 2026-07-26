@@ -1,0 +1,195 @@
+/* src/css/adapter/buttons.css
+ * Mockup §4 "Buttons", ported onto Basecoat's real `.btn` contract
+ * (node_modules/basecoat-css/dist/components/button.css): `.btn` itself is
+ * `@layer components`, structural only (flex/gap/whitespace/disabled state) —
+ * no colour, no size, no radius. Every visual value here is ours to add.
+ *
+ * Variant/size attributes: Basecoat's OWN style packs (e.g.
+ * dist/styles/vega.css) key `.btn` variants off `[data-variant]` and
+ * `[data-size]` — `.btn:not([data-variant])` / `.btn[data-variant='primary']`
+ * is the default, `secondary|outline|ghost|destructive` are the others;
+ * `.btn:not([data-size])` / `.btn[data-size='default']` is the default height,
+ * `sm|lg` the others. We do not import a pack (ADR-008), but the attribute
+ * shape is Basecoat's own convention, already reused in this codebase for
+ * `.badge` (inc/template-tags.php emits `data-variant="secondary"`) — so `.btn`
+ * follows the same contract for consistency, rather than the mockup's own
+ * `.btn--primary` BEM classes. `[data-block]` / `[data-pill]` extend the same
+ * attribute vocabulary to the mockup's `.btn--block` / `.btn--pill` modifiers,
+ * which Basecoat's packs do not define.
+ *
+ * Currently rendered: bare `.btn` with no attributes at all (search submit —
+ * searchform.php, comment submit — comments.php `class_submit`, "read more" —
+ * content-excerpt.php). None of them carry `data-variant`/`data-size` yet
+ * (a template change outside this task's CSS-only scope), so `.btn` with no
+ * attributes must look complete on its own: it resolves to the primary
+ * treatment below, same as Basecoat's own `.btn:not([data-variant])` default.
+ * Every other attribute combination here is forward groundwork for T4/T6
+ * templates that will opt in explicitly.
+ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  min-height: 44px;
+  padding: 0.65rem 1.15rem;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: var(--text-base);
+  letter-spacing: -0.01em;
+  border: 1px solid transparent;
+  transition:
+    background-color var(--dur) var(--ease-out),
+    border-color var(--dur) var(--ease-out),
+    color var(--dur) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur) var(--ease-out);
+}
+
+.btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+/* Basecoat's `.btn` sets `outline-none` and supplies no replacement — every
+ * other interactive element in this theme gets a visible --ring focus
+ * indicator (skip link, nav toggle), so a button must too (a11y hard gate). */
+.btn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px var(--ring-halo);
+}
+
+/* -- Variants -------------------------------------------------------------
+ * Basecoat's disabled handling (`disabled:pointer-events-none
+ * disabled:opacity-50`) already ships in button.css and applies regardless
+ * of variant, so it is not repeated here. */
+.btn:not([data-variant]),
+.btn[data-variant='primary'] {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  box-shadow: var(--shadow-xs), var(--glow);
+}
+
+.btn:not([data-variant]):hover,
+.btn[data-variant='primary']:hover {
+  background-color: var(--primary-hover);
+}
+
+.btn[data-variant='secondary'] {
+  background-color: var(--secondary);
+  color: var(--secondary-foreground);
+  border-color: var(--border);
+}
+
+.btn[data-variant='secondary']:hover {
+  background-color: var(--surface-3);
+  border-color: var(--border-strong);
+}
+
+.btn[data-variant='outline'] {
+  background-color: transparent;
+  color: var(--foreground);
+  border-color: var(--border-strong);
+}
+
+.btn[data-variant='outline']:hover {
+  background-color: var(--accent);
+  border-color: var(--foreground);
+}
+
+.btn[data-variant='ghost'] {
+  background-color: transparent;
+  color: var(--foreground);
+}
+
+.btn[data-variant='ghost']:hover {
+  background-color: var(--accent);
+}
+
+.btn[data-variant='destructive'] {
+  background-color: var(--destructive);
+  color: var(--destructive-foreground);
+}
+
+.btn[data-variant='destructive']:hover {
+  background-color: color-mix(in oklab, var(--destructive) 85%, black);
+}
+
+/* -- Sizes ------------------------------------------------------------- */
+/* `[data-size='sm']` ships at the mockup's post-tap-target-audit height
+ * (§18b), not its original §4 value: 38px is what the design settled on once
+ * every control was checked against the 44px floor, and a compact button
+ * still needs SOME invisible hit-area top-up to clear it — the `::after`
+ * below is that pad, not decorative. 36px never ships. */
+.btn[data-size='sm'] {
+  position: relative;
+  min-height: 38px;
+  padding: 0.45rem 0.8rem;
+  font-size: var(--text-sm);
+}
+
+.btn[data-size='sm']:not(.is-loading)::after {
+  content: '';
+  position: absolute;
+  inset: -3px 0;
+}
+
+.btn[data-size='lg'] {
+  min-height: 52px;
+  padding: 0.85rem 1.6rem;
+  font-size: var(--text-md);
+}
+
+.btn[data-block] {
+  width: 100%;
+}
+
+.btn[data-pill] {
+  border-radius: var(--radius-full);
+}
+
+/* -- Loading state ------------------------------------------------------- */
+.btn.is-loading {
+  position: relative;
+  color: transparent;
+  pointer-events: none;
+}
+
+.btn.is-loading::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  color: var(--primary-foreground);
+  animation: wtb-btn-spin 0.7s linear infinite;
+}
+
+@keyframes wtb-btn-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn {
+    transition-duration: 0.01ms;
+  }
+
+  .btn.is-loading::after {
+    animation: none;
+    /* A static ring stands in for the spinner: still communicates "loading"
+     * without motion, rather than disappearing along with the animation. */
+    border-color: currentColor;
+    border-top-color: color-mix(in oklab, currentColor 30%, transparent);
+  }
+}

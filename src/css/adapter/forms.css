@@ -1,0 +1,518 @@
+/* src/css/adapter/forms.css
+ * Mockup §5 "Form controls", ported onto Basecoat's real component contracts
+ * (dist/components/{field,label,input,textarea,native-select,checkbox,radio}.css)
+ * — every one of them is `@layer components`, structural-only (@apply with no
+ * colour/border/size), so the visuals below are additive, not overriding.
+ *
+ * Currently rendered: bare `.input` (searchform.php, comments.php author/
+ * email/url) and `.textarea` (comments.php comment field) — no `.field`
+ * wrapper anywhere yet. Select, radio, the native-select chevron overlay and
+ * the quantity stepper are forward groundwork: nothing in the template
+ * hierarchy renders them today (confirmed by grep across woodev-base-theme/),
+ * same status tabs/accordion have in components.css. They are written against
+ * Basecoat's real selectors so a future template (T6 checkout/account forms)
+ * gets a working component the moment it emits the markup, per this task's
+ * brief.
+ */
+
+.field {
+  gap: 6px;
+}
+
+/* Basecoat's real label contract: `.field > label`, `.field > section >
+ * label`, and our own `.label` class. comments.php's labels are core's bare
+ * <label> with no class or `.field` wrapper (a template change out of this
+ * task's CSS-only scope — see the task report), so this rule does not reach
+ * them today. */
+.field > label,
+.field > section > label,
+.label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+/* `wp_required_field_indicator()` — used verbatim by comments.php — emits
+ * `<span class="required" aria-hidden="true">`, not the mockup's `.req`. This
+ * IS live markup today. */
+.required {
+  color: var(--destructive);
+}
+
+.hint {
+  font-size: var(--text-xs);
+  color: var(--muted-foreground);
+}
+
+/* -- Text inputs, native select, textarea --------------------------------
+ * One combined ruleset: Basecoat's own input.css/native-select.css/
+ * textarea.css already union every text-like input type this way (see the
+ * source files) — this mirrors that union rather than repeating it per type. */
+.field > input[type='text'],
+.field > input[type='email'],
+.field > input[type='password'],
+.field > input[type='number'],
+.field > input[type='tel'],
+.field > input[type='url'],
+.field > input[type='search'],
+.field > input[type='date'],
+.field > input[type='datetime-local'],
+.field > input[type='month'],
+.field > input[type='week'],
+.field > input[type='time'],
+.field > select,
+.field > textarea,
+.input[type='text'],
+.input[type='email'],
+.input[type='password'],
+.input[type='number'],
+.input[type='tel'],
+.input[type='url'],
+.input[type='search'],
+.input[type='date'],
+.input[type='datetime-local'],
+.input[type='month'],
+.input[type='week'],
+.input[type='time'],
+.input:not([type]),
+select.select,
+.textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.6rem 0.8rem;
+  background-color: var(--card);
+  color: var(--foreground);
+  border: 1px solid var(--input);
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  transition:
+    border-color var(--dur) var(--ease-out),
+    box-shadow var(--dur) var(--ease-out);
+}
+
+.textarea,
+.field > textarea {
+  min-height: 96px;
+  padding: 0.7rem 0.8rem;
+  resize: vertical;
+  line-height: var(--lh-body);
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--muted-foreground);
+}
+
+/* Finding 5 (P1): Chromium repaints an autofilled field with its OWN
+ * background/text colour, ignoring our `background-color`/`color` entirely —
+ * `background-color` alone does not win against the UA's autofill style, an
+ * inset `box-shadow` the size of the field does (it paints over the
+ * chrome-drawn fill instead of losing to it). WebKit also reads
+ * `-webkit-text-fill-color` for autofilled text, not `color`.
+ *
+ * Finding 4 (P1), corrected here: `600000s 0s` is a huge DURATION, not a
+ * delay — it is the standard trick to outlast the page's own lifetime so
+ * Chromium's "flash yellow, then fade" autofill animation never gets the
+ * chance to finish. And `transition` is a shorthand: this declaration
+ * REPLACES the field's own `transition` (border-color, box-shadow) declared
+ * earlier in this file for any autofilled input — it does not run
+ * independently alongside it. Shorthands don't merge across rules; the
+ * later, more specific one simply wins outright for the properties it
+ * names. The consequence: an autofilled field's border-color/box-shadow
+ * changes (focus, error, success) apply instantly with no transition while
+ * autofilled, which is harmless here (there is nothing to animate away from
+ * at the moment autofill fires) but would need reconciling explicitly if a
+ * future autofilled state ever needed an animated border/shadow change.
+ * `:autofill` is added alongside `:-webkit-autofill` because it is the
+ * standard selector — Firefox implements only `:autofill`, not the
+ * `-webkit-` one; Chromium/WebKit accept both.
+ *
+ * Live today: comments.php's author/email/url fields all carry
+ * `autocomplete`, and none are inside a `.field` wrapper yet (see this
+ * file's header), so only the bare `.input` selectors are load-bearing; the
+ * `.field > input` ones are forward groundwork matching the rest of the
+ * file. Token pair: --card/--foreground (the field's own light/dark surface
+ * and text tokens) so the autofilled field reads exactly like an untouched
+ * one in both schemes, instead of Chromium's fixed light fill glaring
+ * against `.dark`'s near-black surface.
+ *
+ * Finding 3 (P1), fixed here: the inset shadow that hides the UA's autofill
+ * fill used to be a literal value duplicated across the base/hover/focus
+ * autofill rules — and every state rule declared LATER in this file
+ * (`.is-error`, `.is-success`, and their `:focus` combos) replaces
+ * `box-shadow` wholesale at equal specificity, so adding `.is-error` to an
+ * autofilled field silently dropped the inset and let Chromium's own fill
+ * colour show through again (glaring in `.dark`). `--autofill-inset` moves
+ * that one layer into a custom property instead: every state rule below
+ * composes `var(--autofill-inset, 0 0 0 0 transparent)` as the FIRST layer
+ * of its own `box-shadow`, so the inset survives every state combination
+ * without a rule per {autofill} x {focus, error, success} pairing (six,
+ * without this). Custom properties cascade independently of the properties
+ * that read them: whichever rule wins `--autofill-inset` for a given
+ * element is what every `var()` reference to it resolves to, regardless of
+ * which rule's `box-shadow` declaration does the referencing or in what
+ * order. The fallback (`0 0 0 0 transparent`) is an invisible zero-spread
+ * layer so the multi-layer `box-shadow` list stays syntactically valid on a
+ * field that was never autofilled at all. */
+.input:-webkit-autofill,
+.input:autofill,
+.field > input:-webkit-autofill,
+.field > input:autofill {
+  --autofill-inset: 0 0 0 1000px var(--card) inset;
+  box-shadow: var(--autofill-inset);
+  -webkit-text-fill-color: var(--foreground);
+  transition:
+    background-color 600000s 0s,
+    color 600000s 0s;
+}
+
+.input:-webkit-autofill,
+.input:autofill,
+.input:-webkit-autofill:hover,
+.input:autofill:hover,
+.field > input:-webkit-autofill,
+.field > input:autofill,
+.field > input:-webkit-autofill:hover,
+.field > input:autofill:hover {
+  border-color: var(--input);
+}
+
+.input:hover,
+select.select:hover,
+.textarea:hover,
+.field > input:hover,
+.field > select:hover,
+.field > textarea:hover {
+  border-color: var(--border-strong);
+}
+
+.input:focus,
+select.select:focus,
+.textarea:focus,
+.field > input:focus,
+.field > select:focus,
+.field > textarea:focus {
+  /* Finding P0-2, fixed here: `outline: none` does not just look invisible
+   * in normal rendering (the halo below stands in for it) — it removes the
+   * outline SHAPE outright, and forced-colors mode (Windows High Contrast)
+   * both ignores `box-shadow` entirely AND has nothing left to repaint once
+   * `outline-style` is `none`. A field's focus indication disappeared
+   * completely for a forced-colors keyboard user, worst on an
+   * already-destructive-coloured invalid field. A TRANSPARENT outline keeps
+   * the shape declared — forced-colors mode overrides a literal
+   * `transparent` outline-COLOUR with a system colour once outline-style
+   * isn't `none`, precisely so authors can't use `transparent` to hide
+   * focus this way, which is the whole reason `transparent` beats `none`
+   * here — while staying invisible in normal rendering, where the
+   * box-shadow halo below is the intended focus treatment. The explicit
+   * `@media (forced-colors: active)` block further down this file backs
+   * that up with its own colour rather than trusting every forced-colors
+   * implementation to do it unprompted. */
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  border-color: var(--ring);
+  box-shadow:
+    var(--autofill-inset, 0 0 0 0 transparent),
+    0 0 0 3px var(--ring-halo);
+}
+
+.input.is-error,
+select.select.is-error,
+.field[data-invalid='true'] > input,
+.field[data-invalid='true'] > select {
+  border-color: var(--destructive);
+  box-shadow:
+    var(--autofill-inset, 0 0 0 0 transparent),
+    0 0 0 3px color-mix(in oklab, var(--destructive) 18%, transparent);
+}
+
+.input.is-success {
+  border-color: var(--success);
+  box-shadow: var(--autofill-inset, 0 0 0 0 transparent);
+}
+
+/* Finding 1 (P0): `.is-error`/`.is-success`/`[data-invalid='true']` sit at
+ * equal specificity to `:focus` above and come later in source order, so the
+ * cascade lets them silently win the `border-color`/`box-shadow` the
+ * `:focus` rule set — tabbing onto an already-invalid (or already-valid)
+ * field produced no visible change at all, and `outline: none` on `:focus`
+ * left nothing to fall back on. These combos restore a focus indicator that
+ * keeps the state colour (destructive/success stays the signal, per the
+ * task) but swaps the soft translucent halo for a hard, opaque "gap ring"
+ * (an inset ring in the field's own surface colour, then a solid outer
+ * ring) — a change in shape, opacity and size, not just a hue, so it reads
+ * as focus even against a field that is already red or green. */
+.input.is-error:focus,
+select.select.is-error:focus,
+.field[data-invalid='true'] > input:focus,
+.field[data-invalid='true'] > select:focus {
+  border-color: var(--destructive);
+  box-shadow:
+    var(--autofill-inset, 0 0 0 0 transparent),
+    0 0 0 2px var(--card),
+    0 0 0 5px var(--destructive);
+}
+
+.input.is-success:focus {
+  border-color: var(--success);
+  box-shadow:
+    var(--autofill-inset, 0 0 0 0 transparent),
+    0 0 0 2px var(--card),
+    0 0 0 5px var(--success);
+}
+
+/* Finding P0-2: every focused control above relies on `box-shadow` for its
+ * halo and now a transparent `outline` for its shape — forced-colors mode
+ * drops box-shadow outright, so this is the ONLY focus indication that
+ * survives in that mode. Explicit rather than assumed, per the reasoning in
+ * the `:focus` rule's own comment above. */
+@media (forced-colors: active) {
+  .input:focus,
+  select.select:focus,
+  .textarea:focus,
+  .field > input:focus,
+  .field > select:focus,
+  .field > textarea:focus {
+    outline-color: Highlight;
+  }
+}
+
+/* Native <select> only (Basecoat's OWN `.select:not(select)` custom
+ * JS-driven listbox component is not styled here: the mockup never draws it
+ * and nothing in this theme renders its markup — ADR-008's "style a
+ * component as it is first used" applies).
+ *
+ * Finding 6 (P1): the two shapes get DIFFERENT treatment, deliberately —
+ * do not fold them back into one rule.
+ *  - `select.select` with no `.field` wrapper has no element to hang a
+ *    chevron pseudo-element on (Basecoat's native-select.css applies
+ *    `appearance: none` to this bare shape too and supplies no arrow of its
+ *    own), so a bare select keeps the PLATFORM's own dropdown affordance
+ *    (`appearance: auto`) rather than looking exactly like a text input.
+ *  - `.field > select` gets the custom chevron below, drawn on `.field`
+ *    itself via `:has()` — matching Basecoat's own `.field > select`
+ *    contract exactly, no invented wrapper markup required.
+ *
+ * `:not([multiple]):not([size])` on both the select and the `:has()` guard
+ * below (finding 5, P2): a multi-select or a sized listbox has no
+ * single-value dropdown to decorate — `appearance: none` would strip its
+ * native listbox chrome for no reason, and the chevron would draw over
+ * content that isn't a closed dropdown at all. */
+select.select {
+  appearance: auto;
+  cursor: pointer;
+}
+
+.field > select:not([multiple]):not([size]) {
+  appearance: none;
+  padding-right: 2.6rem;
+  cursor: pointer;
+}
+
+/* The chevron is a MASK, not an image — its colour comes from
+ * --muted-foreground, so it follows the palette and the scheme. The data URI
+ * is an alpha stencil (see --icon-chevron's own comment in tokens.generated.css),
+ * not a rendered colour. Uses OUR --icon-chevron, not Basecoat's
+ * --chevron-down-icon: see the T5 leftover-token decision table in the task
+ * report — Basecoat's own chevron token is only ever read by its `.sidebar`
+ * component, which this theme does not use, so nothing here shares it.
+ *
+ * Drawn on `.field` (not a `.select-wrap` this theme's PHP/JS never emits —
+ * finding 6) via `:has()`, which is baseline in every browser this theme
+ * supports. `.field` becomes the positioning context; `bottom` (not `top`)
+ * anchors the icon to the LAST 44px of the field — `.field > select`'s own
+ * fixed control height — so it centres on the select even though `.field`
+ * is a flex column that may also contain a label above it.
+ *
+ * Finding 5 (P2), stated honestly this time: this file's own header (above)
+ * already says the theme emits NO `.field > select` markup yet — there is
+ * no real markup to describe the "shape" of. The actual constraint the
+ * arrow assumes is narrower than that: the select is the field's LAST
+ * child, with nothing (e.g. a trailing `.hint` or error message — a shape
+ * Basecoat's own field contract explicitly allows) after it. A field that
+ * puts something after the select needs its own override; this rule does
+ * not guess at markup that doesn't exist yet. */
+.field:has(> select:not([multiple]):not([size])) {
+  position: relative;
+}
+
+.field:has(> select:not([multiple]):not([size]))::after {
+  content: '';
+  position: absolute;
+  right: 0.85rem;
+  bottom: 14px;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+  background-color: var(--muted-foreground);
+  mask: var(--icon-chevron) center / 16px 16px no-repeat;
+}
+
+/* -- Checkbox / radio -----------------------------------------------------
+ * Basecoat's checkbox.css/radio.css are `appearance: none` shells with a
+ * masked/positioned pseudo-element and NO colour, border or size of their
+ * own — the mockup's version instead relies on the browser's native
+ * `accent-color`, a different (simpler) contract. Basecoat's is the one
+ * actually shipped in the build, so this restyles THAT one: a11y hard gate
+ * "state not conveyed by colour alone" is met by the checkmark/dot shape
+ * appearing on :checked, not by a colour swap alone.
+ *
+ * Live today: the comment form's cookie-consent checkbox
+ * (`#wp-comment-cookies-consent`, WP core's own unclassed markup — comments.php
+ * only overrides the author/email/url fields, not the cookies field, so core's
+ * default id-only markup reaches the page as-is). Radio has no live markup
+ * anywhere yet (forward groundwork, matching Basecoat's structural
+ * contract). */
+.field > input[type='checkbox']:not([role='switch']),
+.input[type='checkbox']:not([role='switch']),
+#wp-comment-cookies-consent {
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--input);
+  border-radius: var(--radius-sm);
+  background-color: var(--card);
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.field > input[type='checkbox']:not([role='switch']):hover,
+.input[type='checkbox']:not([role='switch']):hover,
+#wp-comment-cookies-consent:hover {
+  border-color: var(--border-strong);
+}
+
+.field > input[type='checkbox']:not([role='switch']):checked,
+.input[type='checkbox']:not([role='switch']):checked,
+#wp-comment-cookies-consent:checked {
+  background-color: var(--primary);
+  border-color: var(--primary);
+  /* `currentColor` is what Basecoat's own :checked:after mask paints with
+   * (`bg-current`), so this is what makes the checkmark glyph legible against
+   * the filled box, not decorative. */
+  color: var(--primary-foreground);
+}
+
+.field > input[type='checkbox']:not([role='switch']):focus-visible,
+.input[type='checkbox']:not([role='switch']):focus-visible,
+#wp-comment-cookies-consent:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.field > input[type='radio'],
+.input[type='radio'] {
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--input);
+  border-radius: var(--radius-full);
+  background-color: var(--card);
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+
+.field > input[type='radio']:hover,
+.input[type='radio']:hover {
+  border-color: var(--border-strong);
+}
+
+.field > input[type='radio']:checked,
+.input[type='radio']:checked {
+  border-color: var(--primary);
+}
+
+/* Basecoat's own radio.css already positions/rounds `:checked:before` — this
+ * only adds the dot's colour and size. */
+.field > input[type='radio']:checked:before,
+.input[type='radio']:checked:before {
+  width: 10px;
+  height: 10px;
+  background-color: var(--primary);
+}
+
+.field > input[type='radio']:focus-visible,
+.input[type='radio']:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Label pairing (not Basecoat's own `.field > label` grid — this is the
+ * mockup's simpler inline row for a standalone checkbox/radio + text, e.g. a
+ * "remember me" row). */
+.checkbox,
+.radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  cursor: pointer;
+  font-size: var(--text-base);
+}
+
+/* -- Quantity stepper -------------------------------------------------
+ * WooCommerce's own quantity field ships no +/- buttons by default; this is
+ * the markup a future single-product/cart-line enhancement would need to add
+ * — a template change out of this task's CSS-only scope (see the task
+ * report). Ported now because mockup §5 belongs to this file per the plan's
+ * mapping table. */
+.qty {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background-color: var(--card);
+}
+
+.qty button {
+  width: 44px;
+  min-height: 44px;
+  background-color: transparent;
+  border: 0;
+  cursor: pointer;
+  color: var(--foreground);
+  display: grid;
+  place-items: center;
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+.qty button:hover {
+  background-color: var(--accent);
+}
+
+.qty button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+
+.qty input {
+  width: 52px;
+  text-align: center;
+  border: 0;
+  border-inline: 1px solid var(--border);
+  background-color: transparent;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  -moz-appearance: textfield;
+}
+
+.qty input::-webkit-outer-spin-button,
+.qty input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .input,
+  .textarea,
+  select.select,
+  .field > input,
+  .field > select,
+  .field > textarea,
+  .field > input[type='checkbox'],
+  .field > input[type='radio'],
+  .input[type='checkbox'],
+  .input[type='radio'],
+  #wp-comment-cookies-consent,
+  .qty button {
+    transition-duration: 0.01ms;
+  }
+}

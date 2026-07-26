@@ -5,7 +5,7 @@
 //
 // Why this file asserts computed style, never markup: PR #1 shipped an
 // enqueue_dev() that asked the dev server only for `@vite/client` and
-// `app.js`. The pack CSS entry is a separate Rollup input that app.js never
+// `app.js`. The CSS entry is a separate Rollup input that app.js never
 // imports, so the page was a 200 with working JavaScript and correct script
 // tags — every PHP/markup test stayed green — while NO Tailwind, Basecoat or
 // design tokens ever reached the page. See
@@ -33,10 +33,11 @@ test.beforeEach(async ({ page }) => {
   const distStylesheet = page.locator('link[rel="stylesheet"][href*="assets/dist"]');
   await expect(distStylesheet).toHaveCount(0);
 
-  // Dev mode enqueues the selected style pack's CSS entry as a script module
-  // straight from the Vite dev server (see enqueue_dev()'s docblock).
-  const devPackModule = page.locator('script[src*="localhost:5173/src/css/packs/"]');
-  await expect(devPackModule).toHaveCount(1);
+  // Dev mode enqueues the theme's one CSS entry as a script module straight
+  // from the Vite dev server (see enqueue_dev()'s docblock). ADR-008: no
+  // per-pack resolution, so this is a fixed path, not a selection.
+  const devStyleModule = page.locator('script[src*="localhost:5173/src/css/app.css"]');
+  await expect(devStyleModule).toHaveCount(1);
 });
 
 test('the dev-mode site really is in dev mode', async ({ page }) => {
@@ -47,8 +48,8 @@ test('the dev-mode site really is in dev mode', async ({ page }) => {
   const distStylesheet = page.locator('link[rel="stylesheet"][href*="assets/dist"]');
   await expect(distStylesheet).toHaveCount(0);
 
-  const devPackModule = page.locator('script[src*="localhost:5173/src/css/packs/"]');
-  await expect(devPackModule).toHaveCount(1);
+  const devStyleModule = page.locator('script[src*="localhost:5173/src/css/app.css"]');
+  await expect(devStyleModule).toHaveCount(1);
 });
 
 test('the dev server actually styles the page', async ({ page }) => {
@@ -63,13 +64,23 @@ test('the dev server actually styles the page', async ({ page }) => {
     )
     .not.toBe('');
 
+  // --font-sans is the only cheap token probe that can tell "our CSS won"
+  // from "Basecoat's did": every colour token we ship is byte-identical to
+  // Basecoat's shadcn default (see smoke.spec.mjs), so a colour check would
+  // pass even if our stylesheet never loaded at all. Basecoat's base entry
+  // (`basecoat-css/base` -> base/base.css) sets --font-sans to "Geist Sans"
+  // in its @theme block; ours is the system stack from tokens.mjs, aliased
+  // from the body role (--font-sans: var(--font-body)). Only this property
+  // distinguishes the two — see the surprising-finding note in src/css/app.css
+  // about basecoat-css/base NOT actually being skin-free.
+  //
+  // A component-geometry probe (a `.btn`'s height/radius) used to sit here
+  // too, pinned to the vega pack's `h-9`/`rounded-md`. ADR-008 retires the
+  // packs, and `basecoat-css/base` styles no component geometry at all — that
+  // is now T5's job (component kit, adapter layer). Until it lands there is
+  // nothing meaningful to assert about `.btn`'s rendered size, so the probe
+  // is dropped here rather than pinned to an accidental UA default.
   const result = await page.evaluate((expectedFontSansRaw) => {
-    // --font-sans is the only cheap token probe that can tell "our CSS won"
-    // from "Basecoat's did": every colour token we ship is byte-identical to
-    // Basecoat's shadcn default (see smoke.spec.mjs), so a colour check would
-    // pass even if our stylesheet never loaded at all. Basecoat's vega pack
-    // sets --font-sans to Geist Sans; ours is the system stack from
-    // tokens.mjs. Only this property distinguishes the two.
     const canonicalizeFontFamily = (fontFamilyString) => {
       const probe = document.createElement('div');
       probe.style.fontFamily = fontFamilyString;
@@ -81,21 +92,8 @@ test('the dev server actually styles the page', async ({ page }) => {
     );
     const expectedFontSans = canonicalizeFontFamily(expectedFontSansRaw);
 
-    // vega's `.btn:not([data-size])` sets height via `h-9` = 36px
-    // (node_modules/basecoat-css/dist/styles/vega.css). `.btn` is a component
-    // rule the pack ships, not a Tailwind utility generated from page markup,
-    // so it applies to an element created here at runtime and does not depend
-    // on anything already present in the page — an independent confirmation
-    // that the pack's rules, not just its custom properties, reached the page.
-    const btn = document.createElement('button');
-    btn.className = 'btn';
-    document.body.appendChild(btn);
-    const btnHeight = getComputedStyle(btn).height;
-    btn.remove();
-
-    return { actualFontSans, expectedFontSans, btnHeight };
-  }, tokens.fonts.sans);
+    return { actualFontSans, expectedFontSans };
+  }, tokens.fontRoles['font-body']);
 
   expect(result.actualFontSans).toBe(result.expectedFontSans);
-  expect(result.btnHeight).toBe('36px');
 });

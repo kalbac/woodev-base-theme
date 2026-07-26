@@ -4,7 +4,7 @@ Entry point for all development agents. Read this first, then `docs/CURRENT-STAT
 
 ## What this project is
 
-Woodev Base — a universal WordPress theme (optional WooCommerce layer) built on Basecoat UI + Tailwind CSS v4 + Alpine.js, classic templates + `theme.json` (hybrid). Full brief: `PROJECT.md`. Approved design: `docs/specs/2026-07-17-woodev-base-v1-design.md`. Architecture decisions: `docs/adr/`.
+Woodev Base — a universal WordPress theme (optional WooCommerce layer) built on Basecoat UI + Tailwind CSS v4 + Alpine.js, classic templates + `theme.json` (hybrid). Full brief: `PROJECT.md`. Architecture: `docs/specs/2026-07-17-woodev-base-v1-design.md`. Current visual identity (colours, type, radius — supersedes that spec's §6 style packs and §9 fonts): `docs/design/v2-mockup/`, [ADR-008](docs/adr/ADR-008-single-visual-identity.md), [ADR-007](docs/adr/ADR-007-self-hosted-fonts.md). Architecture decisions: `docs/adr/`.
 
 ## Roles and models
 
@@ -18,8 +18,13 @@ Woodev Base — a universal WordPress theme (optional WooCommerce layer) built o
 **Run this project as autonomously as the task allows.** Maksim is interrupted for
 exactly two things:
 
-1. **UI/UX calls** — anything a visitor sees and that taste, not engineering,
-   decides.
+1. **UI/UX forks with genuinely no viable option** — a visitor-facing choice that
+   taste, not engineering, decides AND where you cannot find even one defensible
+   default. **If you can see two or more workable options, do NOT ask** — expose the
+   choice as a **Customizer setting** with a sensible default and let the admin
+   pick. Example: "square (1:1) vs 16:9 product thumbnails" is two options → ship a
+   Customizer control (defaulting to one), never a question. Interrupt Maksim on a
+   UI fork only when it has no workable option at all.
 2. **Architectural forks you genuinely cannot settle yourself** — an ADR conflict,
    an irreversible 🔴 choice, a scope question with no defensible default.
 

@@ -30,3 +30,6 @@ Thumbs.db
 src/css/tokens.generated.css
 src/css/packs/
 tests/integration/vendor/
+
+# Playwright MCP scratch output
+.playwright-mcp/

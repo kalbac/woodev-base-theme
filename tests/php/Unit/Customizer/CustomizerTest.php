@@ -6,7 +6,7 @@ namespace Woodev\Theme\Base\Tests\Unit\Customizer;
 use Brain\Monkey\Functions;
 use Mockery;
 use Woodev\Theme\Base\Customizer\Customizer;
-use Woodev\Theme\Base\Customizer\Settings;
+use Woodev\Theme\Base\Customizer\Palettes;
 use Woodev\Theme\Base\Tests\Unit\TestCase;
 
 final class CustomizerTest extends TestCase {
@@ -18,16 +18,18 @@ final class CustomizerTest extends TestCase {
 	 */
 	public static function expected_settings(): array {
 		return [
-			'style_preset'         => [ 'style_preset', 'vega' ],
-			'primary_preset'       => [ 'primary_preset', 'default' ],
 			'color_scheme_default' => [ 'color_scheme_default', 'system' ],
 			'color_scheme_toggle'  => [ 'color_scheme_toggle', true ],
+			'palette'              => [ 'palette', 'warm-clay' ],
+			'accent'               => [ 'accent', '' ],
 			'base_font_size'       => [ 'base_font_size', 16 ],
+			'font'                 => [ 'font', 'identity' ],
 			'container_width'      => [ 'container_width', 1440 ],
-			'radius_scale'         => [ 'radius_scale', 'md' ],
+			'radius'               => [ 'radius', 10 ],
 			'sidebar_position'     => [ 'sidebar_position', 'none' ],
 			'header_variant'       => [ 'header_variant', 'inline' ],
 			'footer_variant'       => [ 'footer_variant', 'simple' ],
+			'cta_reveal'           => [ 'cta_reveal', 'hover' ],
 		];
 	}
 
@@ -61,6 +63,11 @@ final class CustomizerTest extends TestCase {
 				$recorded['settings'][ $id ] = $args;
 			}
 		);
+		// The accent control's add_color() falls back to a plain (id, args)
+		// add_control() call here: \WP_Customize_Color_Control does not exist
+		// in this suite (no WP code is loaded at all), so class_exists()
+		// picks the same two-argument shape every other control already
+		// uses. See Customizer::add_color()'s docblock.
 		$manager->shouldReceive( 'add_control' )->andReturnUsing(
 			static function ( string $id, array $args ) use ( &$recorded ) {
 				$recorded['controls'][]          = $id;
@@ -73,7 +80,7 @@ final class CustomizerTest extends TestCase {
 		return $recorded;
 	}
 
-	public function test_it_registers_the_five_v1_sections(): void {
+	public function test_it_registers_the_six_v1_sections(): void {
 		self::assertSame(
 			[
 				'woodev_base_colors',
@@ -81,6 +88,7 @@ final class CustomizerTest extends TestCase {
 				'woodev_base_layout',
 				'woodev_base_header',
 				'woodev_base_footer',
+				'woodev_base_shop',
 			],
 			$this->capture()['sections']
 		);
@@ -114,31 +122,6 @@ final class CustomizerTest extends TestCase {
 			$recorded['controls'],
 			'A setting with no control is invisible to the admin'
 		);
-	}
-
-	/**
-	 * Codex P2 on the M1-04 diff. The accent slugs are generated from the token
-	 * source while their labels are hand-written literals (a .pot scanner needs
-	 * literals). Add a preset to src/tokens/tokens.mjs without adding a label
-	 * and the control silently drops it — so this compares the control's choices
-	 * against the REAL generated map, not a copy of the list.
-	 */
-	public function test_every_generated_preset_is_offered_with_a_translated_label(): void {
-		$recorded = $this->capture();
-		$choices  = $recorded['control_args']['primary_preset']['choices'];
-
-		Functions\when( 'get_template_directory' )->justReturn( \dirname( __DIR__, 4 ) . '/woodev-base-theme' );
-
-		foreach ( array_keys( Settings::presets() ) as $slug ) {
-			self::assertArrayHasKey(
-				$slug,
-				$choices,
-				"The generated preset '{$slug}' has no label in Customizer::primary_preset_choices()"
-			);
-		}
-
-		self::assertArrayHasKey( 'default', $choices );
-		self::assertCount( \count( Settings::presets() ) + 1, $choices );
 	}
 
 	/**
@@ -181,6 +164,49 @@ final class CustomizerTest extends TestCase {
 				"{$id}'s fallback is not a fixed point of its own sanitizer"
 			);
 		}
+	}
+
+	/**
+	 * The palette control's choices are exactly Palettes::slugs() — an admin
+	 * must never be offered a slug the renderer has no data for.
+	 */
+	public function test_the_palette_control_offers_exactly_the_seven_shipped_slugs(): void {
+		$choices = $this->capture()['control_args']['palette']['choices'];
+
+		self::assertSame(
+			[ 'warm-clay', 'cold-petrol', 'graphite', 'forest', 'sand', 'wine', 'night-indigo' ],
+			array_keys( $choices )
+		);
+	}
+
+	/**
+	 * Every shipped palette must have an EXPLICIT, translatable label.
+	 *
+	 * `palette_choices()` falls back to `ucwords( str_replace( '-', ' ', $slug ) )`
+	 * for a slug its label map has never heard of. That fallback is a reasonable
+	 * runtime safety net and a terrible early-warning system: adding an eighth
+	 * palette to `src/tokens/tokens.mjs` without adding a label here breaks
+	 * nothing, throws nothing and logs nothing — a Russian-locale admin simply
+	 * sees one English word among seven translated ones, which is the kind of
+	 * defect that ships.
+	 *
+	 * So the contract is asserted where it can fail loudly instead: the moment a
+	 * palette exists without a label, this test goes red.
+	 */
+	public function test_every_shipped_palette_has_an_explicit_translatable_label(): void {
+		Functions\when( '__' )->returnArg();
+		Functions\when( 'get_template_directory' )->justReturn( \dirname( __DIR__, 4 ) . '/woodev-base-theme' );
+
+		// Compared against the label MAP, not against the rendered choices: the
+		// labels are deliberately the title-cased slugs, so `Warm Clay` from the
+		// map and `Warm Clay` from the fallback are the same string. Only the
+		// keys can tell them apart.
+		self::assertSame(
+			Palettes::slugs(),
+			array_keys( Customizer::palette_labels() ),
+			'A palette exists without an explicit label, so palette_choices() will derive an ' .
+			'untranslatable one. Add it to Customizer::palette_labels().'
+		);
 	}
 
 	public function test_register_hooks_customize_register(): void {

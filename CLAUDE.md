@@ -29,7 +29,8 @@ Universal WordPress theme (hybrid: classic templates + theme.json) on Basecoat U
 ## Docs map
 
 - `PROJECT.md` — project brief
-- `docs/specs/2026-07-17-woodev-base-v1-design.md` — approved v1 design
+- `docs/specs/2026-07-17-woodev-base-v1-design.md` — approved v1 architecture (see the superseded-notice at its top for what's since changed)
+- `docs/design/v2-mockup/` — current whole-theme visual identity ([ADR-008](docs/adr/ADR-008-single-visual-identity.md), [ADR-007](docs/adr/ADR-007-self-hosted-fonts.md))
 - `docs/adr/` — decisions · `docs/GOTCHAS.md` — traps index
 - `docs/CURRENT-STATE.md` — status · `docs/SESSION-LOG.md` — history
 

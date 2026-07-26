@@ -1,6 +1,18 @@
 # Basecoat style packs are standalone — never combine them, and they differ by SHAPE not colour
 
 > Discovered s1 (17.07.2026) while designing the `style_preset` Customizer option, from Basecoat 1.0.2 docs. **Corrected s5 (21.07.2026)** during M1-03 by reading the shipped package: the s1 wording ("standalone full *token* sets") was wrong about *what* differs, and that mistake would have made the whole feature untestable.
+>
+> **Context changed (25.07.2026):** the 8-pack feature this gotcha is about is
+> retired — [ADR-008](../adr/ADR-008-single-visual-identity.md) replaces it with
+> one visual identity and `basecoat-css/base` (structure/behaviour only, no
+> skin). What still generalises: trap 3's method (verify a vendor package's real
+> structure on disk before designing around it — the s1 wording it corrects was
+> a guess from docs, not the shipped files) and the base/skin split itself
+> (`basecoat-base.css` vs `styles/<pack>.css`), which is exactly why
+> `basecoat-css/base` is a coherent import today. The specific traps below
+> (never combine packs, assert geometry not colour, exact pin) no longer apply
+> to anything in the codebase once T2 of `docs/plans/2026-07-25-visual-identity.md`
+> lands.
 
 ## The traps
 

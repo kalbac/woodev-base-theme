@@ -7,22 +7,32 @@
 // setting. Do not add a theme_mod mutation to any other spec — put it here.
 // Each test restores what it touched before the next one runs.
 import { expect, test } from '@playwright/test';
-import { PACKS } from '../../scripts/lib/packs-lib.mjs';
+import { formatColor, resolveColor, varsFor } from '../../scripts/lib/build-tokens-lib.mjs';
 import { tokens } from '../../src/tokens/tokens.mjs';
 import { isInteger, isToggleValue, readThemeMod, restoreThemeMod, wp } from './lib/theme-mod.mjs';
 
-const PRESETS = ['neutral', 'blue', 'green', 'red', 'rose', 'orange', 'yellow', 'violet'];
-const RADII = ['none', 'sm', 'md', 'lg'];
 const SCHEMES = ['system', 'light', 'dark'];
 
 const SIDEBAR_POSITIONS = ['none', 'right'];
 
-/** theme_mod name -> guard, for everything this file touches. */
+/**
+ * theme_mod name -> guard, for everything this file touches.
+ *
+ * ADR-008 retired `style_preset` (the 8 Basecoat packs) and `primary_preset`
+ * (the Tailwind-palette accent presets) outright, and T7
+ * (`docs/plans/2026-07-25-visual-identity.md`) has since built their
+ * replacements — `palette` (7 slugs), `accent` (hex), `font`, `cta_reveal` —
+ * but no test in THIS file mutates any of them yet (deferred to the T8 e2e
+ * gate), so there is still nothing here for TOUCHED to restore for them.
+ *
+ * `radius_scale` (four rem STEPS) was retired by T7 too, replaced by
+ * `radius` (a PX INTEGER 0-16, Settings::sanitize_radius()'s docblock has
+ * the full migration rationale) — updated below rather than left to rot,
+ * since this file's own radius test exercises the exact contract that moved.
+ */
 const TOUCHED = {
-  style_preset: (value) => PACKS.includes(value),
-  primary_preset: (value) => PRESETS.includes(value),
   container_width: isInteger,
-  radius_scale: (value) => RADII.includes(value),
+  radius: isInteger,
   base_font_size: isInteger,
   color_scheme_default: (value) => SCHEMES.includes(value),
   color_scheme_toggle: isToggleValue,
@@ -38,20 +48,6 @@ function rootVar(page, property) {
     (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim(),
     property,
   );
-}
-
-/**
- * Height (px, rounded) of the blog index's read-more button.
- *
- * The locator is deliberately specific. A bare `.btn` would also match the
- * search form's submit and would keep passing if `btn` were ever dropped from
- * the read-more link — measuring some other element instead of failing.
- */
-async function readMoreButton(page) {
-  const button = page.locator('a.wtb-entry-more.btn').first();
-  await expect(button).toBeVisible();
-
-  return button;
 }
 
 /**
@@ -84,54 +80,12 @@ test.describe.serial('site-global theme_mods', () => {
     }
   });
 
-  test('default pack (vega): vega bundle loads and .btn is 36px tall', async ({ page }) => {
-    wp('theme mod remove style_preset');
-    await page.goto('/');
-
-    await expect(page.locator('link[rel="stylesheet"][href*="style-vega-"]')).toHaveCount(1);
-    await expect(page.locator('link[rel="stylesheet"][href*="style-nova-"]')).toHaveCount(0);
-
-    const box = await (await readMoreButton(page)).boundingBox();
-    expect(Math.round(box.height)).toBe(36);
-  });
-
-  test('switching to nova loads the nova bundle and shrinks the .btn to 32px', async ({ page }) => {
-    wp('theme mod set style_preset nova');
-    await page.goto('/');
-
-    await expect(page.locator('link[rel="stylesheet"][href*="style-nova-"]')).toHaveCount(1);
-    await expect(page.locator('link[rel="stylesheet"][href*="style-vega-"]')).toHaveCount(0);
-
-    const box = await (await readMoreButton(page)).boundingBox();
-    expect(Math.round(box.height)).toBe(32);
-  });
-
   // An untouched site must ship no inline block at all — that contract is what
   // keeps the default install free of per-page CSS.
   test('an untouched site emits no inline style block', async ({ page }) => {
     await page.goto('/');
 
     await expect(page.locator('style#woodev-base-inline')).toHaveCount(0);
-  });
-
-  // Colour is the one axis packs cannot move (all 8 share one palette), so this
-  // assertion is immune to whatever pack happens to be active.
-  test('the blue accent preset repaints --primary and the button', async ({ page }) => {
-    await page.goto('/');
-    const before = await (
-      await readMoreButton(page)
-    ).evaluate((node) => getComputedStyle(node).backgroundColor);
-
-    wp('theme mod set primary_preset blue');
-    await page.goto('/');
-
-    await expect(page.locator('style#woodev-base-inline')).toHaveCount(1);
-    expect(await rootVar(page, '--primary')).toContain('54.6%');
-
-    const after = await (
-      await readMoreButton(page)
-    ).evaluate((node) => getComputedStyle(node).backgroundColor);
-    expect(after).not.toBe(before);
   });
 
   test('the container width setting caps the layout', async ({ page }) => {
@@ -173,25 +127,27 @@ test.describe.serial('site-global theme_mods', () => {
   });
 
   // --radius drives Basecoat's --radius-md/-lg/-xl through calc(), so one
-  // setting reshapes every component. Asserting 0 vs > 0 keeps the check true
-  // under any pack, which differ in WHICH radius step a .btn uses.
-  test('the radius setting squares off and rounds the button', async ({ page }) => {
-    wp('theme mod set radius_scale none');
+  // setting reshapes every component that reads them.
+  //
+  // This used to also assert the read-more button's rendered
+  // border-top-left-radius, which came from the active style pack's own
+  // `rounded-*` utility on `.btn`. ADR-008 retires the packs, and
+  // `basecoat-css/base` styles no component geometry at all (see the
+  // surprising-finding note in src/css/app.css) — `.btn`'s radius is not
+  // driven by anything yet, that is T5's job (component kit, adapter layer).
+  // Until T5 lands there is nothing for a `.btn`-geometry assertion to prove;
+  // the token-level assertion below is what T2's Settings/InlineStyles
+  // machinery actually guarantees today.
+  test('the radius setting moves the --radius token', async ({ page }) => {
+    wp('theme mod set radius 0');
     await page.goto('/');
 
-    expect(await rootVar(page, '--radius')).toBe('0rem');
-    const squared = await (
-      await readMoreButton(page)
-    ).evaluate((node) => parseFloat(getComputedStyle(node).borderTopLeftRadius));
-    expect(squared).toBe(0);
+    expect(await rootVar(page, '--radius')).toBe('0px');
 
-    wp('theme mod set radius_scale lg');
+    wp('theme mod set radius 16');
     await page.goto('/');
 
-    const rounded = await (
-      await readMoreButton(page)
-    ).evaluate((node) => parseFloat(getComputedStyle(node).borderTopLeftRadius));
-    expect(rounded).toBeGreaterThan(squared);
+    expect(await rootVar(page, '--radius')).toBe('16px');
   });
 
   test('the base font size setting moves the root size', async ({ page }) => {
@@ -310,8 +266,19 @@ test.describe.serial('site-global theme_mods', () => {
         await expect(page.locator('html')).not.toHaveClass(/light/);
         await expect(page.locator('html')).not.toHaveClass(/dark/);
 
+        // tokens.colors.dark.background is `var(--n-950)` since the identity
+        // landed (ADR-008), not a literal oklch() string — canvas 2D's
+        // fillStyle does NOT resolve custom properties, so feeding it the raw
+        // token would silently keep canvas's untouched default (black)
+        // instead of a real colour. Resolve through the same substitution the
+        // generator and the browser both perform (this file never sets the
+        // T7 `palette`/`accent` theme_mods, so it is always warm-clay, the
+        // default palette).
+        const darkVars = varsFor(tokens, 'warm-clay', 'dark');
+        const expectedBackground = formatColor(resolveColor(darkVars.background, darkVars));
+
         const background = await canonicalColor(page, await rootVar(page, '--background'));
-        expect(background).toBe(await canonicalColor(page, tokens.colors.dark.background));
+        expect(background).toBe(await canonicalColor(page, expectedBackground));
       });
     });
 
@@ -329,8 +296,14 @@ test.describe.serial('site-global theme_mods', () => {
         await expect(page.locator('html')).not.toHaveClass(/light/);
         await expect(page.locator('html')).not.toHaveClass(/dark/);
 
+        // See the sibling "dark" test above for why this resolves through
+        // varsFor()/resolveColor() rather than feeding the raw var()-valued
+        // token to canvas's fillStyle.
+        const lightVars = varsFor(tokens, 'warm-clay', 'light');
+        const expectedBackground = formatColor(resolveColor(lightVars.background, lightVars));
+
         const background = await canonicalColor(page, await rootVar(page, '--background'));
-        expect(background).toBe(await canonicalColor(page, tokens.colors.light.background));
+        expect(background).toBe(await canonicalColor(page, expectedBackground));
       });
     });
 

@@ -14,7 +14,9 @@ declare(strict_types=1);
 get_header();
 ?>
 <div class="wtb-layout">
-	<div class="wtb-layout__content">
+	<div class="wtb-layout__content wtb-error-404">
+		<p class="wtb-error-404__code" aria-hidden="true">404</p>
+
 		<div class="wtb-no-results alert">
 			<?php woodev_base_icon( 'search' ); ?>
 			<h1 class="wtb-archive-title" data-title>

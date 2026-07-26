@@ -37,8 +37,9 @@ declare(strict_types=1);
 	</section>
 
 	<footer>
-		<a class="wtb-entry-more btn" href="<?php the_permalink(); ?>">
+		<a class="wtb-entry-more" href="<?php the_permalink(); ?>">
 			<?php esc_html_e( 'Read more', 'woodev-base-theme' ); ?>
+			<?php woodev_base_icon( 'chevron-right' ); ?>
 			<span class="sr-only">
 				<?php
 				printf(

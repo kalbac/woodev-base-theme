@@ -10,7 +10,9 @@ declare(strict_types=1);
 namespace Woodev\Theme\Base\Customizer;
 
 /**
- * Emits the settings that are CSS custom properties (spec §6).
+ * Emits the settings that are CSS custom properties (spec §6, extended by
+ * ADR-008's five identity controls — T7 of
+ * docs/plans/2026-07-25-visual-identity.md).
  *
  * Hooked to wp_head at priority 20 rather than attached with
  * wp_add_inline_style(): that function needs a registered STYLE handle, and in
@@ -37,13 +39,29 @@ namespace Woodev\Theme\Base\Customizer;
  * about it (higher specificity, or an enqueue after wp_head 20); that is the
  * correct outcome, since otherwise the setting could never do anything.
  *
- * KNOWN LIMITATION, dev mode only: under WOODEV_BASE_DEV the pack CSS is served
- * by Vite as a JS module that injects its <style> when the module EXECUTES,
- * i.e. after this block was parsed — so tokens.generated.css wins on source
- * order and Customizer overrides appear to do nothing. Production is
- * unaffected (an e2e mutation pins it: moving this to priority 5 turns the
- * accent-preset assertion red). Raising specificity would fix dev at the cost
- * of every real site's override path, which is the wrong trade.
+ * CASCADE PROOF against the generated `prefers-color-scheme` fallback block
+ * (docs/gotchas/not-selector-carries-its-arguments-specificity.md): that
+ * block's selector is `:root:where(:not(.light):not(.dark))`, deliberately
+ * wrapped in `:where()` so it too stays at specificity (0,1,0) rather than
+ * the (0,3,0) two bare `:not()`s would carry. Two rules of EQUAL specificity
+ * are decided by source order, and tokens.generated.css (enqueued, printed
+ * at wp_head 8) always precedes this block (wp_head 20) — so every setting
+ * below wins there precisely because this file never raises its own
+ * selector's specificity to "solve" the same problem the token generator
+ * already solved once, which is what InlineStylesTest and the integration
+ * suite pin (a plain `:root{`, never `:root:root`, never `!important`).
+ *
+ * KNOWN LIMITATION, dev mode only: under WOODEV_BASE_DEV the CSS bundle is
+ * served by Vite as a JS module that injects its <style> when the module
+ * EXECUTES, i.e. after this block was parsed — so tokens.generated.css wins
+ * on source order and Customizer overrides appear to do nothing in dev mode.
+ * Production is unaffected: --radius is declared by both tokens.generated.css
+ * and (when the radius theme_mod deviates from default) this block, so
+ * moving this hook to a priority before wp_head prints stylesheets (8) would
+ * make tokens.generated.css win instead and the radius assertion in
+ * tests/e2e/theme-mods.spec.mjs would go red. Raising specificity would fix
+ * dev at the cost of every real site's override path, which is the wrong
+ * trade.
  */
 final class InlineStyles {
 
@@ -57,11 +75,11 @@ final class InlineStyles {
 	/**
 	 * Print the block, unless every setting is at its default.
 	 *
-	 * Every value is drawn from a closed set (Settings::RADIUS_SCALE, the clamped
-	 * ints, or the oklch-pinned preset map), so there is nothing to escape;
-	 * wp_strip_all_tags() is the belt to those braces. esc_html()/esc_attr()
-	 * would be wrong here — they encode characters that are syntactically
-	 * meaningful in CSS.
+	 * Every value is drawn from a closed set (Palettes::slugs(),
+	 * Settings::FONTS), a clamped int, or ColorConverter's own numeric
+	 * output, so there is nothing to escape; wp_strip_all_tags() is the belt
+	 * to those braces. esc_html()/esc_attr() would be wrong here — they
+	 * encode characters that are syntactically meaningful in CSS.
 	 */
 	public function print_styles(): void {
 		$css = self::build_css();
@@ -85,29 +103,42 @@ final class InlineStyles {
 			$root['--wtb-container-max'] = "{$width}px";
 		}
 
-		$radius = Settings::radius_scale();
+		$palette = Settings::palette();
+		if ( Settings::PALETTE_DEFAULT !== $palette ) {
+			$tuple = Palettes::get( $palette );
+
+			$root['--n-h']      = $tuple['n-h'];
+			$root['--accent-h'] = $tuple['accent-h'];
+			$root['--accent-c'] = $tuple['accent-c'];
+		}
+
+		// Overrides the palette's accent-h/-c (or the default's, if the
+		// palette is warm-clay), never --n-h: the accent picker replaces the
+		// accent only, per ADR-008.
+		$accent = Settings::accent();
+		if ( Settings::ACCENT_DEFAULT !== $accent ) {
+			$oklch = ColorConverter::to_oklch( $accent );
+
+			if ( null !== $oklch ) {
+				$root['--accent-h'] = $oklch['h'];
+				$root['--accent-c'] = $oklch['c'];
+			}
+		}
+
+		$radius = Settings::radius();
 		if ( Settings::RADIUS_DEFAULT !== $radius ) {
-			$root['--radius'] = Settings::radius_value( $radius );
+			$root['--radius'] = "{$radius}px";
 		}
 
-		$preset = Settings::primary_preset();
-		$dark   = [];
-
-		// The map really is read twice — primary_preset() validates the slug
-		// against its own read, and this is a second one — so the key check is
-		// what makes that safe, not the read count. Indexing blind would turn a
-		// file that changed between the two reads (a build running against a live
-		// site) into an undefined index, a null $tuple and a TypeError: a
-		// front-end fatal. Two cheap reads of an opcached file beat a cache whose
-		// staleness would then need its own invalidation story.
-		$tuple = Settings::presets()[ $preset ] ?? null;
-
-		if ( Settings::PRIMARY_PRESET_DEFAULT !== $preset && null !== $tuple ) {
-			$root = array_merge( $root, $tuple['light'] );
-			$dark = $tuple['dark'];
+		$font = Settings::font();
+		if ( Settings::FONT_DEFAULT !== $font ) {
+			// The only other member of Settings::FONTS is FONT_SYSTEM.
+			foreach ( Settings::FONT_SYSTEM_STACK as $property => $value ) {
+				$root[ $property ] = $value;
+			}
 		}
 
-		$css = self::rule( ':root', $root ) . self::rule( '.dark', $dark );
+		$css = self::rule( ':root', $root );
 
 		$font_size = Settings::base_font_size();
 		if ( Settings::BASE_FONT_SIZE_DEFAULT !== $font_size ) {
