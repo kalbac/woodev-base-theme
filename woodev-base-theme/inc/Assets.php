@@ -26,6 +26,7 @@ final class Assets {
 	public function register(): void {
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue' ] );
 		add_filter( 'wp_preload_resources', [ $this, 'preload_display_font' ] );
+		add_action( 'after_setup_theme', [ $this, 'register_editor_style' ] );
 	}
 
 	/**
@@ -54,6 +55,35 @@ final class Assets {
 		foreach ( self::entry_css( $manifest, self::JS_ENTRY ) as $index => $imported ) {
 			wp_enqueue_style( "woodev-base-app-{$index}", "{$dist_uri}/{$imported}", [], null );
 		}
+	}
+
+	/**
+	 * Give the block editor the stylesheet that defines the theme's tokens.
+	 *
+	 * ADR-010 makes every theme.json colour a `var()` reference to a live token.
+	 * Those references resolve to nothing unless the CSS that DEFINES the tokens is
+	 * present, and the WP 6.8+ editor canvas is an iframe that loads only core's own
+	 * stylesheets — measured: `--primary` reads empty inside it without this call,
+	 * and resolves with it.
+	 *
+	 * The filename is hashed by Vite, so it is resolved through the manifest, never
+	 * written out. If the manifest or the entry is missing the editor simply keeps
+	 * core's styling, which is the same failure mode the front end already has.
+	 */
+	public function register_editor_style(): void {
+		if ( \defined( 'WOODEV_BASE_DEV' ) && WOODEV_BASE_DEV ) {
+			return;
+		}
+
+		$manifest = self::read_manifest( get_template_directory() . '/assets/dist/.vite/manifest.json' );
+		$css      = self::entry_file( $manifest, self::CSS_ENTRY );
+
+		if ( null === $css ) {
+			return;
+		}
+
+		add_theme_support( 'editor-styles' );
+		add_editor_style( "assets/dist/{$css}" );
 	}
 
 	/**

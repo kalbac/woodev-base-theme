@@ -3,81 +3,82 @@
 	"version": 3,
 	"settings": {
 		"color": {
+			"defaultPalette": false,
 			"palette": [
 				{
 					"slug": "background",
 					"name": "Background",
-					"color": "oklch(99% .002 68)"
+					"color": "var(--background)"
 				},
 				{
 					"slug": "foreground",
 					"name": "Foreground",
-					"color": "oklch(17% .012 68)"
+					"color": "var(--foreground)"
 				},
 				{
 					"slug": "primary",
 					"name": "Primary",
-					"color": "oklch(47% .088 40)"
+					"color": "var(--primary)"
 				},
 				{
 					"slug": "primary-foreground",
 					"name": "Primary Foreground",
-					"color": "oklch(99% .008 40)"
+					"color": "var(--primary-foreground)"
 				},
 				{
 					"slug": "secondary",
 					"name": "Secondary",
-					"color": "oklch(94.6% .004 68)"
+					"color": "var(--secondary)"
 				},
 				{
 					"slug": "secondary-foreground",
 					"name": "Secondary Foreground",
-					"color": "oklch(27% .014 68)"
+					"color": "var(--secondary-foreground)"
 				},
 				{
 					"slug": "muted",
 					"name": "Muted",
-					"color": "oklch(97.2% .003 68)"
+					"color": "var(--muted)"
 				},
 				{
 					"slug": "muted-foreground",
 					"name": "Muted Foreground",
-					"color": "oklch(52% .012 68)"
+					"color": "var(--muted-foreground)"
 				},
 				{
 					"slug": "accent",
 					"name": "Accent",
-					"color": "oklch(94.6% .004 68)"
+					"color": "var(--accent)"
 				},
 				{
 					"slug": "accent-foreground",
 					"name": "Accent Foreground",
-					"color": "oklch(17% .012 68)"
+					"color": "var(--accent-foreground)"
 				},
 				{
 					"slug": "border",
 					"name": "Border",
-					"color": "oklch(87% .006 68)"
+					"color": "var(--border)"
 				},
 				{
 					"slug": "destructive",
 					"name": "Destructive",
-					"color": "oklch(55% .19 25)"
+					"color": "var(--destructive)"
 				},
 				{
 					"slug": "success",
 					"name": "Success",
-					"color": "oklch(52% .13 155)"
+					"color": "var(--success)"
 				},
 				{
 					"slug": "warning",
 					"name": "Warning",
-					"color": "oklch(66% .14 75)"
+					"color": "var(--warning)"
 				},
 				{
 					"slug": "sale",
 					"name": "Sale",
-					"color": "oklch(55% .19 25)"
+					"color": "var(--sale)"
 				}
 			]
 		},
@@ -99,6 +100,16 @@
 					"fontFamily": "\"IBM Plex Mono\", ui-monospace, \"SF Mono\", Menlo, monospace"
 				}
 			]
+		}
+	},
+	"styles": {
+		"elements": {
+			"button": {
+				"color": {
+					"background": "var(--primary)",
+					"text": "var(--primary-foreground)"
+				}
+			}
 		}
 	}
 }

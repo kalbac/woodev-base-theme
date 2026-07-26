@@ -1,7 +1,7 @@
 # ADR-010: `theme.json` carries `var()` references, and the editor gets the tokens
 
-- **Status:** **Proposed** (26.07.2026, s15) — awaiting Maksim's call. 🔴 irreversible-ish:
-  it changes how the identity is delivered to WordPress itself.
+- **Status:** **Accepted** (26.07.2026, s15) — Maksim approved option (b) on the measured
+  diff. 🔴: it changes how the identity is delivered to WordPress itself.
 - **Deciders:** Maksim + Claude
 - **Closes:** [#26](https://github.com/kalbac/woodev-base-theme/issues/26),
   [#25](https://github.com/kalbac/woodev-base-theme/issues/25)

@@ -34,7 +34,15 @@ final class AssetsPreloadTest extends TestCase {
 	}
 
 	public function test_it_hooks_wp_preload_resources(): void {
-		Functions\expect( 'add_action' )->once();
+		// Named rather than counted. This used to expect add_action() "once", which
+		// pinned the NUMBER of actions instead of which ones — so adding the editor
+		// stylesheet hook (ADR-010) failed a test that was never about counting.
+		Functions\expect( 'add_action' )
+			->once()
+			->with( 'wp_enqueue_scripts', \Mockery::type( 'array' ) );
+		Functions\expect( 'add_action' )
+			->once()
+			->with( 'after_setup_theme', \Mockery::type( 'array' ) );
 		Functions\expect( 'add_filter' )
 			->once()
 			->with( 'wp_preload_resources', \Mockery::type( 'array' ) );
