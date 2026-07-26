@@ -60,11 +60,48 @@ Ship Golos Text, IBM Plex Sans and IBM Plex Mono **self-hosted** inside the them
   the `-ext` subsets rarely load at all. Mono is the outlier — 131 KB on disk for order
   numbers and SKUs — because Google served it as three static instances while the other
   two families came as single variable files per subset.
-- **M3 reduction, concrete:** re-instance with `pyftsubset` (drop unused weight-axis range
-  on the variable faces; cut Mono to the one or two weights the shipped templates truly
-  need). Not done at v1 because it needs a font toolchain this repo does not have, and
-  because cutting weights now would deviate from the approved design before anything has
-  been seen in a browser.
+- ~~**M3 reduction, concrete:** re-instance with `pyftsubset` (drop unused weight-axis
+  range on the variable faces; cut Mono to the one or two weights the shipped templates
+  truly need).~~ **Measured 27.07.2026 (s15) and largely unavailable — see the amendment
+  below.**
+
+### Amendment (s15, 27.07.2026): the reduction target is not reachable, and here is why
+
+The plan above assumed weights were being shipped that nothing renders. Measured instead
+of assumed: a browser walked every text-bearing element on the base site (`/`, a page, a
+post) and the store (`/`, `/shop/`, `/cart/`, `/checkout/`, `/my-account/`), in **both
+schemes**, and recorded the computed `(family, weight)` pair actually used.
+
+| Family | Shipped | Actually rendered | Trimmable? |
+|---|---|---|---|
+| IBM Plex Sans (variable 400–700) | whole axis | 400, 500, 600, **700** | **No** — the whole axis is used |
+| Golos Text (variable 500–800) | whole axis | 600, **650**, 700, 800 | Only the unused 500–600 range, which is a small saving on a variable axis |
+| IBM Plex Mono (static 400/500/600) | 3 weights | 400, 500, 600 | **No** — all three render |
+
+Two of those numbers close the question on their own. **Mono's three weights are all in
+use**, so "cut Mono to one or two weights" — the single biggest hoped-for saving, 131 KB —
+is not available. And **Golos renders at 650**, an intermediate value only a variable font
+can produce, so neither variable face can be replaced by static instances.
+
+Three further findings:
+
+- **`@ibm/plex-mono` has no variable release.** Checked against the published package
+  (2.5.0): 96 `woff2` files, every one a static instance. Collapsing Mono's 12 files into 4
+  variable ones — the other structural saving — does not exist upstream.
+- **Glyph-subsetting to observed content is not available to us at all.** A distributable
+  theme renders arbitrary user content; subsetting the Cyrillic range to the glyphs our
+  demo pages happen to use would ship a theme that breaks on somebody's actual text. This
+  is the technique that would have produced the large number, and it is unusable here by
+  construction, not by preference.
+- **Mono 700 does not render anywhere measured**, so the one design rule asking for it
+  (`.totals .row.grand .amount`) is not reached on the block-cart store. Adding the weight
+  would ADD bytes for a rule nothing currently hits.
+
+**What is still worth doing, restated honestly:** re-instancing from upstream OFL
+**release tags** rather than "whatever `fonts.googleapis.com` served on 25.07.2026". That
+is a *provenance* win — a known, citable version for the wp.org review — and not a size
+win. The ~120 KB figure in [#17](https://github.com/kalbac/woodev-base-theme/issues/17)
+should be struck rather than pursued.
 - One known gap from the vendored source: the design uses IBM Plex **Mono 700** once
   (`.totals .row.grand .amount`) and no 700 static instance exists in the Google response
   we derive from, so that rule falls back to 600. The M3 re-subset closes it.
