@@ -37,18 +37,31 @@ final class AssetsPreloadTest extends TestCase {
 		// Named rather than counted. This used to expect add_action() "once", which
 		// pinned the NUMBER of actions instead of which ones — so adding the editor
 		// stylesheet hook (ADR-010) failed a test that was never about counting.
+		//
+		// The METHOD is pinned too, not just `Mockery::type('array')`. A callback
+		// matcher that accepts any array would pass with
+		// add_action( 'enqueue_block_editor_assets', [ $this, 'enqueue' ] ) — which
+		// would put the full bundle into wp-admin and restyle the admin itself, the
+		// one thing ADR-010 forbids. Raised by the critic; the loose matcher was real.
+		$callback = static fn( string $method ): \Mockery\Matcher\Closure => \Mockery::on(
+			static fn( $value ): bool => \is_array( $value )
+				&& 2 === \count( $value )
+				&& $value[0] instanceof Assets
+				&& $method === $value[1]
+		);
+
 		Functions\expect( 'add_action' )
 			->once()
-			->with( 'wp_enqueue_scripts', \Mockery::type( 'array' ) );
+			->with( 'wp_enqueue_scripts', $callback( 'enqueue' ) );
 		Functions\expect( 'add_action' )
 			->once()
-			->with( 'after_setup_theme', \Mockery::type( 'array' ) );
+			->with( 'after_setup_theme', $callback( 'register_editor_style' ) );
 		Functions\expect( 'add_action' )
 			->once()
-			->with( 'enqueue_block_editor_assets', \Mockery::type( 'array' ) );
+			->with( 'enqueue_block_editor_assets', $callback( 'enqueue_editor_tokens' ) );
 		Functions\expect( 'add_filter' )
 			->once()
-			->with( 'wp_preload_resources', \Mockery::type( 'array' ) );
+			->with( 'wp_preload_resources', $callback( 'preload_display_font' ) );
 
 		( new Assets() )->register();
 	}

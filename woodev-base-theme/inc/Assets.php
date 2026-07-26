@@ -75,6 +75,17 @@ final class Assets {
 	 * The filename is hashed by Vite, so it is resolved through the manifest, never
 	 * written out. If the manifest or the entry is missing the editor simply keeps
 	 * core's styling, which is the same failure mode the front end already has.
+	 *
+	 * KNOWN DEV-MODE GAP, raised by the critic and accepted rather than fixed. In dev
+	 * mode both this and enqueue_editor_tokens() bail, so the editor gets no tokens and
+	 * theme.json's var() references resolve to nothing: palette swatches render
+	 * transparent and the canvas is unstyled. It is not fixable the obvious way — the
+	 * Vite dev server serves CSS as a JS MODULE that injects a <style> when it executes
+	 * (docs/gotchas/dev-mode-css-injection-breaks-relative-urls.md), and
+	 * add_editor_style() takes a stylesheet URL, not a module. This joins the two
+	 * dev-mode limitations already recorded (Customizer overrides lose to
+	 * tokens.generated.css; self-hosted fonts 404). Production is unaffected and is
+	 * covered by integration and e2e. Judge the editor in a production build.
 	 */
 	public function register_editor_style(): void {
 		if ( \defined( 'WOODEV_BASE_DEV' ) && WOODEV_BASE_DEV ) {

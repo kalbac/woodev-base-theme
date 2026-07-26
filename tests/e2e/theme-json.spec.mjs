@@ -13,6 +13,22 @@ import { expect, test } from '@playwright/test';
 /** Core's default button background, the thing #26 was about. */
 const CORE_DEFAULT_BG = 'rgb(50, 55, 60)'; // #32373c
 
+/**
+ * Resolve a token to the value the browser computes for it, in whatever scheme the
+ * document is currently in. Comparing against this — rather than against "not core's
+ * grey" — is what makes the assertion about the TOKEN rather than about some colour.
+ */
+const resolveToken = (page, token) =>
+  page.evaluate((name) => {
+    const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    const probe = document.createElement('div');
+    probe.style.backgroundColor = raw;
+    document.body.append(probe);
+    const value = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return { raw, computed: value };
+  }, token);
+
 test('a core Button block is painted by the theme, not by core, in both schemes', async ({
   page,
 }) => {
@@ -27,30 +43,44 @@ test('a core Button block is painted by the theme, not by core, in both schemes'
       return { bg: cs.backgroundColor, fg: cs.color };
     });
 
-  const light = await read();
+  // Both schemes are checked against the LIVE TOKEN, not against a list of colours the
+  // button must avoid. A "not core's grey, not transparent, differs from light" trio
+  // passes happily against a hardcoded `.dark .wp-element-button{background:#123456}`,
+  // which is a second copy of the identity and exactly what #25 is about.
+  for (const scheme of ['light', 'dark']) {
+    if (scheme === 'dark') {
+      // Runtime toggle rather than a theme_mod another worker may own.
+      await page.evaluate(() => document.documentElement.classList.add('dark'));
+    }
 
-  // The defect, stated as the assertion: core's grey must not be what renders.
-  expect(light.bg).not.toBe(CORE_DEFAULT_BG);
+    const computed = await read();
+    const primary = await resolveToken(page, '--primary');
+    const primaryForeground = await resolveToken(page, '--primary-foreground');
 
-  // …and it must be a real colour, not a var() that resolved to nothing. An
-  // unresolvable custom property computes to `rgba(0, 0, 0, 0)`, which would also
-  // satisfy the assertion above while looking completely broken on screen.
-  expect(light.bg).not.toBe('rgba(0, 0, 0, 0)');
-  expect(light.fg).not.toBe('rgba(0, 0, 0, 0)');
+    expect(primary.raw, `--primary is undefined in ${scheme}`).not.toBe('');
+    expect(computed.bg, `background in ${scheme}`).toBe(primary.computed);
+    expect(computed.fg, `text colour in ${scheme}`).toBe(primaryForeground.computed);
 
-  // Same runtime `.dark` toggle the rest of this suite uses, rather than mutating
-  // theme_mods another worker may own.
+    // Belt to those braces: the defect this change exists to fix, stated directly.
+    expect(computed.bg, `core's default survived in ${scheme}`).not.toBe(CORE_DEFAULT_BG);
+  }
+});
+
+test('the two schemes really do resolve to different colours', async ({ page }) => {
+  // Guards the loop above against a degenerate pass: if `.dark` did nothing, both
+  // iterations would compare the same value against the same token and agree.
+  await page.goto('/core-button/');
+
+  const button = page.locator('a.wp-element-button').first();
+  await expect(button).toBeVisible();
+
+  const bg = () => button.evaluate((el) => getComputedStyle(el).backgroundColor);
+
+  const light = await bg();
   await page.evaluate(() => document.documentElement.classList.add('dark'));
-  const dark = await read();
+  const dark = await bg();
 
-  expect(dark.bg).not.toBe(CORE_DEFAULT_BG);
-  expect(dark.bg).not.toBe('rgba(0, 0, 0, 0)');
-  expect(dark.fg).not.toBe('rgba(0, 0, 0, 0)');
-
-  // The point of the var() references: the button FOLLOWS the scheme. If theme.json
-  // still carried a literal, these would be identical in both schemes — which is the
-  // whole of #25 expressed as one comparison.
-  expect(dark.bg).not.toBe(light.bg);
+  expect(dark).not.toBe(light);
 });
 
 test('the button resolves its colours from the identity tokens, not from a copy', async ({
