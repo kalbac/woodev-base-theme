@@ -310,7 +310,9 @@ const ratioFrom = (luminance, one, other) => {
 export function contrastRatio(one, other) {
   for (const color of [one, other]) {
     if (1 !== color.a) {
-      throw new Error(`Refusing to measure contrast against a translucent colour (alpha ${color.a})`);
+      throw new Error(
+        `Refusing to measure contrast against a translucent colour (alpha ${color.a})`,
+      );
     }
   }
 
@@ -426,9 +428,7 @@ export function assertAccessiblePalettes(tokens) {
    ========================================================================== */
 
 const trimNumber = (value, decimals) =>
-  Number(value.toFixed(decimals))
-    .toString()
-    .replace(/^0\./, '.');
+  Number(value.toFixed(decimals)).toString().replace(/^0\./, '.');
 
 /**
  * A resolved colour back as a concrete, var()-free oklch() literal — for
