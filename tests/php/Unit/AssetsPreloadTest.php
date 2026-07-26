@@ -43,10 +43,16 @@ final class AssetsPreloadTest extends TestCase {
 		// add_action( 'enqueue_block_editor_assets', [ $this, 'enqueue' ] ) — which
 		// would put the full bundle into wp-admin and restyle the admin itself, the
 		// one thing ADR-010 forbids. Raised by the critic; the loose matcher was real.
+		// Identity, not `instanceof`. The re-critic caught the first version claiming to
+		// pin the receiving object while only pinning its CLASS — `[ new Assets(),
+		// 'enqueue' ]` would have satisfied it, registering a callback on an object
+		// nobody holds, which no remove_action() could ever detach.
+		$assets = new Assets();
+
 		$callback = static fn( string $method ): \Mockery\Matcher\Closure => \Mockery::on(
 			static fn( $value ): bool => \is_array( $value )
 				&& 2 === \count( $value )
-				&& $value[0] instanceof Assets
+				&& $value[0] === $assets
 				&& $method === $value[1]
 		);
 
@@ -63,7 +69,7 @@ final class AssetsPreloadTest extends TestCase {
 			->once()
 			->with( 'wp_preload_resources', $callback( 'preload_display_font' ) );
 
-		( new Assets() )->register();
+		$assets->register();
 	}
 
 	public function test_a_russian_locale_gets_the_cyrillic_entry(): void {

@@ -13,6 +13,9 @@ import { expect, test } from '@playwright/test';
 /** Core's default button background, the thing #26 was about. */
 const CORE_DEFAULT_BG = 'rgb(50, 55, 60)'; // #32373c
 
+/** What an unresolvable custom property — or a `transparent` one — computes to. */
+const TRANSPARENT = 'rgba(0, 0, 0, 0)';
+
 /**
  * Resolve a token to the value the browser computes for it, in whatever scheme the
  * document is currently in. Comparing against this — rather than against "not core's
@@ -58,6 +61,15 @@ test('a core Button block is painted by the theme, not by core, in both schemes'
     const primaryForeground = await resolveToken(page, '--primary-foreground');
 
     expect(primary.raw, `--primary is undefined in ${scheme}`).not.toBe('');
+
+    // Following the token is necessary but not sufficient: a button faithfully
+    // following `--primary: transparent` computes rgba(0, 0, 0, 0), matches its token
+    // exactly, and is invisible on screen. The first version of this fix dropped this
+    // guard while adding the token comparison — caught by the re-critic. Both claims
+    // have to hold at once.
+    expect(computed.bg, `background is invisible in ${scheme}`).not.toBe(TRANSPARENT);
+    expect(computed.fg, `text is invisible in ${scheme}`).not.toBe(TRANSPARENT);
+
     expect(computed.bg, `background in ${scheme}`).toBe(primary.computed);
     expect(computed.fg, `text colour in ${scheme}`).toBe(primaryForeground.computed);
 
