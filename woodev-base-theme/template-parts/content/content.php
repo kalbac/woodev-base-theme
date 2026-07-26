@@ -8,6 +8,10 @@
  */
 
 declare(strict_types=1);
+
+// Direct access to a theme file runs outside WordPress: the fatal that follows
+// prints a path. Fail closed instead.
+defined( 'ABSPATH' ) || exit;
 ?>
 <article id="post-<?php the_ID(); ?>" <?php post_class( 'wtb-entry mb-8' ); ?>>
 	<header class="wtb-entry-header mb-4">

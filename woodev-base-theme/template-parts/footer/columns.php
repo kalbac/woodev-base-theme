@@ -6,6 +6,10 @@
  */
 
 declare(strict_types=1);
+
+// Direct access to a theme file runs outside WordPress: the fatal that follows
+// prints a path. Fail closed instead.
+defined( 'ABSPATH' ) || exit;
 ?>
 <footer class="wtb-footer">
 	<div class="wtb-container">

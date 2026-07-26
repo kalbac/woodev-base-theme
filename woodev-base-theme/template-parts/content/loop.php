@@ -12,6 +12,10 @@
 
 declare(strict_types=1);
 
+// Direct access to a theme file runs outside WordPress: the fatal that follows
+// prints a path. Fail closed instead.
+defined( 'ABSPATH' ) || exit;
+
 if ( have_posts() ) {
 	echo '<div class="wtb-post-grid">';
 

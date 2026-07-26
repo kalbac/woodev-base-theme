@@ -9,6 +9,10 @@ declare(strict_types=1);
 
 namespace Woodev\Theme\Base\Woo;
 
+// Direct access to a theme file runs outside WordPress: the fatal that follows
+// prints a path. Fail closed instead.
+defined( 'ABSPATH' ) || exit;
+
 /**
  * Adds a `.card-actions` wrapper around the loop add-to-cart button by
  * filtering `woocommerce_loop_add_to_cart_link` — the canonical point for

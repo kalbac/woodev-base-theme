@@ -9,6 +9,10 @@ declare(strict_types=1);
 
 namespace Woodev\Theme\Base\Customizer;
 
+// Direct access to a theme file runs outside WordPress: the fatal that follows
+// prints a path. Fail closed instead.
+defined( 'ABSPATH' ) || exit;
+
 /**
  * The generated inc/generated/palettes.php is our own build artifact (`npm run tokens`),
  * but it is also the point where three bare numbers per palette enter a
