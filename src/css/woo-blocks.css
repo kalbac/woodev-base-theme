@@ -1,0 +1,951 @@
+/*
+ * Block-based WooCommerce Cart and Checkout — the hardcoded surfaces only
+ * (ADR-009 finding 4 / docs/plans/2026-07-25-block-cart-checkout.md, task B1,
+ * work-list row 1). Measured against the installed WooCommerce 10.9.4 package
+ * on disk, not recalled.
+ *
+ * NO `@import 'tailwindcss'` HERE, DELIBERATELY. Same trap `src/css/woo.css`'s
+ * own header documents (lines 7-19): this file uses no Tailwind feature
+ * (`@apply`, `theme()`, `--spacing()`, `@variant`, `@utility` — none appear
+ * below), it is plain CSS reading this theme's own custom properties, which
+ * come from `tokens.generated.css` in the MAIN bundle (`app.css`), enqueued
+ * unconditionally on every front-end request. Importing Tailwind again here
+ * would ship a SECOND full copy of the reset + preflight + the `@source`
+ * glob's utilities — un-scoped, unlike every rule below — on top of every
+ * page that already paid for it once via `app.css`. `woo.css`'s header
+ * records that this used to actually ship (45,895 bytes, un-scoped) before
+ * the import was removed there; the same failure mode applies verbatim to a
+ * second stylesheet, so it is called out again here rather than trusted to
+ * be "obviously" avoided.
+ *
+ * WHY A NEW FILE, NOT AN ADDITION TO woo.css (ADR-009 finding 5).
+ * Verified against the BUILT artifact, not the source: all 184 top-level
+ * rules in the built `woo.css` bundle (`assets/dist/assets/woo-*.css`)
+ * require a `.woocommerce` ancestor — the whole file is nested inside
+ * `.woocommerce { … }` plus two `.woocommerce`-prefixed rules (see that
+ * file's own header). The block Checkout page's `<body>` carries no bare
+ * `woocommerce` class at all — its classes are `woocommerce-checkout
+ * woocommerce-page woocommerce-no-js` — so not one byte of `woo.css` can
+ * ever match there. Nesting these rules inside `woo.css`'s `.woocommerce { … }`
+ * block would silently compile to dead code on the one page that needs it;
+ * a stylesheet with its own scope is the only shape that actually reaches
+ * the block Cart/Checkout markup.
+ *
+ * WHY UN-LAYERED (mirrors woo.css's own reasoning, same file, lines 20-31).
+ * WooCommerce Blocks ships `cart.css` / `checkout.css` un-layered. Our
+ * stylesheets already load LAST in `<head>` on both pages (ADR-009 finding 3
+ * — the tail of the head order is `wc-blocks-style` → `wc-blocks-style-
+ * cart|checkout` → `global-styles` → `woocommerce-general` →
+ * `woodev-base-style` → `woodev-base-woo`, and this bundle's own enqueue
+ * — inc/Woo/BlockAssets.php — registers after all of those), so an
+ * UN-LAYERED rule of EQUAL specificity wins purely on source order. A rule
+ * parked in `@layer adapter` would lose to Woo's un-layered CSS regardless of
+ * specificity, exactly the s9 mistake `woo.css`'s header already documents
+ * (fixed s10, faf7801) — there is no reason to repeat it in a second file.
+ *
+ * WHY THE SCOPE IS THE WRAPPER, NOT INTERNAL MARKUP (ADR-009 decision 1).
+ * Every rule below is scoped under `.wp-block-woocommerce-cart` /
+ * `.wp-block-woocommerce-checkout` — the class WordPress generates from the
+ * block's REGISTERED NAME (`woocommerce/cart`, `woocommerce/checkout`), not
+ * from any internal DOM structure. That is the most stable selector
+ * available: ADR-009 finding 7 measured only 85-94% survival of Woo's OWN
+ * internal `.wc-block-*` classes across 6 majors (~10 months) — churn we
+ * have no control over — whereas the wrapper is WordPress core's own
+ * block-serialisation convention (block name -> `wp-block-{namespace}-
+ * {name}`), which only changes if WooCommerce renames the block itself, and
+ * that would break every site's saved content, not just this stylesheet. The
+ * wrapper is also what keeps this file from leaking onto blocks explicitly
+ * OUT of ADR-009's scope — Mini Cart, Product Collection, and the other Woo
+ * blocks reuse several of the very same `.wc-block-components-*` internal
+ * classes targeted below; an un-scoped override would restyle those too.
+ *
+ * SPECIFICITY: mirrored against the real vendor rule, never inflated with
+ * `!important` (ADR-009 decision 3 / plan ground rule 2). Every selector
+ * below reproduces the vendor selector's own classes/attributes/elements
+ * exactly, prefixed with the ONE wrapper class scoping requires (see each
+ * rule's comment for the vendor file, line and the specificity arithmetic).
+ * That wrapper prefix does add one class of specificity over the bare vendor
+ * selector — unavoidable, since scoping correctly IS the point (previous
+ * paragraph) — but this page wins even without that extra class: our
+ * stylesheet loads after Woo's on both pages (finding 3 above), so an
+ * EQUAL-specificity un-layered rule already wins on source order alone. The
+ * added class is a side effect of correct scope, not a selector raised to
+ * force a win — nothing here relies on the extra specificity to function.
+ *
+ * SCOPE: work-list row 1 only (the plan doc's table). Text input and the
+ * select/combobox control — background, text colour, border colour and
+ * radius, the one genuine defect ADR-009 found (a white field with
+ * near-black text on an `oklch(13% …)` dark page). Checkboxes, radios, focus
+ * rings, buttons, notices and general radii elsewhere are B2-B5, deliberately
+ * not here. Also deliberately not here: `.wc-block-gateway-container
+ * .wc-block-gateway-input` (checkout.css, a payment-gateway card-details
+ * field with the same hardcoded #fff/near-black/4px shape) — found while
+ * reading the vendor file for the rule below, but it belongs to a specific
+ * payment gateway's markup, not core Woo Blocks, and is outside ADR-009
+ * finding 4's measured table; left for whoever owns that surface to decide
+ * on, not silently folded in here.
+ *
+ * Nothing is a literal colour: every declaration reads `var(--…)` from
+ * `tokens.generated.css` (un-layered, loaded on every page via `app.css`) —
+ * the same tokens `woo.css` and `adapter/forms.css` read, so this surface
+ * joins the identity in both colour schemes without sharing code with
+ * either. No separate dark-scheme block is needed: `--background`,
+ * `--foreground`, `--border` and `--radius` already resolve differently
+ * under `.dark`/`prefers-color-scheme: dark` (tokens.generated.css), so one
+ * declaration each covers both schemes.
+ */
+
+/* -- Text input --------------------------------------------------------
+ * Vendor rule (WooCommerce 10.9.4, verified on disk):
+ *   checkout.css:68 — compiled directly into the checkout page's own bundle.
+ *   assets/client/blocks/packages-style.css:17 — the shared "wc-blocks-style"
+ *     bundle enqueued on the cart page too (cart.css itself does not carry
+ *     this rule — checked, absent — the cart's coupon field, which uses this
+ *     same `.wc-block-components-text-input` class, is styled from the
+ *     shared bundle instead).
+ * Narrowest matching branch: `.wc-block-components-text-input
+ * input[type=text]` (and the other five types) — 1 class + 1 attribute
+ * selector + 1 element = specificity (0,2,1). (`checkout.css` and
+ * `packages-style.css` both also carry a `.wc-block-components-form
+ * .wc-block-components-text-input input[type=text]` branch at (0,3,1); our
+ * rule below ties that one too, since our wrapper class brings us to (0,3,1)
+ * as well — see the file header on why the added class is not a specificity
+ * trick.)
+ * Vendor declares (kept, not restated): border WIDTH/STYLE (1px solid),
+ * box-sizing, font metrics, height, padding, width. Vendor declares (fixed
+ * below): background-color:#fff, border colour (a color-mix(currentColor)
+ * that resolves to near-black once combined with the hardcoded color:#2b2d2f
+ * on the same rule), color:#2b2d2f, border-radius:4px.
+ */
+.wp-block-woocommerce-cart .wc-block-components-text-input input[type='email'],
+.wp-block-woocommerce-cart .wc-block-components-text-input input[type='number'],
+.wp-block-woocommerce-cart .wc-block-components-text-input input[type='password'],
+.wp-block-woocommerce-cart .wc-block-components-text-input input[type='tel'],
+.wp-block-woocommerce-cart .wc-block-components-text-input input[type='text'],
+.wp-block-woocommerce-cart .wc-block-components-text-input input[type='url'],
+.wp-block-woocommerce-checkout .wc-block-components-text-input input[type='email'],
+.wp-block-woocommerce-checkout .wc-block-components-text-input input[type='number'],
+.wp-block-woocommerce-checkout .wc-block-components-text-input input[type='password'],
+.wp-block-woocommerce-checkout .wc-block-components-text-input input[type='tel'],
+.wp-block-woocommerce-checkout .wc-block-components-text-input input[type='text'],
+.wp-block-woocommerce-checkout .wc-block-components-text-input input[type='url'] {
+  background-color: var(--background);
+  border-color: var(--border);
+  color: var(--foreground);
+  border-radius: var(--radius);
+}
+
+/* -- Select / combobox --------------------------------------------------
+ * WooCommerce Blocks has no separate "combobox" CSS class — the country/
+ * state autocomplete control (grep confirms `combobox` appears only in the
+ * package's JS, as an ARIA role on this same markup) renders through the
+ * identical `.wc-blocks-components-select` component targeted below.
+ *
+ * Vendor rule (WooCommerce 10.9.4, verified on disk): checkout.css:6 only.
+ * Checked and NOT present in cart.css or packages-style.css — the select
+ * component's base style is compiled solely into the checkout bundle, so
+ * the override below is scoped to `.wp-block-woocommerce-checkout` alone,
+ * matching where the vendor rule (and therefore the defect) actually is.
+ *
+ * Two nested elements carry the visible surface:
+ *  - `.wc-blocks-components-select__container` — `background:#fff;
+ *    border-radius:4px` (plus non-colour layout declarations, kept). 2
+ *    classes, specificity (0,2,0).
+ *  - `.wc-blocks-components-select__select` (the actual `<select>`) —
+ *    `background:none` (the container's fill shows through), `border:1px
+ *    solid color-mix(...)`, `border-radius:4px`, `color:#2b2d2f` (plus kept
+ *    font/size/layout declarations). 2 classes, specificity (0,2,0).
+ *    The chevron (`__expand`, `fill:#2b2d2f`) is deliberately left alone:
+ *    row 1 covers background/text/border/radius, not icon fill.
+ */
+.wp-block-woocommerce-checkout
+  .wc-blocks-components-select
+  .wc-blocks-components-select__container {
+  background-color: var(--background);
+  border-radius: var(--radius);
+}
+
+.wp-block-woocommerce-checkout .wc-blocks-components-select .wc-blocks-components-select__select {
+  border-color: var(--border);
+  color: var(--foreground);
+  border-radius: var(--radius);
+}
+
+/* =========================================================================
+ * TASK B2 (docs/plans/2026-07-25-block-cart-checkout.md) — checkboxes,
+ * radios, and the focus states for those PLUS the text input / select rows
+ * B1 already styled above. ADR-009 work-list row 2 ("checkbox, radio | #fff
+ * bg, radius 4px | same, plus our focus ring") and the plan's own framing:
+ * s12 shipped two P0 accessibility defects in exactly this area, both INSIDE
+ * a fix — an invalid field lost its focus indicator to `.is-error` sitting
+ * later in source at equal specificity, and the repair for that then
+ * vanished under Windows High Contrast because `box-shadow` is dropped there
+ * and `outline: none` suppressed the fallback. Every `:focus` rule below is
+ * checked against BOTH traps: the real vendor `has-error` styling (found in
+ * the vendor file, not assumed) and forced-colors mode.
+ * ========================================================================= */
+
+/* -- Checkbox --------------------------------------------------------------
+ * Vendor rule (WooCommerce 10.9.4, verified on disk): packages-style.css:2 —
+ * the shared "wc-blocks-style" bundle already established (B1, this file's
+ * header) to load on BOTH the cart and checkout pages. checkout.css's own
+ * bundle references `.wc-block-components-checkbox` only inside flex/margin
+ * LAYOUT rules (e.g. `.wc-block-checkout__billing-fields
+ * .wc-block-components-address-form .wc-block-components-checkbox{flex:0 0
+ * 100%}`) — checked directly, it carries none of the checkbox's own
+ * background/border/radius declarations, so packages-style.css is the only
+ * source for those and this rule is scoped to both wrapper classes to match.
+ *
+ * Narrowest matching selector: `.wc-block-components-checkbox
+ * .wc-block-components-checkbox__input[type=checkbox]` — 2 classes + 1
+ * attribute = specificity (0,3,0). Vendor declares (kept, not restated):
+ * border COLOUR (`color-mix(in srgb,currentColor 48%,transparent)` — already
+ * inherits, finding 4), border width/style, box-sizing, height/width. Vendor
+ * declares (fixed below): background-color:#fff, border-radius:4px.
+ */
+.wp-block-woocommerce-cart
+  .wc-block-components-checkbox
+  .wc-block-components-checkbox__input[type='checkbox'],
+.wp-block-woocommerce-checkout
+  .wc-block-components-checkbox
+  .wc-block-components-checkbox__input[type='checkbox'] {
+  background-color: var(--background);
+  border-radius: var(--radius);
+}
+
+/* Consequence of the override above, not a separate work-list item: vendor's
+ * OWN `:checked` rule (packages-style.css:2) redeclares `background:#fff` —
+ * the SAME colour as unchecked, so vendor's checked/unchecked states never
+ * actually differed by background; the checkmark glyph alone conveys
+ * "checked". Our base rule above already ties that `:checked` rule's
+ * specificity (2 classes + 1 attribute + 1 pseudo-class, and once our
+ * wrapper class is added: 1 wrapper + 2 classes + 1 attribute = (0,4,0) —
+ * matches), and this stylesheet loads after Woo's (finding 3), so the
+ * checked state also resolves to `var(--background)`, not `#fff` —
+ * intentional: the checkbox keeps ONE surface colour across both states.
+ *
+ * That is what turns the checkmark's own hardcoded `fill:#000`
+ * (packages-style.css:2, `.wc-block-components-checkbox__mark`) into a
+ * genuine, newly INTRODUCED defect rather than a restated inherited value:
+ * before the rule above, a checked box stayed `#fff` in BOTH colour schemes,
+ * so a black mark was always legible; after it, a checked box in `.dark`
+ * resolves to `var(--background)` (near-black), and an unchanged `fill:#000`
+ * mark would vanish into it — the exact "P0 hiding inside a fix" shape this
+ * task exists to avoid. Fixed here, not deferred: `.wc-block-components-checkbox
+ * .wc-block-components-checkbox__mark` is 2 classes = (0,2,0); our
+ * wrapper-prefixed version is (0,3,0), beating it outright regardless of
+ * load order. `var(--foreground)` is the same pairing `--background` uses
+ * everywhere else in this file (row 1), so the mark keeps the exact contrast
+ * relationship the box's own background promises in both schemes. */
+.wp-block-woocommerce-cart .wc-block-components-checkbox .wc-block-components-checkbox__mark,
+.wp-block-woocommerce-checkout .wc-block-components-checkbox .wc-block-components-checkbox__mark {
+  fill: var(--foreground);
+}
+
+/* Focus ring (work-list row 2, "plus our focus ring"). Vendor's OWN
+ * mechanism here is a real, non-transparent `outline` (not `box-shadow`), so
+ * — unlike the text-input/select rules further below — this needs neither
+ * the transparent-outline trick nor a `forced-colors` block: an outline with
+ * a real `outline-style` already survives forced-colors mode unassisted (the
+ * UA substitutes a system colour for ANY non-`none` outline-colour;
+ * adapter/forms.css's own `:focus` comment explains why this is exactly WHY
+ * `transparent` beats `none` — and forms.css's own checkbox/radio
+ * `:focus-visible` rules, the shape this ties, likewise carry no
+ * forced-colors override, for the identical reason). `:focus`, not
+ * `:focus-visible` like forms.css's own checkbox: the vendor rule being
+ * mirrored here is itself keyed on `:focus` (packages-style.css:2), and
+ * ground rule 2 is to mirror the REAL vendor rule, not invent a different
+ * pseudo-class shape.
+ *
+ * Vendor: `.wc-block-components-checkbox .wc-block-components-checkbox__input[type=checkbox]:focus`
+ * = 2 classes + 1 attribute + 1 pseudo-class = (0,4,0). Our wrapper-prefixed
+ * version = (0,5,0), beating it outright — no reliance on load order needed
+ * here either. */
+.wp-block-woocommerce-cart
+  .wc-block-components-checkbox
+  .wc-block-components-checkbox__input[type='checkbox']:focus,
+.wp-block-woocommerce-checkout
+  .wc-block-components-checkbox
+  .wc-block-components-checkbox__input[type='checkbox']:focus {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* The trap this task exists to avoid, checked against the REAL vendor rule
+ * (not assumed): WooCommerce Blocks' own checkbox already has a `has-error`
+ * class (packages-style.css:2) with its OWN `:focus` combo —
+ * `.wc-block-components-checkbox.has-error .wc-block-components-checkbox__input:focus{outline:2px solid #cc1818;outline-offset:2px}`
+ * — 4 classes = (0,4,0), placed AFTER the plain `:focus` rule in vendor's own
+ * source, so on Woo's unmodified CSS an invalid+focused checkbox already
+ * gets a RED outline, not none: there is no `outline:none` trap in the
+ * vendor rule itself (unlike the s12 defect, which was in OUR OWN
+ * adapter/forms.css, not Woo's). But our own `:focus` rule directly above is
+ * MORE specific ((0,5,0)) than Woo's `has-error` combo ((0,4,0)) — the
+ * wrapper class scoping requires (file header) pushes us past it — so
+ * without this rule, our own override would SILENTLY win over Woo's red
+ * error outline and repaint it `var(--ring)` colour while the field is still
+ * invalid, discarding the error signal precisely while the user is on the
+ * field. Restored here at (0,5,0) (wrapper + checkbox + has-error + input +
+ * focus — no `[type=checkbox]` attribute, matching vendor's own combo
+ * selector exactly), tying our own plain `:focus` rule above and coming
+ * after it in THIS file's source, so it wins the tie for `outline-color`
+ * only — width/style still come from the plain `:focus` rule above,
+ * unaffected. */
+.wp-block-woocommerce-cart
+  .wc-block-components-checkbox.has-error
+  .wc-block-components-checkbox__input:focus,
+.wp-block-woocommerce-checkout
+  .wc-block-components-checkbox.has-error
+  .wc-block-components-checkbox__input:focus {
+  outline-color: var(--destructive);
+}
+
+/* -- Radio -------------------------------------------------------------
+ * Vendor rule (WooCommerce 10.9.4, verified on disk): packages-style.css:10
+ * — same shared bundle as the checkbox above, same reasoning for scoping to
+ * both wrapper classes. Confirmed live on the CART page too, not merely
+ * bundle-reachable: cart.css:30
+ * (`.wc-block-cart .wc-block-components-radio-control__input{left:0;margin:0}`,
+ * inside the cart's shipping-method options) proves this component actually
+ * renders there.
+ *
+ * Narrowest matching selector: `.wc-block-components-radio-control
+ * .wc-block-components-radio-control__input` — 2 classes, specificity
+ * (0,2,0). Vendor declares (kept, not restated): border COLOUR
+ * (`color-mix(in srgb,currentColor 48%,transparent)`, already inherits —
+ * finding 4), border-radius:50% (the circular shape itself, not part of the
+ * `--radius` family — row 2's radius fix does not apply here). Vendor
+ * declares (fixed below): background:#fff.
+ */
+.wp-block-woocommerce-cart
+  .wc-block-components-radio-control
+  .wc-block-components-radio-control__input,
+.wp-block-woocommerce-checkout
+  .wc-block-components-radio-control
+  .wc-block-components-radio-control__input {
+  background-color: var(--background);
+}
+
+/* Same consequence as the checkbox mark above, for the same reason: the
+ * checked dot is `.wc-block-components-radio-control__input:checked:before`
+ * (packages-style.css:10) with a hardcoded `background:#000` — legible
+ * against vendor's own `#fff` ring in both schemes today, but the ring above
+ * now resolves to `var(--background)` (near-black in `.dark`), so an
+ * unchanged black dot would vanish into it. `.wc-block-components-radio-control
+ * .wc-block-components-radio-control__input:checked:before` is 2 classes + 1
+ * pseudo-class + 1 pseudo-element = specificity (0,3,1); our
+ * wrapper-prefixed version is (0,4,1), beating it outright. `var(--foreground)`
+ * matches the same pairing used for the checkbox mark and for row 1. */
+.wp-block-woocommerce-cart
+  .wc-block-components-radio-control
+  .wc-block-components-radio-control__input:checked:before,
+.wp-block-woocommerce-checkout
+  .wc-block-components-radio-control
+  .wc-block-components-radio-control__input:checked:before {
+  background-color: var(--foreground);
+}
+
+/* Focus ring (row 2, "plus our focus ring"). Same reasoning as the
+ * checkbox's `:focus` rule above: vendor's own mechanism is a real
+ * `outline`, so no transparent-outline trick and no `forced-colors` block
+ * are needed. No `has-error` combo exists for this component at all —
+ * checked directly, `has-error` never appears alongside `radio-control`
+ * anywhere in packages-style.css or checkout.css, so there is no vendor
+ * error styling this override could silently beat.
+ *
+ * Vendor: `.wc-block-components-radio-control .wc-block-components-radio-control__input:focus`
+ * = 2 classes + 1 pseudo-class = (0,3,0). Our wrapper-prefixed version =
+ * (0,4,0), beating it outright. */
+.wp-block-woocommerce-cart
+  .wc-block-components-radio-control
+  .wc-block-components-radio-control__input:focus,
+.wp-block-woocommerce-checkout
+  .wc-block-components-radio-control
+  .wc-block-components-radio-control__input:focus {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* -- Text input focus ring -----------------------------------------------
+ * B1 styled the text input's RESTING state only (this file's header,
+ * work-list row 1); this adds the focus indicator row 2 / this task asks
+ * for. Vendor sets NO `outline` at all on text-input focus (checked
+ * directly — grep for "outline" across checkout.css and packages-style.css
+ * turns up nothing in the text-input module) and no `outline:none` either,
+ * so there is no suppressed-outline trap to route around here — the gap is
+ * an ABSENT indicator, not a hidden one. What vendor DOES redeclare on
+ * `:focus` (packages-style.css:17 / checkout.css, both copies — same rule
+ * compiled twice, see this file's header) is `background-color:#fff` and
+ * `color:#2b2d2f`, already beaten by B1's own resting-state override (tied
+ * specificity, our stylesheet loads later) — not restated here.
+ *
+ * Vendor `:focus` narrowest branch: `.wc-block-components-text-input
+ * input[type=text]:focus` — 1 class + 1 attribute + 1 pseudo-class =
+ * (0,3,1). The wider `.wc-block-components-form .wc-block-components-text-input
+ * input[type=text]:focus` branch (both files carry it, same duplication B1's
+ * own resting-state rule found) = (0,4,1). Our wrapper-prefixed version =
+ * (0,4,1), tying the wider branch (our sheet loads later — finding 3 — so we
+ * win the tie) and beating the narrower branch outright.
+ *
+ * Shape ties adapter/forms.css's own `:focus` rule exactly (see that file):
+ * a transparent `outline` (kept for forced-colors mode, see the shared
+ * `forced-colors` block below) plus a `border-color`/`box-shadow` halo for
+ * normal rendering. `:focus`, not `:focus-visible` — same reasoning as the
+ * checkbox above: the vendor rule this ties is itself keyed on `:focus`. */
+.wp-block-woocommerce-cart .wc-block-components-text-input input[type='email']:focus,
+.wp-block-woocommerce-cart .wc-block-components-text-input input[type='number']:focus,
+.wp-block-woocommerce-cart .wc-block-components-text-input input[type='password']:focus,
+.wp-block-woocommerce-cart .wc-block-components-text-input input[type='tel']:focus,
+.wp-block-woocommerce-cart .wc-block-components-text-input input[type='text']:focus,
+.wp-block-woocommerce-cart .wc-block-components-text-input input[type='url']:focus,
+.wp-block-woocommerce-checkout .wc-block-components-text-input input[type='email']:focus,
+.wp-block-woocommerce-checkout .wc-block-components-text-input input[type='number']:focus,
+.wp-block-woocommerce-checkout .wc-block-components-text-input input[type='password']:focus,
+.wp-block-woocommerce-checkout .wc-block-components-text-input input[type='tel']:focus,
+.wp-block-woocommerce-checkout .wc-block-components-text-input input[type='text']:focus,
+.wp-block-woocommerce-checkout .wc-block-components-text-input input[type='url']:focus {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px var(--ring-halo);
+}
+
+/* The trap this task exists to avoid, checked against the REAL vendor rule:
+ * WooCommerce Blocks' text input has its OWN `has-error` class
+ * (checkout.css / packages-style.css:17) with a `:focus` combo —
+ * `.wc-block-components-text-input.has-error input:focus{box-shadow:0 0 0 .5px #cc1818}`
+ * plus `.has-error input,…:focus,…{border-color:#cc1818}` — no
+ * `outline:none` here either (Woo's own error styling never suppresses the
+ * outline; the s12 `outline:none` defect was in OUR file, not Woo's). Its
+ * narrowest branch is 2 classes + 1 pseudo-class = (0,3,1); the wider
+ * `.wc-block-components-form`-prefixed branch is (0,4,1) — which TIES our
+ * own `:focus` rule above (also (0,4,1)) and, since that rule is declared
+ * earlier in THIS file, would otherwise let our `var(--ring)` colouring win
+ * over Woo's red error indication for a focused, invalid field — not an
+ * invisible indicator (ours would still show), but a silently discarded
+ * error signal at exactly the moment (focused) a user most needs it.
+ * Restored here at (0,5,1) (wrapper + text-input + has-error + attribute +
+ * focus), beating our own plain `:focus` rule outright, so `border-color`/
+ * `box-shadow` go destructive while `outline` (transparent, from the rule
+ * above, untouched here) still carries the shape forced-colors mode needs —
+ * same "hard gap ring" shape adapter/forms.css's own `.input.is-error:focus`
+ * uses for the identical reason (see that file), substituting this file's
+ * own `--background` token for that file's `--card` (this file has used
+ * `--background` throughout, per B1). */
+.wp-block-woocommerce-cart .wc-block-components-text-input.has-error input[type='email']:focus,
+.wp-block-woocommerce-cart .wc-block-components-text-input.has-error input[type='number']:focus,
+.wp-block-woocommerce-cart .wc-block-components-text-input.has-error input[type='password']:focus,
+.wp-block-woocommerce-cart .wc-block-components-text-input.has-error input[type='tel']:focus,
+.wp-block-woocommerce-cart .wc-block-components-text-input.has-error input[type='text']:focus,
+.wp-block-woocommerce-cart .wc-block-components-text-input.has-error input[type='url']:focus,
+.wp-block-woocommerce-checkout .wc-block-components-text-input.has-error input[type='email']:focus,
+.wp-block-woocommerce-checkout .wc-block-components-text-input.has-error input[type='number']:focus,
+.wp-block-woocommerce-checkout
+  .wc-block-components-text-input.has-error
+  input[type='password']:focus,
+.wp-block-woocommerce-checkout .wc-block-components-text-input.has-error input[type='tel']:focus,
+.wp-block-woocommerce-checkout .wc-block-components-text-input.has-error input[type='text']:focus,
+.wp-block-woocommerce-checkout .wc-block-components-text-input.has-error input[type='url']:focus {
+  border-color: var(--destructive);
+  box-shadow:
+    0 0 0 2px var(--background),
+    0 0 0 5px var(--destructive);
+}
+
+/* -- Open question: does the CART render a select-like control? -----------
+ * The task brief asks this explicitly: the Cart block's shipping calculator
+ * can render its own country/state control, and B1 scoped
+ * `.wc-blocks-components-select` to `.wp-block-woocommerce-checkout` only
+ * because checkout.css:6 was the only place the RULE existed. Re-checked
+ * here with the same method, this time exhaustively rather than on the
+ * first page of each file: `grep` for `wc-blocks-components-select` across
+ * the FULL `cart.css` (all 33 lines/modules) and the FULL `packages-style.css`
+ * (all 20) returns ZERO matches in either file — the class is compiled ONLY
+ * into `checkout.css`.
+ *
+ * This settles the CSS half of the question with certainty: even if the
+ * cart's shipping calculator renders a `<select>`, it cannot receive any of
+ * `.wc-blocks-components-select`'s vendor styling (or, by the same logic,
+ * any override of it) on the cart page — the stylesheet that would carry it
+ * never loads there. What this does NOT settle: whether the cart's
+ * shipping-calculator country/state control renders as a bare native
+ * `<select>` (styled only by UA defaults, unaffected by anything in this
+ * file) or via some other markup entirely. Answering that needs a live DOM
+ * inspection of the shipping calculator actually expanded — a browser
+ * measurement `grep` over the installed package cannot produce — and this
+ * task's brief excludes running the e2e/browser tooling that would produce
+ * it. Left unresolved rather than guessed; B1's scope is NOT widened here. */
+
+/* -- Select / combobox focus ring -----------------------------------------
+ * Same B1-resting/B2-focus split as text input. Vendor sets no `outline` and
+ * no `outline:none` on the select's own `:focus` (checkout.css:6 — checked
+ * directly); what it redeclares (`border-color:currentColor;border-width:1.5px`)
+ * already inherits and is left alone. No `has-error` + `:focus` combo exists
+ * for this component (checked directly: `.has-error` combines with
+ * `.wc-blocks-components-select__container` / `__select` for `border-color`
+ * / `color` only, never with `:focus` in checkout.css) — nothing to protect
+ * against here, unlike text input/checkbox.
+ *
+ * Ring applied to `.wc-blocks-components-select__select` — the actual
+ * `<select>` element that receives focus — not the `__container` (B1's
+ * background/radius target), matching where the browser actually draws
+ * native focus.
+ *
+ * Vendor: `.wc-blocks-components-select .wc-blocks-components-select__select:focus`
+ * = 2 classes + 1 pseudo-class = (0,3,0). Our wrapper-prefixed version =
+ * (0,4,0), beating it outright. Checkout-only, matching B1's own scoping for
+ * this component (checkout.css:6 only — confirmed absent from cart.css and
+ * packages-style.css by full-file grep, not just the narrow selector). */
+.wp-block-woocommerce-checkout
+  .wc-blocks-components-select
+  .wc-blocks-components-select__select:focus {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px var(--ring-halo);
+}
+
+/* -- Select: restore the invalid-field text colour B1 erased ---------------
+ * NOT new styling — a repair of a regression this stylesheet introduced.
+ * Vendor declares the error colour at
+ *   `.has-error .wc-blocks-components-select .wc-blocks-components-select__select
+ *    { color: #cc1818 }`  (checkout.css, 3 classes = (0,3,0))
+ * and B1's resting rule above is
+ *   `.wp-block-woocommerce-checkout .wc-blocks-components-select
+ *    .wc-blocks-components-select__select` — also (0,3,0). Equal specificity,
+ * and our sheet loads LAST, so B1 silently won that tie and an invalid
+ * select's text stopped turning red: the field lost its only non-positional
+ * error signal. Exactly the shape s12's two P0s took — a repair that quietly
+ * removes an accessibility affordance — except here the removal shipped in
+ * the fix itself rather than in a later one.
+ *
+ * The wrapper prefix takes this to (0,4,0), which beats B1's rule as it must,
+ * and restates the vendor's INTENT in our token rather than its literal
+ * `#cc1818`. Checkout-only, matching where the component's CSS exists at all.
+ *
+ * Found by the B2 worker while reading the vendor file for the focus rules;
+ * the Codex critic's high-effort pass over B1's CSS did not catch it. */
+.wp-block-woocommerce-checkout
+  .has-error
+  .wc-blocks-components-select
+  .wc-blocks-components-select__select {
+  color: var(--destructive);
+}
+
+/* -- forced-colors fallback (Windows High Contrast) -----------------------
+ * Finding P0-2's shape, reused verbatim (see adapter/forms.css's own
+ * `:focus` and `forced-colors` comments for the full mechanism): a
+ * transparent `outline` keeps the outline SHAPE declared above so
+ * forced-colors mode has something to repaint once `box-shadow` (its own
+ * halo) is dropped outright. Only the text-input/select rules above need
+ * this — the checkbox/radio rules already use a real, non-transparent
+ * `outline` as their PRIMARY indicator (matching vendor's own mechanism), so
+ * forced-colors mode already re-colours them without help; adapter/
+ * forms.css's own `forced-colors` block omits its checkbox/radio for the
+ * identical reason (compare that file's media query selector list). */
+@media (forced-colors: active) {
+  .wp-block-woocommerce-cart .wc-block-components-text-input input[type='email']:focus,
+  .wp-block-woocommerce-cart .wc-block-components-text-input input[type='number']:focus,
+  .wp-block-woocommerce-cart .wc-block-components-text-input input[type='password']:focus,
+  .wp-block-woocommerce-cart .wc-block-components-text-input input[type='tel']:focus,
+  .wp-block-woocommerce-cart .wc-block-components-text-input input[type='text']:focus,
+  .wp-block-woocommerce-cart .wc-block-components-text-input input[type='url']:focus,
+  .wp-block-woocommerce-checkout .wc-block-components-text-input input[type='email']:focus,
+  .wp-block-woocommerce-checkout .wc-block-components-text-input input[type='number']:focus,
+  .wp-block-woocommerce-checkout .wc-block-components-text-input input[type='password']:focus,
+  .wp-block-woocommerce-checkout .wc-block-components-text-input input[type='tel']:focus,
+  .wp-block-woocommerce-checkout .wc-block-components-text-input input[type='text']:focus,
+  .wp-block-woocommerce-checkout .wc-block-components-text-input input[type='url']:focus,
+  .wp-block-woocommerce-checkout
+    .wc-blocks-components-select
+    .wc-blocks-components-select__select:focus {
+    outline-color: Highlight;
+  }
+}
+
+/* =========================================================================
+ * TASKS B3 (buttons) / B4 (notices) / B5 (panels, totals, general radii)
+ * (docs/plans/2026-07-25-block-cart-checkout.md). ADR-009's own table names
+ * these as the three remaining hardcoded surfaces once B1/B2's form-control
+ * work is done: place-order/other buttons (`rgb(50,55,60)` bg), notice
+ * banners (`#fff0f0` bg / `#2f2f2f` text — all four roles, not only the
+ * error one s12's own notice test mistakenly proved sufficient), and
+ * leftover `0px`/`4px` radii. Same file, same register: every rule below
+ * names its vendor selector, file and specificity arithmetic, and every
+ * state variant is checked against the real vendor rule before being
+ * restored or declared absent.
+ * ========================================================================= */
+
+/* ---------------------------------------------------------------------- *
+ * B3 — Buttons
+ * ---------------------------------------------------------------------- */
+
+/* -- Resting colour ------------------------------------------------------
+ * The vendor selector that actually carries every block button in cart and
+ * checkout — `.wc-block-components-button:not(.is-link)` — is declared
+ * identically in packages-style.css (module 1, the shared "wc-blocks-style"
+ * bundle this file's header already established loads on BOTH pages) and
+ * duplicated verbatim in checkout.css (module 12) and cart.css (module 24).
+ * None of the three copies sets a `background-color` or `color` for the
+ * DEFAULT (non-`.text`, non-`.is-style-outline`/`.outlined`) variant — the
+ * only colour any of them declares is `.text{color:#1e1e1e}`, a link-styled
+ * variant (the "Return to cart" button) that already carries `.is-link` and
+ * is therefore excluded by vendor's own `:not(.is-link)` guard.
+ *
+ * So `rgb(50,55,60)` does not originate in the WooCommerce Blocks package at
+ * all — verified by an exhaustive grep of all three pinned files for the
+ * literal `#32373c` / `9999px` / `wp-element-button`, which returns ZERO
+ * matches (the only hits for `32373c` anywhere under the installed
+ * `woocommerce/` directory are its own unrelated wp-admin CSS). Traced
+ * instead to WordPress CORE's own base `theme.json`
+ * (`WordPress/wp-includes/theme.json`: `styles.elements.button.color` =
+ * `{"text":"#fff","background":"#32373c"}`), which `WP_Theme_JSON` merges
+ * beneath every theme's own theme.json regardless of what that theme
+ * declares, and emits as the un-layered `global-styles-inline-css` block —
+ * the exact "global-styles" stylesheet ADR-009 finding 3 already places in
+ * the head order, ahead of both `woodev-base-style` and this bundle. It
+ * applies through the `.wp-element-button` class, which `checkout.js`,
+ * `cart.js` and `wc-cart-checkout-base-frontend.js` (grepped directly) all
+ * attach to every WooCommerce Blocks button — place-order, proceed-to-
+ * checkout, apply-coupon, update-cart alike. Its selector,
+ * `.wp-element-button, .wp-block-button__link`, is 1 class = (0,1,0). Our
+ * theme.json declares no `styles.elements.button` (checked: no `elements`
+ * key at all), so this rule is genuinely live today, and we override the
+ * SAME class it actually targets rather than a selector that only looks
+ * plausible.
+ *
+ * `:not(.is-link):not(.text):not(.is-style-outline):not(.outlined)` mirrors
+ * vendor's OWN variant classes (the same four names its focus/hover rules
+ * key off, see the focus rule below) so this rule cannot repaint a link- or
+ * outline-styled button that happens to share `.wp-element-button` — not a
+ * raised selector to force a win (wrapper + class already beats (0,1,0)
+ * outright at (0,3,0) before any `:not()` is added), but a guard against
+ * silently overriding a DIFFERENT vendor-declared look this task never
+ * touches. Wrapper + class + 4 `:not()` guards = 6 classes = (0,6,0). */
+.wp-block-woocommerce-cart
+  .wp-element-button:not(.is-link):not(.text):not(.is-style-outline):not(.outlined),
+.wp-block-woocommerce-checkout
+  .wp-element-button:not(.is-link):not(.text):not(.is-style-outline):not(.outlined) {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+
+/* -- Hover / disabled — checked against the vendor, nothing to restore ----
+ * Hover: the base (contained) variant declares NO `:hover` rule anywhere in
+ * the three pinned files — only `.text:hover{opacity:.9}` (the excluded
+ * link variant above) and `.is-style-outline:hover`/`.outlined:hover`
+ * (an editor block-style variation, also excluded above, not applied to
+ * place-order/proceed-to-checkout/apply-coupon by this package's own
+ * markup). This task's own instruction is to restore vendor's states WHERE
+ * IT DECLARES THEM — it declares none here, so none is invented.
+ * Disabled: `.wc-block-components-button:not(.is-link):disabled
+ * .wc-block-components-button__text{opacity:.5}` (packages-style.css) and
+ * cart.css's own `.wc-block-cart__submit-button[aria-disabled=true]
+ * .wc-block-components-button__text{opacity:.5}` both dim the button via a
+ * relative `opacity` on the TEXT node, not a literal colour on the button
+ * itself — already correct over ANY background, ours included; nothing to
+ * override. */
+
+/* -- Focus ring -----------------------------------------------------------
+ * Vendor declares the SAME focus values through TWO selectors at two
+ * different specificities — both checked, because whichever is live decides
+ * what our own rule must beat:
+ *   Plain: `.wc-block-components-button:not(.is-link):focus` — 3 classes =
+ *   (0,3,0).
+ *   Body-gated: `body:not(.woocommerce-block-theme-has-button-styles)
+ *   .wc-block-components-button:not(.is-link):focus` — 1 type + 4 classes =
+ *   (0,4,1). WooCommerce Blocks adds `woocommerce-block-theme-has-button-
+ *   styles` to `<body>` only when the active theme's `theme.json` declares
+ *   `styles.elements.button` colours; ours does not (see the resting-colour
+ *   rule above), so this body-gated selector is the one ACTUALLY active
+ *   today, not merely a defensive extra.
+ * Both declare identically: `box-shadow: inset 0 0 0 1px #fff, 0 0 0 2px
+ * #0675c4; outline: 3px solid transparent`.
+ *
+ * Restored in our tokens at BOTH specificities, so the ring is correct
+ * regardless of which selector is live (and stays correct if a future
+ * filter ever toggles that body class): `#fff` — the halo showing the
+ * button's own surface through the ring — becomes `var(--background)`,
+ * the same pairing the text-input `.has-error` repair above uses; `#0675c4`
+ * — the ring itself — becomes `var(--ring)`. `outline: 3px solid
+ * transparent` is NOT re-declared: vendor's own copy stays live and already
+ * has the shape forced-colors mode needs (see the new `forced-colors` block
+ * below). No `:not(.text)`/`:not(.is-style-outline)` guards needed here —
+ * unlike the resting-colour rule, this only sets `box-shadow`, a property
+ * none of those variant rules touch, so there is no property-level
+ * collision to guard against. */
+.wp-block-woocommerce-cart .wc-block-components-button:not(.is-link):focus,
+.wp-block-woocommerce-checkout .wc-block-components-button:not(.is-link):focus,
+body:not(.woocommerce-block-theme-has-button-styles)
+  .wp-block-woocommerce-cart
+  .wc-block-components-button:not(.is-link):focus,
+body:not(.woocommerce-block-theme-has-button-styles)
+  .wp-block-woocommerce-checkout
+  .wc-block-components-button:not(.is-link):focus {
+  box-shadow:
+    inset 0 0 0 1px var(--background),
+    0 0 0 2px var(--ring);
+}
+
+@media (forced-colors: active) {
+  .wp-block-woocommerce-cart .wc-block-components-button:not(.is-link):focus,
+  .wp-block-woocommerce-checkout .wc-block-components-button:not(.is-link):focus,
+  body:not(.woocommerce-block-theme-has-button-styles)
+    .wp-block-woocommerce-cart
+    .wc-block-components-button:not(.is-link):focus,
+  body:not(.woocommerce-block-theme-has-button-styles)
+    .wp-block-woocommerce-checkout
+    .wc-block-components-button:not(.is-link):focus {
+    outline-color: Highlight;
+  }
+}
+
+/* ---------------------------------------------------------------------- *
+ * B4 — Notice banners (all four roles) + B5's radius on the same selector
+ * ---------------------------------------------------------------------- */
+
+/* Vendor: `.wc-block-components-notice-banner` — declared identically in
+ * packages-style.css (module 13, the shared bundle) and duplicated verbatim
+ * in cart.css (module 33); ABSENT from checkout.css's own bundle (grepped
+ * directly — no `notice-banner` occurrence there at all), so this component
+ * reaches the checkout page ONLY through the shared packages-style.css
+ * bundle. Both wrapper classes are scoped below regardless, matching B1's
+ * own reasoning for identically-shared components.
+ *
+ * Base selector `.wc-block-components-notice-banner` = 1 class = (0,1,0).
+ * Vendor declares (kept, not restated): the icon's own `border-radius:50%`
+ * (a circle, not part of the `--radius` family — same note as B2's radio
+ * input), all layout/spacing/flex declarations. Vendor declares (fixed
+ * below): `background-color:#fff`, `border` COLOUR only (`#2f2f2f` — width/
+ * style 1px/solid kept), `border-radius:4px` (work-list row 5 — bundled
+ * into this same rule since it is the exact same selector/declaration
+ * block, not a separate one), `color:#2f2f2f`.
+ *
+ * All four role variants — `.is-error`/`.is-warning`/`.is-success`/
+ * `.is-info` — are each 2 classes = (0,2,0), beating the base rule on
+ * specificity alone; each overrides ONLY `background-color`/`border-color`
+ * (nothing else vendor sets per role — the icon's OWN `background-color`
+ * per role is handled by the `>svg` rules further below). This task's own
+ * instruction is explicit that ALL FOUR roles must be covered, not only
+ * `.is-error` — s12's notice test mounted only `.woocommerce-error` and
+ * passed with its own fix reverted; B6's e2e for this surface must mount
+ * all four.
+ *
+ * Colour mapping follows this theme's OWN already-settled notice recipe
+ * (`src/css/woo.css`'s `.woocommerce-message`/`-info`/`-error`, and
+ * `adapter/feedback.css`'s `.alert[data-variant]`) instead of inventing a
+ * fourth look: `color-mix(in oklab, var(--role) N%, var(--card))` for the
+ * tinted background (N matches woo.css's own values — 9% for destructive/
+ * success, 8% for primary/info; 9% for warning, which has no existing
+ * precedent in either file, chosen inside that same established range),
+ * `var(--role)` directly for `border-color` — woo.css's own choice, NOT
+ * `--warning-text`/`--success-text`, which this codebase reserves for plain
+ * inline text (e.g. the "available on backorder" stock label, a different
+ * use case). Text stays `var(--foreground)` for every role, not role-tinted
+ * — matching woo.css's classic notices, which never set an explicit `color`
+ * at all and so also read in the page's default foreground; vendor's OWN
+ * single `color:#2f2f2f` on the shared base rule (never overridden per-role
+ * in the vendor CSS either) already establishes that one text colour across
+ * all four roles is the intended design — this only makes it scheme-aware.
+ * "Info" has no dedicated token in `tokens.generated.css` (grepped: only
+ * destructive/success/warning custom properties exist) — mapped to
+ * `--primary`, the same choice `woo.css`'s own `.woocommerce-info` already
+ * made. */
+.wp-block-woocommerce-cart .wc-block-components-notice-banner,
+.wp-block-woocommerce-checkout .wc-block-components-notice-banner {
+  background-color: var(--card);
+  border-color: var(--border);
+  border-radius: var(--radius);
+  color: var(--foreground);
+}
+
+/* Icon circle: vendor's base `.wc-block-components-notice-banner>svg{
+ * fill:#fff;background-color:#2f2f2f;border-radius:50%}` (2 elements = a
+ * child combinator, specificity (0,1,1)) is a solid neutral dot with the
+ * glyph cut out in the surface colour — mapped 1:1: `fill` -> `var(--card)`,
+ * `background-color` -> `var(--foreground)`. `border-radius:50%` is kept
+ * (the circular shape, not the `--radius` family, same note as above). */
+.wp-block-woocommerce-cart .wc-block-components-notice-banner > svg,
+.wp-block-woocommerce-checkout .wc-block-components-notice-banner > svg {
+  fill: var(--card);
+  background-color: var(--foreground);
+}
+
+/* Error role. Vendor: `.wc-block-components-notice-banner.is-error{
+ * background-color:#fff0f0;border-color:#cc1818}` (2 classes, (0,2,0)) and
+ * `.is-error>svg{background-color:#cc1818;transform:rotate(180deg)}` (kept:
+ * the 180° flip is the "!" glyph's own orientation trick, not a colour). */
+.wp-block-woocommerce-cart .wc-block-components-notice-banner.is-error,
+.wp-block-woocommerce-checkout .wc-block-components-notice-banner.is-error {
+  background-color: color-mix(in oklab, var(--destructive) 9%, var(--card));
+  border-color: var(--destructive);
+}
+
+.wp-block-woocommerce-cart .wc-block-components-notice-banner.is-error > svg,
+.wp-block-woocommerce-checkout .wc-block-components-notice-banner.is-error > svg {
+  background-color: var(--destructive);
+}
+
+/* Warning role. Vendor: `.is-warning{background-color:#fffbf4;
+ * border-color:#f0b849}` and `.is-warning>svg{background-color:#f0b849;
+ * transform:rotate(180deg)}` (same kept flip as error). */
+.wp-block-woocommerce-cart .wc-block-components-notice-banner.is-warning,
+.wp-block-woocommerce-checkout .wc-block-components-notice-banner.is-warning {
+  background-color: color-mix(in oklab, var(--warning) 9%, var(--card));
+  border-color: var(--warning);
+}
+
+.wp-block-woocommerce-cart .wc-block-components-notice-banner.is-warning > svg,
+.wp-block-woocommerce-checkout .wc-block-components-notice-banner.is-warning > svg {
+  background-color: var(--warning);
+}
+
+/* Success role. Vendor: `.is-success{background-color:#f4fff7;
+ * border-color:#4ab866}` and `.is-success>svg{background-color:#4ab866}`
+ * (no rotate on this one — vendor's own checkmark glyph needs no flip). */
+.wp-block-woocommerce-cart .wc-block-components-notice-banner.is-success,
+.wp-block-woocommerce-checkout .wc-block-components-notice-banner.is-success {
+  background-color: color-mix(in oklab, var(--success) 9%, var(--card));
+  border-color: var(--success);
+}
+
+.wp-block-woocommerce-cart .wc-block-components-notice-banner.is-success > svg,
+.wp-block-woocommerce-checkout .wc-block-components-notice-banner.is-success > svg {
+  background-color: var(--success);
+}
+
+/* Info role. Vendor: `.is-info{background-color:#f4f8ff;
+ * border-color:#007cba}` and `.is-info>svg{background-color:#007cba}`. No
+ * dedicated `--info` token exists (see the file-level note above) — mapped
+ * to `--primary`, matching `woo.css`'s own `.woocommerce-info`. */
+.wp-block-woocommerce-cart .wc-block-components-notice-banner.is-info,
+.wp-block-woocommerce-checkout .wc-block-components-notice-banner.is-info {
+  background-color: color-mix(in oklab, var(--primary) 8%, var(--card));
+  border-color: var(--primary);
+}
+
+.wp-block-woocommerce-cart .wc-block-components-notice-banner.is-info > svg,
+.wp-block-woocommerce-checkout .wc-block-components-notice-banner.is-info > svg {
+  background-color: var(--primary);
+}
+
+/* ---------------------------------------------------------------------- *
+ * B5 — Remaining panels and general radii
+ * ---------------------------------------------------------------------- */
+
+/* -- Address confirmation card -------------------------------------------
+ * Vendor: `.wc-block-components-address-card` (packages-style.css module 4,
+ * the shared bundle — both wrapper classes scoped to match, same reasoning
+ * as the notice banner above). 1 class = (0,1,0). Vendor declares (kept):
+ * border WIDTH/style (1px solid) and its `color-mix(currentColor 20%,
+ * transparent)` tint (already inherits, finding 4), all layout/spacing.
+ * Vendor declares (fixed below): `border-radius:4px`. No background-colour
+ * is set on this component at all — it is transparent, showing whatever is
+ * behind it — so there is nothing to restate there.
+ *
+ * BOTH PAGES, deliberately, and the measurement below is why that needed
+ * saying rather than assuming. B6 looked at the live seeded store
+ * (26.07.2026): the address card renders on `/checkout/` unprompted — a real
+ * "CA, United States (US)" summary — and is ABSENT from `/cart/`, count 0,
+ * with zero, one and two shipping methods configured. That measurement is
+ * sound; the conclusion first drawn from it was not. The rule was briefly
+ * narrowed to checkout on the grounds that a selector matching nothing on the
+ * cart is dead code implying the cart has address cards — but it implies no
+ * such thing. It says "if this component mounts here, its radius is ours",
+ * which is exactly right, costs a few dozen bytes, and matches what the
+ * VENDOR does: `packages-style.css` is the shared bundle, so WooCommerce
+ * itself ships the `4px` rule to both pages. One store's guest flow is not a
+ * contract that no cart configuration can ever mount the component, and if
+ * one does, the narrowed version would have silently left it on the vendor's
+ * radius. Restored after a Codex review finding, s14 — the narrowing was the
+ * orchestrator's own call, not a worker's. */
+.wp-block-woocommerce-cart .wc-block-components-address-card,
+.wp-block-woocommerce-checkout .wc-block-components-address-card {
+  border-radius: var(--radius);
+}
+
+/* -- Quantity stepper (cart page only) ------------------------------------
+ * Vendor: `.wc-block-components-quantity-selector` — the REAL, rendered
+ * component style exists ONLY in cart.css (module 7). Checked directly:
+ * checkout.css's single mention of this class (module 39) sits inside a
+ * `.wc-block-cart--is-loading …` SKELETON selector list, not this
+ * component's real style, and packages-style.css has no mention at all — so
+ * unlike every other rule in this section, this one is cart-only, matching
+ * how B1 scoped `.wc-blocks-components-select` to checkout-only by the same
+ * method (which bundle actually carries the real declaration, not just the
+ * class name).
+ *
+ * The wrapper (`border:1px solid color-mix(currentColor 30%,transparent);
+ * border-radius:4px`, kept border colour/width) and its two buttons, which
+ * split the SAME 4px into direction-specific corners so the pair reads as
+ * one pill-shaped control:
+ *   `.wc-block-components-quantity-selector>
+ *    .wc-block-components-quantity-selector__button--minus{
+ *    border-radius:4px 0 0 4px}` (2 classes, (0,2,0))
+ *   `…__button--plus{border-radius:0 4px 4px 0}` (2 classes, (0,2,0)) */
+.wp-block-woocommerce-cart .wc-block-components-quantity-selector {
+  border-radius: var(--radius);
+}
+
+.wp-block-woocommerce-cart
+  .wc-block-components-quantity-selector
+  > .wc-block-components-quantity-selector__button--minus {
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+
+.wp-block-woocommerce-cart
+  .wc-block-components-quantity-selector
+  > .wc-block-components-quantity-selector__button--plus {
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+/* -- Highlighted shipping/payment option group ---------------------------
+ * Vendor: `.wc-block-components-radio-control--highlight-checked`
+ * (packages-style.css module 10, the shared bundle — both wrapper classes
+ * scoped, since B2 already established this component's plain `__input`
+ * sibling renders on both pages). This is the DEFAULT accordion/highlight
+ * treatment WooCommerce Blocks applies to the shipping-method and payment-
+ * method radio lists. Two declarations carry a 4px radius:
+ *   - the GROUP outline: `…--highlight-checked:after{border:1px solid
+ *     color-mix(...);border-radius:4px;…}` — 1 class + 1 pseudo-element =
+ *     (0,1,1).
+ *   - the SELECTED option's own highlight: `…--highlight-checked
+ *     .wc-block-components-radio-control-accordion-option--checked-option-
+ *     highlighted, …label.wc-block-components-radio-control__option--
+ *     checked-option-highlighted{border-radius:4px;box-shadow:inset 0 0 0
+ *     1.5px currentColor}` — 2 classes = (0,2,0). The `box-shadow` already
+ *     inherits (`currentColor`) — kept, not restated. */
+.wp-block-woocommerce-cart .wc-block-components-radio-control--highlight-checked::after,
+.wp-block-woocommerce-checkout .wc-block-components-radio-control--highlight-checked::after {
+  border-radius: var(--radius);
+}
+
+.wp-block-woocommerce-cart
+  .wc-block-components-radio-control--highlight-checked
+  .wc-block-components-radio-control-accordion-option--checked-option-highlighted,
+.wp-block-woocommerce-cart
+  .wc-block-components-radio-control--highlight-checked
+  label.wc-block-components-radio-control__option--checked-option-highlighted,
+.wp-block-woocommerce-checkout
+  .wc-block-components-radio-control--highlight-checked
+  .wc-block-components-radio-control-accordion-option--checked-option-highlighted,
+.wp-block-woocommerce-checkout
+  .wc-block-components-radio-control--highlight-checked
+  label.wc-block-components-radio-control__option--checked-option-highlighted {
+  border-radius: var(--radius);
+}
+
+/* -- Explicitly NOT touched here (B5 scope discipline) --------------------
+ * `.wc-block-components-address-autocomplete-suggestions` (packages-style.css
+ * module 8) also carries a hardcoded `border-radius:4px` on its dropdown,
+ * but that component only renders when a third-party address-autocomplete
+ * provider is registered — the markup ships inert without one, and the
+ * WooCommerce 10.9.4 install measured for this work has none configured.
+ * Left for whoever wires that integration up, matching B1's own precedent
+ * for the payment-gateway input (this file's header).
+ * Loading-skeleton radii (`.wc-block-cart--is-loading …`,
+ * `.wp-block-woocommerce-cart.is-loading …`, both files, a dozen-plus
+ * selectors) are ALL `color-mix(in srgb,currentColor …)`-based already
+ * (finding 4's inherit pattern) and their `border-radius:4px` paints a
+ * sub-second shimmer placeholder during hydration (B0's own framing), not a
+ * persisting surface — YAGNI, left alone. */

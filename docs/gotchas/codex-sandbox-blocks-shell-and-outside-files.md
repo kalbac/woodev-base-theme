@@ -27,10 +27,14 @@ politely, and you get a review-shaped answer containing no review.
 - If you must use files, they have to live **inside the repo workdir** (e.g. a temporary
   untracked `.critic/`), never in the scratchpad — and even then the dead shell means
   Codex needs MCP to read them, so drop `mcp_servers={}`.
-- **Prefer the plugin over hand-rolled `codex exec`.** `/codex:review` and
-  `/codex:adversarial-review` run through `codex-companion.mjs`, which handles this.
-  They are `disable-model-invocation: true`, so the operator triggers them — ask rather
-  than rebuilding the invocation by hand (s13 wasted a pass doing exactly that).
+- ~~**Prefer the plugin over hand-rolled `codex exec`.**~~ **Corrected s14: the plugin
+  does NOT handle this.** `/codex:adversarial-review` returned `verdict: approve` with
+  the body "the required diff inspection could not run because the read-only shell is
+  denied by the sandbox (`CreateProcessAsUserW failed: 5`)" — a review-shaped answer
+  containing no review, and an `approve` that would have waved work through a merge
+  gate. The plugin asks Codex to go and read the diff; that is precisely what the
+  sandbox forbids. The working route is a hand-rolled call that hands Codex everything
+  up front — see [[codex-critic-needs-inline-stdin-and-explicit-effort]].
 
 ## Two more things seen in the same session
 

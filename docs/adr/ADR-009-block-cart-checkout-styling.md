@@ -57,12 +57,28 @@ in our tokens and our fonts — the checkout's section titles come out in Golos 
 |---|---|---|
 | Text input, select, combobox | `#fff` bg, `rgb(43,45,47)` text, radius `4px` | `--background`/`--foreground`/`--border`, `--radius` |
 | Checkbox / radio | `#fff` bg, radius `4px` | same |
-| Place-order & other buttons | `rgb(50,55,60)` bg | `--primary` / `--primary-foreground` |
+| Place-order & other buttons | `rgb(50,55,60)` bg — **but see the amendment below: not from WooCommerce** | `--primary` / `--primary-foreground` |
 | Notice banners | `#fff0f0` bg, `#2f2f2f` text | `--destructive` / `--success` / `--warning` roles |
 | Radii generally | `0px` / `4px` | `--radius` (currently `10px`) |
 
 **The dark scheme is where this reads as broken, not merely off-brand:** a checkout text
 input stays white with near-black text on a `oklch(13% …)` page.
+
+> **Amendment (s14, while implementing B3).** The button row above measured the right
+> value and named the wrong source. `#32373c` — which is exactly `rgb(50,55,60)` —
+> appears **zero** times in the pinned WooCommerce 10.9.4 `cart.css`, `checkout.css`
+> and `packages-style.css`. It comes from **WordPress core's own `theme.json`**
+> (`styles.elements.button.color.background`), which `WP_Theme_JSON` merges beneath
+> our `theme.json` and emits as the un-layered `global-styles` block already named in
+> finding 3's head order; WooCommerce's JS is merely what attaches the
+> `.wp-element-button` class to these buttons. Two consequences. First, the override
+> has to target `.wp-element-button`, not a `.wc-block-*` class — which is what the
+> implementation does, still scoped under the block wrapper. Second, and beyond this
+> ADR's scope: the same core default paints **every** `.wp-element-button` on the
+> site, so core's own Button block is off-identity on any page until our `theme.json`
+> declares `styles.elements.button`. Tracked separately, next to
+> [#25](https://github.com/kalbac/woodev-base-theme/issues/25). Note this does not
+> touch decision 5, which is about `styles.blocks`, not `styles.elements`.
 
 **5. Not one byte of `woo.css` can apply to these pages.**
 Verified against the **built** artifact, not the source: all 184 top-level blocks in

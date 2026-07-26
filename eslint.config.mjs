@@ -29,6 +29,12 @@ export default [
         process: 'readonly',
         getComputedStyle: 'readonly',
         localStorage: 'readonly',
+        // Added s14 for tests/e2e-woo/helpers.mjs, which parses `page.url()`
+        // to prove /checkout/ did not 302 to /cart/. `URL` is a global in
+        // both Node and the browser, so its absence here was the same gap
+        // the comment above records — a spec file legitimately reaching for
+        // a standard global the whitelist happened not to list.
+        URL: 'readonly',
       },
     },
   },

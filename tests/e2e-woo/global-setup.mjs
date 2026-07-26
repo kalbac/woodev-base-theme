@@ -31,9 +31,18 @@
 // :8888; omitting it silently talks to the wrong container.
 
 import { execSync } from 'node:child_process';
+import { writeFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 /** wp-env config file for the isolated Woo environment (port 8891). */
 const CONFIG = '.wp-env.woo.json';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Where the seeded product ids are exported for specs/helpers.mjs to read —
+// see the docblock on writeFixtures() below for why a file, not process.env.
+const FIXTURES_PATH = path.join(__dirname, '.fixtures.json');
 /** Theme slug — must match woodev-base-theme/style.css. */
 const THEME_SLUG = 'woodev-base-theme';
 /** Plugin slug — WooCommerce. */
@@ -90,6 +99,73 @@ function reseedProduct(slug, args) {
     }
   }
   return wp(`wc product create --user=admin --slug=${slug} --porcelain ${args}`);
+}
+
+/**
+ * Assert that a WooCommerce page option points at a page that ACTUALLY carries
+ * the block markup it is supposed to (B0, ADR-009).
+ *
+ * `wp wc tool run install_pages` is documented to create the Cart/Checkout
+ * pages, but the plan explicitly says not to assume it worked: it is a no-op
+ * when the option already points at an existing page (by design, so it does
+ * not clobber a store owner's edits), and nothing stops that existing page
+ * from having been hand-edited back to the classic shortcode. Every e2e spec
+ * for the block surfaces (this task and B6) is worthless against a page that
+ * silently reverted to classic markup, so this reads the option
+ * `install_pages` itself writes, fetches that page's real `post_content`, and
+ * greps for the block comment delimiter WordPress serializes for a block
+ * (`<!-- wp:woocommerce/cart -->` / `<!-- wp:woocommerce/checkout -->`) —
+ * verified against the live :8891 install via `wp post get --field=post_content`.
+ *
+ * @param {string} optionName WordPress option holding the page id.
+ * @param {string} blockName  Fully-qualified block name, e.g. "woocommerce/cart".
+ * @returns {number} the page id, once verified.
+ */
+function assertBlockPageExists(optionName, blockName) {
+  const pageId = wpTry(`option get ${optionName}`);
+  if (!pageId || !/^\d+$/.test(pageId)) {
+    throw new Error(
+      `[e2e-woo:setup] expected option "${optionName}" to hold a numeric page id, got ` +
+        `${JSON.stringify(pageId)} — did "wp wc tool run install_pages" actually run?`,
+    );
+  }
+
+  const content = wp(`post get ${pageId} --field=post_content`);
+  const delimiter = `<!-- wp:${blockName} -->`;
+  if (!content.includes(delimiter)) {
+    throw new Error(
+      `[e2e-woo:setup] page ${pageId} (option "${optionName}") does not contain "${delimiter}" — ` +
+        `expected the block-based page install_pages creates, but got content starting: ` +
+        `${content.slice(0, 200)}`,
+    );
+  }
+
+  return Number(pageId);
+}
+
+/**
+ * Write the ids this run seeded to a JSON file so specs/helpers.mjs can reach
+ * a real product without depending on the id being stable across runs
+ * (reseedProduct() deletes and recreates on every run, so the id changes).
+ *
+ * WHY A FILE, NOT process.env: Playwright's docs list `process.env` mutation
+ * from globalSetup as the alternative, but that value only reaches worker
+ * PROCESSES Playwright itself forks for the run that just executed
+ * globalSetup. It does NOT persist to a later, separate `npx playwright test`
+ * invocation — which this project's own verification workflow relies on (a
+ * temporary config that omits globalSetup entirely and reuses whatever the
+ * last full run seeded, to turn a multi-minute cycle into a ~15s one). A file
+ * on disk survives that gap, is inspectable with a plain `cat` mid-debugging,
+ * and carries no assumption about worker-fork timing relative to globalSetup
+ * returning. Gitignored (`tests/e2e-woo/.fixtures.json`) since it is
+ * regenerated every run and only meaningful against the container's current
+ * state.
+ *
+ * Idempotent by construction: this OVERWRITES the file every run rather than
+ * appending, so it never accumulates stale ids from a previous seeding pass.
+ */
+function writeFixtures(fixtures) {
+  writeFileSync(FIXTURES_PATH, `${JSON.stringify(fixtures, null, 2)}\n`, 'utf8');
 }
 
 /** Slug of the page carrying a `[products]` shortcode loop. */
@@ -250,6 +326,18 @@ export default function globalSetup() {
   wp('wc tool run install_pages --user=admin');
   log('install_pages done.');
 
+  // ── 3a. Assert the block Cart and Checkout pages actually carry block
+  // markup — do not assume install_pages worked (B0, ADR-009). ─────────────
+  const cartPageId = assertBlockPageExists('woocommerce_cart_page_id', 'woocommerce/cart');
+  const checkoutPageId = assertBlockPageExists(
+    'woocommerce_checkout_page_id',
+    'woocommerce/checkout',
+  );
+  log(
+    `confirmed block Cart (page ${cartPageId}) and block Checkout (page ${checkoutPageId}) ` +
+      'carry the expected block markup.',
+  );
+
   // ── 3b. Enable my-account registration ────────────────────────────────────
   //
   // Off by default. The register form's `.col2-set` split (login left,
@@ -317,6 +405,16 @@ export default function globalSetup() {
   // ── 5. Seed a NON-Woo page that renders a Woo product loop ───────────────
   const shortcodePageId = seedShortcodePage();
   log(`[products] shortcode page ${SHORTCODE_PAGE_SLUG} → id ${shortcodePageId}`);
+
+  // ── 6. Export the seeded product ids for specs/helpers.mjs ──────────────
+  writeFixtures({
+    products: {
+      simple: Number(simpleId),
+      sale: Number(saleId),
+      oos: Number(oosId),
+    },
+  });
+  log(`wrote fixture ids to ${FIXTURES_PATH}`);
 
   log('done.');
 }

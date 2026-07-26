@@ -11,6 +11,10 @@ woodev-base-theme/assets/dist/
 *.local
 .wp-env.override.json
 
+# Personal opencode config — holds live MCP credentials.
+# Copy opencode.example.json and fill in your own keys.
+opencode.json
+
 # Tooling caches
 .vite/
 .phpunit.result.cache
@@ -33,3 +37,6 @@ tests/integration/vendor/
 
 # Playwright MCP scratch output
 .playwright-mcp/
+
+# Regenerated every tests/e2e-woo/global-setup.mjs run — never a source of truth.
+tests/e2e-woo/.fixtures.json

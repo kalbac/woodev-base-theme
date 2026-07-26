@@ -14,8 +14,14 @@ export default defineConfig({
         // The theme's one visual identity (ADR-008); Assets.php enqueues it
         // unconditionally, no per-pack resolution.
         style: 'src/css/app.css',
-        // Storefront bundle; Woo\Assets.php enqueues it only on Woo contexts.
+        // Storefront bundle; Woo\Assets.php enqueues it on EVERY front-end
+        // request of a Woo store, not only on Woo contexts — a `[products]`
+        // loop renders our product markup on any page. See that class's
+        // docblock; this comment claimed the opposite until s14.
         woo: 'src/css/woo.css',
+        // Block Cart/Checkout bundle; Woo\BlockAssets.php enqueues it only
+        // when the page actually contains one of the two blocks.
+        wooBlocks: 'src/css/woo-blocks.css',
       },
     },
   },
