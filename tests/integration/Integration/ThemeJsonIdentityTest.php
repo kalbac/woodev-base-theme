@@ -36,6 +36,22 @@ final class ThemeJsonIdentityTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Both editor-asset tests resolve a hashed filename through the Vite manifest, so
+	 * they need a build. Same skip AssetsProductionTest uses, for the same reason and
+	 * with the same caveat: a skip is a coverage hole, not a pass. CI's php-integration
+	 * job now runs `npm run build` precisely so these do not skip there — it was that
+	 * missing build, not the code, that made this file red in CI and green locally.
+	 *
+	 * The theme.json tests above deliberately do NOT skip: they read what WordPress
+	 * emits, which needs no build at all.
+	 */
+	private function skip_without_a_build(): void {
+		if ( ! is_file( get_template_directory() . '/assets/dist/.vite/manifest.json' ) ) {
+			self::markTestSkipped( 'No Vite build present — run `npm run build` to cover this path.' );
+		}
+	}
+
+	/**
 	 * #26: with `styles.elements.button` absent, WP_Theme_JSON contributes core's own
 	 * default — background #32373c on every .wp-element-button, site-wide, in both
 	 * schemes. Declaring ours REPLACES that rule rather than adding to it (measured,
@@ -136,6 +152,8 @@ final class ThemeJsonIdentityTest extends WP_UnitTestCase {
 	 * this, --primary is empty inside the iframe; with it, it resolves.
 	 */
 	public function test_the_editor_is_given_the_stylesheet_that_defines_those_tokens(): void {
+		$this->skip_without_a_build();
+
 		self::assertTrue(
 			current_theme_supports( 'editor-styles' ),
 			'editor-styles support is not registered, so add_editor_style() is inert.'
@@ -165,6 +183,8 @@ final class ThemeJsonIdentityTest extends WP_UnitTestCase {
 	 * restyle wp-admin itself.
 	 */
 	public function test_the_admin_document_gets_the_tokens_the_colour_picker_needs(): void {
+		$this->skip_without_a_build();
+
 		do_action( 'enqueue_block_editor_assets' );
 
 		self::assertTrue(
