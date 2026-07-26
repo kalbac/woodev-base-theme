@@ -33,7 +33,7 @@
 
 **Suites still contend for Docker.** Run them ONE AT A TIME even on different wp-env configs — s12 lost a run to a stall, and s13 watched wp-cli calls slow to a crawl with 15 containers up. Stop the environments you are not using.
 
-`npm run format` is red on 5 files no session has touched — the three `docs/design/v2-mockup/*` artifacts (verbatim exports, must not be reformatted), `scripts/lib/build-tokens-lib.mjs`, and an untracked `opencode.json` that is not the theme's. Not in the documented gate battery; the files we own are clean.
+`npm run format` is red on 4 files no session has touched — the three `docs/design/v2-mockup/*` artifacts (verbatim exports, must not be reformatted) and `scripts/lib/build-tokens-lib.mjs`. Not in the documented gate battery; the files we own are clean. (s15 re-measured: it was recorded as 5 including an untracked `opencode.json`, which is in fact Prettier-clean and is now git-ignored — see `opencode.example.json`.)
 
 **What the critic gate produced (all four areas now criticked AND re-criticked):**
 - **Woo layer** — 4 real defects, then 3 more inside the fixes: the shortcode/block product loop shipping without CSS or `data-cta`; a priority window swallowing third-party buttons; the same repair then wrapping the Product Button BLOCK's markup in an inline span; a placeholder sprite unreachable from REST-rendered blocks.
