@@ -8,6 +8,9 @@
 the identity reaching core's own blocks, the font payload honest, the strings extractable,
 and the review checklist actually run rather than assumed.
 
+**Not in scope, deliberately:** the translation files. `.pot`, `.po` and `.mo` are Maksim's,
+produced in Poedit once the strings are final. See R3.
+
 **Architecture:** four independent tracks. R1 changes how the identity is delivered to
 WordPress (needs a decision recorded first). R2 replaces the font derivation pipeline. R3
 adds the translation artifacts. R4 is the compliance sweep and must run **last**, on the
@@ -158,27 +161,31 @@ that day, and missing Mono 700.
 
 ---
 
-## R3 — the `.pot`, and a real `ru_RU` (ADR-006)
+## R3 — translation-READINESS only. The files themselves are Maksim's.
 
-Independent of R1 and R2.
+**Scope corrected 27.07.2026, on Maksim's call.** An earlier draft of this plan had me
+generate the `.pot` and translate `ru_RU`. That was wrong twice over: the string set is not
+final until R2 and R4 land, so any `.pot` produced now gets regenerated anyway, and wp.org
+does not require a shipped `.pot` at all — GlotPress builds its own from the source. Maksim
+produces `.pot`, `.po` and `.mo` himself in **Poedit**, at the end. Do not generate them,
+and do not "save him time" by pre-filling them.
 
-- [ ] **Step 1: the failing test.** Integration assertion that
-      `get_template_directory() . '/languages/woodev-base-theme.pot'` exists and that
-      `load_theme_textdomain()` returns true for `ru_RU`. It currently points at a directory
-      that does not exist, so this fails honestly today.
-- [ ] **Step 2: run it, watch it fail.**
-- [ ] **Step 3: generate** via wp-cli inside wp-env:
-      `wp i18n make-pot wp-content/themes/woodev-base-theme wp-content/themes/woodev-base-theme/languages/woodev-base-theme.pot --domain=woodev-base-theme`.
-      Add an npm script so it is reproducible, not a remembered command.
-- [ ] **Step 4: audit the extraction.** Compare the `.pot` entry count against the 85 call
-      sites. A string that uses a variable inside an i18n function does not extract and is
-      a defect, not a discrepancy — fix any at the source.
-- [ ] **Step 5: translate `ru_RU`** (`.po` + compiled `.mo`), informal register to match the
-      product's voice. Every count-sensitive string must stay count-agnostic — the Russian
-      3-form plural rule is why `_n()` is banned here (`comments.php:94` documents it).
-- [ ] **Step 6: e2e.** With `WPLANG=ru_RU`, a known front-end string renders in Russian.
-      Mutation-verify by removing the `.mo`.
-- [ ] **Step 7: commit.**
+What IS ours is that the code is extractable and correct when he runs Poedit over it:
+
+- [ ] **Audit every i18n call site** (85 at the time of writing) for the defects that make a
+      string un-extractable or mis-extractable: a variable inside an i18n function, a
+      missing or wrong text domain, a concatenation where a placeholder belongs, a
+      translator comment missing on an ambiguous string.
+- [ ] **Confirm the plural rule holds.** `_n()` is banned here because Russian has three
+      forms; count-sensitive copy must be count-agnostic plus `number_format_i18n()`.
+      `comments.php:94` documents the one place this came up. Verify nothing new violates it.
+- [ ] **Test what is testable without the files.** `load_theme_textdomain()` is called with
+      the right domain and path (`Setup.php:38`); every user-facing string carries
+      `woodev-base-theme`. Do NOT assert that a `.pot` exists — that is his artefact, and a
+      test demanding it would fail the suite for a reason that is not a defect.
+- [ ] **Create `languages/` with an index.php stub** if wp.org's checklist wants the
+      directory present, and leave it otherwise empty.
+- [ ] **Report the audit to Maksim** so he knows the source is clean before opening Poedit.
 
 ---
 
