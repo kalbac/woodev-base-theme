@@ -33,7 +33,9 @@
 
 **Suites still contend for Docker.** Run them ONE AT A TIME even on different wp-env configs — s12 lost a run to a stall, and s13 watched wp-cli calls slow to a crawl with 15 containers up. Stop the environments you are not using.
 
-`npm run format` is red on 4 files no session has touched — the three `docs/design/v2-mockup/*` artifacts (verbatim exports, must not be reformatted) and `scripts/lib/build-tokens-lib.mjs`. Not in the documented gate battery; the files we own are clean. (s15 re-measured: it was recorded as 5 including an untracked `opencode.json`, which is in fact Prettier-clean and is now git-ignored — see `opencode.example.json`.)
+**`npm run format` is green as of s15, and it was never optional.** Recorded for two sessions as "red on 5 files, not in the documented gate battery" — but CI's `js-qa` job runs `prettier --check .`, so it was a gate, it was failing, and because the `e2e` job declares `needs: js-qa`, **CI has never run the base e2e on PR #24 at all**. Fixed in `dc6f889`: the three `docs/design/v2-mockup/*` exports are `.prettierignore`d (approved artifacts, ADR-008 — not ours to reformat) and `scripts/lib/build-tokens-lib.mjs` is formatted, line-wrapping only.
+
+Two measurement traps came out of that, both worth keeping. **Prettier 3 reads `.gitignore` as well as `.prettierignore`** — so once `opencode.json` was git-ignored, `prettier --check opencode.json` printed "All matched files use Prettier code style!" while matching zero files. That message means "nothing failed", never "your file is clean", and it is indistinguishable from a pass. And **a docs line saying a check is "not in the gate battery" is a claim about CI that only CI can settle** — read `.github/workflows/ci.yml`, not the note.
 
 **What the critic gate produced (all four areas now criticked AND re-criticked):**
 - **Woo layer** — 4 real defects, then 3 more inside the fixes: the shortcode/block product loop shipping without CSS or `data-cta`; a priority window swallowing third-party buttons; the same repair then wrapping the Product Button BLOCK's markup in an inline span; a placeholder sprite unreachable from REST-rendered blocks.
