@@ -24,18 +24,25 @@ use Woodev\Theme\Base\Assets as BaseAssets;
  * page via a shortcode or block loop — a product loop is not itself a
  * "Woo context", so there is no cheap, reliable condition to gate on, and
  * the bundle stays inert (it is entirely `.woocommerce`-scoped) when unused.
- * Cart and Checkout are different in kind: both blocks declare
- * `"multiple": false` in their `block.json` and WooCommerce's
- * `install_pages` creates exactly one page for each, so "does this page
- * contain the block" is both ACCURATE (the block cannot appear anywhere
- * else) and CHEAP (`has_block()` is a `str_contains()` scan of the already-
- * loaded post content, no query). Loading it unconditionally the way
- * Woo\Assets does would put it on every front-end request of a WooCommerce
- * store to serve the only two pages that can ever use it. Size is not the
- * argument and no figure is quoted here on purpose — an earlier draft of
- * this docblock said "~30 KB", which is woo.css's built size, not this
- * bundle's (1.4 KB today, and it grows as the plan's remaining work-list
- * rows land).
+ * Cart and Checkout are different in kind, and the invariant is exactly
+ * this: the bundle loads whenever the QUERIED POST'S CONTENT contains
+ * either block, wherever that post happens to be. That condition is CHEAP
+ * (`has_block()` scans post content already in memory, no query) and it is
+ * EXACT — it follows the block rather than a page id, so an administrator
+ * who pastes the Checkout block onto some other page gets the styles there
+ * too, and a store that has moved or rebuilt its cart page keeps them. In
+ * practice a default install has one page for each, because
+ * `install_pages` creates them and both blocks declare `"multiple": false`
+ * — but note what that flag actually constrains: it stops a SECOND instance
+ * inside one post, not the block from appearing in another post. An earlier
+ * draft of this docblock claimed the blocks "cannot appear anywhere else"
+ * and that only two pages could "ever" use the stylesheet; neither is true,
+ * and neither is what the code relies on. (Codex review finding, s14.)
+ *
+ * Size is not the argument and no figure is quoted here on purpose — an
+ * even earlier draft said "~30 KB", which is woo.css's built size rather
+ * than this bundle's, and any number written here goes stale as the
+ * remaining work-list rows land.
  *
  * has_block() with a null $post — verified against the installed WordPress
  * core source (wp-includes/blocks.php, wp-includes/post.php), not assumed:
