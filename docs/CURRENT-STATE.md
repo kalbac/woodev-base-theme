@@ -15,7 +15,7 @@
 | Identity implementation (T0–T8) | ✅ **Merged s15** | ADR-007 (fonts) + ADR-008 (identity replaces the 8 style packs). Plan: `docs/plans/2026-07-25-visual-identity.md`. All four areas criticked and re-criticked (s12); test debt paid s13. PR [#24](https://github.com/kalbac/woodev-base-theme/pull/24) squashed onto `main` as `f040eaa` |
 | M2a — Woo storefront | ✅ **Merged s15**, in `f040eaa` | Classic storefront on the approved identity. The block cart/checkout gap was M2b |
 | M2b — Woo block cart & checkout | ✅ **Merged s15** | [ADR-009](adr/ADR-009-block-cart-checkout-styling.md) implemented B0–B6, criticked **and** re-criticked. PR [#29](https://github.com/kalbac/woodev-base-theme/pull/29) squashed onto `main` as `1d769ae` |
-| M3 — Public release prep | ⬜ Not started | |
+| M3 — Public release prep | 🟡 In flight | Plan: `docs/plans/2026-07-26-m3-release-prep.md`, four tracks. **R1 done**, PR [#30](https://github.com/kalbac/woodev-base-theme/pull/30) open and CI-green — [ADR-010](adr/ADR-010-theme-json-identity.md), closes #26 + #25. R2 (fonts), R3 (`.pot`), R4 (wp.org sweep) not started |
 
 ## Known bugs
 
@@ -68,6 +68,12 @@ Plan: `docs/plans/2026-07-25-block-cart-checkout.md`. Implementation is the next
 s7's near-miss is worth carrying: the new `ScriptModuleGuard` reflected on `WP_Script_Modules::$done`, which **exists only from WP 6.9** while the theme declares `Requires at least: 6.8`. Every test using it would have died with `ReflectionException` on the floor we claim to support. Local runs cannot see this — wp-env uses `core: null`, i.e. latest — and neither can CI, which does not matrix the floor. **Nothing in this project currently tests the declared WP floor**; that is now the most valuable untested claim we make.
 
 s5 found and fixed one real defect after merging — the mobile-drawer focus-trap e2e was red on merged `main` while green on each branch alone. Not a product regression: `x-trap` moves focus asynchronously and a premature `Tab` lands on the skip link, outside the nav (`docs/gotchas/x-trap-focus-move-is-async.md`, PR #7 `9dc2f3b`). Codex also caught a would-be **fatal on every front-end request** before merge — `(string) get_theme_mod()` throws `Error` for an object; now fails closed.
+
+**Branch `feat/m3-r1-theme-json-identity` (PR [#30](https://github.com/kalbac/woodev-base-theme/pull/30)) — CI green on head `30b1090`, and CI now covers more than it did:** php-qa · js-qa · php-integration · e2e all pass. unit **208** (613 assertions) · integration **46** (130 assertions, **Skipped: 1**, down from 4) · base e2e **60 passed**. Locally, on the same tree: e2e:woo **23/23** · integration-dev 4/4 · e2e-dev 2/2 · `tokens:check` 0.
+
+Two gate defects were fixed to get there, and both are the same shape as the prettier one above. **`php-integration` never ran `npm run build`**, so four asset tests were silently `markTestSkipped()` — a green job covering less than it looked like. And **`theme.json` is a generated artifact** (`scripts/build-tokens.mjs`), which nothing in the gate could see: a hand edit passed the whole PHP suite, which never builds, and was erased by the next build. `npm run tokens:check` now fails CI when a committed generated file drifts from its source.
+
+**The critic ran three rounds on R1** — 3 findings, then 2 *inside* those fixes, then 3 more that were all about the test's precision rather than the product. Every fix mutation-verified, several with the critic's own stated trigger. The product code has been clean since round 1.
 
 ## Deferred, tracked
 
