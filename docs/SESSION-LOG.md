@@ -1,5 +1,57 @@
 # Session Log — Woodev Base
 
+## s15 — 26–27.07.2026 — both milestones merged, M3 opened, and three gates found doing nothing
+
+**M1 identity + M2a merged as `f040eaa`, M2b as `1d769ae`, both green on the merge commit.**
+Merged `main` was verified tree-identical to the CI-green PR head, which is what lets CI's
+result stand as a measurement of `main` rather than of a branch. The three suites CI never
+runs (`e2e:woo`, `integration-dev`, `e2e-dev`) were run locally on that same tree.
+
+**Getting there meant fixing the gate first, and that is the session's real story.**
+`docs/CURRENT-STATE.md` had said for two sessions that `npm run format` was red but "not in
+the documented gate battery". CI ran it, it was failing, and because the `e2e` job declares
+`needs: js-qa`, **CI had never once run the base e2e on PR #24** — it showed as `e2e skipping`
+beside three passes, which scans as fine. Two more of the same shape followed: `php-integration`
+never ran `npm run build`, so four asset tests were silently `markTestSkipped()` (fixed:
+*Skipped: 4* → *Skipped: 1*, 122 → 130 assertions); and `prettier --check` on a git-ignored
+path prints "All matched files use Prettier code style!" having matched none, which was
+written into the docs as a measured fact before being caught.
+
+**R1 (ADR-010) carries the identity into WordPress's own blocks.** theme.json colours became
+`var()` references, `styles.elements.button` displaces core's `#32373c` site-wide, core's
+palette is off, and the editor gets the tokens. Every claim measured against WP 7.0.2, not
+reasoned: `var()` survives serialisation verbatim; declaring the button element REPLACES core's
+rule rather than adding to it; `defaultPalette:false` does NOT remove core's preset custom
+properties (read from `WP_Theme_JSON`'s `prevent_override` entry). **Two defects found by
+running it, not reading it.** `theme.json` turned out to be a GENERATED artifact — the hand
+edit passed the whole PHP suite, which never builds, and the next `npm run build` erased it;
+`npm run tokens:check` now fails CI on drift. And the editor is two documents: the sidebar
+picker lives in wp-admin, where every swatch computed `rgba(0,0,0,0)` until a tokens-only Vite
+entry was enqueued there. Three critic rounds — 3 findings, then 2 *inside* those fixes, then
+3 about the test's precision. Every fix mutation-verified.
+
+**R4 audited the theme against wp.org and found real gaps.** Zero of 45 shipped PHP files had a
+direct-access guard; `footer.php` requested over HTTP returned nine bytes of theme markup.
+Adding the guard then **silently switched the unit suite off** — Brain\Monkey runs without
+WordPress, `ABSPATH` was undefined, and the first `require` exited the process with **code 0**.
+A suite that never ran is indistinguishable from one that passed. Theme Check (run headlessly)
+found `comment-reply` enqueued nowhere and eight classes WordPress itself emits with no rule at
+all. Deliberately NOT fixed: the `Update URI` REQUIRED, which ADR-005 makes v1's self-update
+channel.
+
+**Two tracks were cut down rather than executed, both on measurement.** The `.pot` was descoped
+on Maksim's call — the strings are not final and wp.org builds its own. And #17's font target is
+unreachable: a browser walk over both sites showed IBM Plex Sans using its whole axis, Golos
+rendering at **650** (only a variable font does that), and Mono using **all three** shipped
+weights, so the 131 KB saving does not exist; `@ibm/plex-mono` has no variable release, and
+glyph-subsetting is unusable for a theme that renders arbitrary user text.
+
+Commits on `feat/m3-release-prep`, merged as PR #32. New cards: #31 (sticky footer), #33
+(four wp-env environments, three containers idle), #34 (`settings.layout` — "Wide width" does
+nothing), #35 (slug/directory/text-domain mismatch, cheap now and expensive after release),
+#36 (screenshot, deferred until the front page has real content). Measurements added to #17
+and #23. Two gotchas compiled.
+
 ## s14 — 26.07.2026 — M2b built, criticked and re-criticked; the critic gate itself was the real bug
 
 **M2b is done: B0-B6, seven commits on `feat/m2b-block-cart-checkout`.** The block Cart and
