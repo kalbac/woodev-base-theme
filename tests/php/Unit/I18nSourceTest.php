@@ -192,11 +192,16 @@ final class I18nSourceTest extends PHPUnitTestCase {
 		return 1 === \count( $argument ) && T_CONSTANT_ENCAPSED_STRING === $argument[0]['type'];
 	}
 
-	/**
-	 * @param list<array{type: int|string, text: string, line: int}> $argument Argument tokens.
-	 */
 	private function literal_value( array $argument ): string {
-		return trim( $argument[0]['text'], "'\"" );
+		/*
+		 * Exactly one delimiter off each end — never a character SET. `trim( $raw,
+		 * "'\"" )` also eats quotes that belong to the value: the literal
+		 * `'woodev-base-theme"'` names a real, different domain, and trimming
+		 * returned `woodev-base-theme`, so a string extracted into somebody else's
+		 * POT passed as ours. A T_CONSTANT_ENCAPSED_STRING is always properly
+		 * delimited, which makes one character each end exact rather than a guess.
+		 */
+		return substr( $argument[0]['text'], 1, -1 );
 	}
 
 	/**
@@ -211,11 +216,24 @@ final class I18nSourceTest extends PHPUnitTestCase {
 		for ( $i = 0, $count = \count( $tokens ); $i < $count; $i++ ) {
 			$token = $tokens[ $i ];
 
-			if ( T_STRING !== $token['type'] ) {
+			if ( ! \in_array( $token['type'], [ T_STRING, T_NAME_FULLY_QUALIFIED ], true ) ) {
 				continue;
 			}
 
-			$name = $token['text'];
+			/*
+			 * PHP 8 tokenises `\__()` as a single T_NAME_FULLY_QUALIFIED carrying the
+			 * leading separator, not as T_NS_SEPARATOR followed by T_STRING. Reaching a
+			 * WordPress function that way from inside a namespace is normal — this theme
+			 * does it for `\sprintf()` — so a scanner watching only T_STRING walks past
+			 * `\_n( $var, … )` without a word. A name with an INNER separator is somebody
+			 * else's namespaced function and is not ours to judge.
+			 */
+			$name = ltrim( $token['text'], '\\' );
+
+			if ( str_contains( $name, '\\' ) ) {
+				continue;
+			}
+
 			$prev = $tokens[ $i - 1 ] ?? null;
 
 			// A method, a static call or a declaration of the same name is not ours.
@@ -297,7 +315,11 @@ final class I18nSourceTest extends PHPUnitTestCase {
 		for ( $i = 0, $count = \count( $tokens ); $i < $count; $i++ ) {
 			$token = $tokens[ $i ];
 
-			if ( T_STRING !== $token['type'] || ! isset( self::DOMAIN_ARGUMENT[ $token['text'] ] ) ) {
+			if ( ! \in_array( $token['type'], [ T_STRING, T_NAME_FULLY_QUALIFIED ], true ) ) {
+				continue;
+			}
+
+			if ( ! isset( self::DOMAIN_ARGUMENT[ ltrim( $token['text'], '\\' ) ] ) ) {
 				continue;
 			}
 
@@ -334,10 +356,6 @@ final class I18nSourceTest extends PHPUnitTestCase {
 		self::assertGreaterThan( 70, $sites, 'The i18n scanner found almost nothing — it has stopped scanning.' );
 	}
 
-	/**
-	 * The analyser reports what it claims to report. Without this, a scanner that
-	 * matched nothing would certify the theme as clean.
-	 */
 	public function test_the_analyser_catches_every_rule_it_asserts(): void {
 		$broken = <<<'PHP'
 		<?php
@@ -348,16 +366,28 @@ final class I18nSourceTest extends PHPUnitTestCase {
 		_x( 'Split' . ' string', 'context', 'woodev-base-theme' );
 		printf( _n( '%s comment', '%s comments', $count, 'woodev-base-theme' ), $count );
 		$this->_e( 'A method of ours, not WordPress', 'anything' );
+		\esc_html_e( $label, 'woodev-base-theme' );
+		\_n( '%s item', '%s items', $count, 'woodev-base-theme' );
+		__( 'A quote inside the domain', 'woodev-base-theme"' );
+		Other\_e( 'Somebody else namespaced function', 'whatever' );
 		PHP;
 
 		$findings = $this->findings( $broken, 'fixture' );
 
-		self::assertCount( 5, $findings, "Expected five findings, got:\n  " . implode( "\n  ", $findings ) );
+		self::assertCount( 8, $findings, "Expected eight findings, got:\n  " . implode( "\n  ", $findings ) );
 		self::assertStringContainsString( 'text domain "some-plugin"', $findings[0] );
 		self::assertStringContainsString( 'argument 1 is not a literal string', $findings[1] );
 		self::assertStringContainsString( 'names no text domain', $findings[2] );
 		self::assertStringContainsString( 'argument 1 is not a literal string', $findings[3] );
 		self::assertStringContainsString( '_n() cannot express the Russian plural rule', $findings[4] );
+
+		// The three the critic found the analyser walking past, plus the one it
+		// must keep ignoring. Root-namespaced calls arrive as a single
+		// T_NAME_FULLY_QUALIFIED token; a domain whose value ends in a quote used
+		// to be trimmed back into a match.
+		self::assertStringContainsString( 'argument 1 is not a literal string', $findings[5] );
+		self::assertStringContainsString( '_n() cannot express the Russian plural rule', $findings[6] );
+		self::assertStringContainsString( 'text domain "woodev-base-theme"', $findings[7] );
 	}
 
 	public function test_every_shipped_string_is_extractable_and_ours(): void {
