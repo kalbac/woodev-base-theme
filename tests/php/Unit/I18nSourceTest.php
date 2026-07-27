@@ -193,6 +193,18 @@ final class I18nSourceTest extends PHPUnitTestCase {
 	}
 
 	private function literal_value( array $argument ): string {
+		$raw = $argument[0]['text'];
+
+		/*
+		 * A binary-string literal — `b'woodev-base-theme'` — is a legal PHP string
+		 * whose token text starts one character further along. Stripping blindly
+		 * would leave the opening quote in the value and report a correct domain as
+		 * somebody else's, which is the worse direction for a check that gates CI.
+		 */
+		if ( 'b' === $raw[0] || 'B' === $raw[0] ) {
+			$raw = substr( $raw, 1 );
+		}
+
 		/*
 		 * Exactly one delimiter off each end — never a character SET. `trim( $raw,
 		 * "'\"" )` also eats quotes that belong to the value: the literal
@@ -201,7 +213,7 @@ final class I18nSourceTest extends PHPUnitTestCase {
 		 * POT passed as ours. A T_CONSTANT_ENCAPSED_STRING is always properly
 		 * delimited, which makes one character each end exact rather than a guess.
 		 */
-		return substr( $argument[0]['text'], 1, -1 );
+		return substr( $raw, 1, -1 );
 	}
 
 	/**
@@ -370,6 +382,7 @@ final class I18nSourceTest extends PHPUnitTestCase {
 		\_n( '%s item', '%s items', $count, 'woodev-base-theme' );
 		__( 'A quote inside the domain', 'woodev-base-theme"' );
 		Other\_e( 'Somebody else namespaced function', 'whatever' );
+		__( 'A binary literal naming the correct domain', b'woodev-base-theme' );
 		PHP;
 
 		$findings = $this->findings( $broken, 'fixture' );

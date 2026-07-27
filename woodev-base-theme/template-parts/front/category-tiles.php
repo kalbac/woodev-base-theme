@@ -54,9 +54,21 @@ if ( is_wp_error( $wtb_categories ) || empty( $wtb_categories ) ) {
 		<div class="wtb-cat-tiles">
 			<?php foreach ( $wtb_categories as $wtb_category ) : ?>
 				<?php
+				/*
+				 * get_term_link() returns WP_Error, not a string, when a term cannot be
+				 * resolved — and casting WP_Error to string is a fatal in PHP 8, on the
+				 * front page of the site. A tile with nowhere to go is worth losing;
+				 * the page is not.
+				 */
+				$wtb_term_link = get_term_link( $wtb_category );
+
+				if ( is_wp_error( $wtb_term_link ) ) {
+					continue;
+				}
+
 				$wtb_thumbnail_id = (int) get_term_meta( $wtb_category->term_id, 'thumbnail_id', true );
 				?>
-				<a class="wtb-cat-tile" href="<?php echo esc_url( (string) get_term_link( $wtb_category ) ); ?>">
+				<a class="wtb-cat-tile" href="<?php echo esc_url( $wtb_term_link ); ?>">
 					<?php if ( $wtb_thumbnail_id > 0 ) : ?>
 						<span class="bg">
 							<?php
@@ -68,7 +80,15 @@ if ( is_wp_error( $wtb_categories ) || empty( $wtb_categories ) ) {
 
 					<span class="arrow"><?php woodev_base_icon( 'chevron-right', [ 'size' => 16 ] ); ?></span>
 
-					<span class="label">
+					<?php
+					/*
+					 * A div, not the mockup's span: a span accepts phrasing content only,
+					 * and an h3 is flow content, so the mockup's markup is invalid HTML
+					 * and gives the accessibility tree something to guess at. The CSS is
+					 * unaffected — blocks.css selects `.label`, not the element.
+					 */
+					?>
+					<div class="label">
 						<h3><?php echo esc_html( $wtb_category->name ); ?></h3>
 						<?php
 						/*
@@ -86,7 +106,7 @@ if ( is_wp_error( $wtb_categories ) || empty( $wtb_categories ) ) {
 							);
 							?>
 						</span>
-					</span>
+					</div>
 				</a>
 			<?php endforeach; ?>
 		</div>

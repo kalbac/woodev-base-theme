@@ -31,8 +31,18 @@ $wtb_shop_link = function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permal
  * With no image the slot still renders: hero.css gives it a surface, a rule, a
  * radius and a shadow, so it reads as a deliberate plate rather than a gap —
  * and it holds the layout's second column, which would otherwise collapse.
+ *
+ * The post ID is passed explicitly. This part renders BEFORE the main loop, so
+ * the global `$post` the argument-less forms read is not set yet: the first
+ * version asked `has_post_thumbnail()` with no ID and got false on every static
+ * front page that had one, which looks exactly like "no image was set".
+ * `get_queried_object_id()` is 0 on a posts front page, which is the correct
+ * answer there — that page has no featured image of its own.
  */
-$wtb_hero_image = has_post_thumbnail() ? get_the_post_thumbnail( null, 'large', [ 'class' => 'wtb-hero__image' ] ) : '';
+$wtb_front_id   = get_queried_object_id();
+$wtb_hero_image = ( $wtb_front_id > 0 && has_post_thumbnail( $wtb_front_id ) )
+	? get_the_post_thumbnail( $wtb_front_id, 'large', [ 'class' => 'wtb-hero__image' ] )
+	: '';
 ?>
 <section class="wtb-hero">
 	<div class="wtb-container wtb-hero__inner">

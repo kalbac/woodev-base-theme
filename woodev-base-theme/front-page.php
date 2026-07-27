@@ -39,16 +39,28 @@ get_template_part( 'template-parts/front/category-tiles' );
 		<?php get_template_part( 'template-parts/content/loop' ); ?>
 	<?php else : ?>
 		<?php
-		while ( have_posts() ) :
+		/*
+		 * A static front page, and this template displaces page.php for it — so it
+		 * renders through the SAME partial page.php uses rather than a hand-rolled
+		 * loop. The first version echoed the_content() and nothing else, which
+		 * silently dropped wp_link_pages() (a <!--nextpage--> page became
+		 * unreachable) and the comments template. Mirroring page.php is what makes
+		 * that class of omission impossible rather than merely fixed once.
+		 *
+		 * `hide_entry_head` is the second half of that repair. Routing through the
+		 * full partial brought back the page's title as a second <h1> and its
+		 * featured image a second time, under the hero that already renders both —
+		 * the re-critic's finding, and a fair one: the fix for a missing call
+		 * introduced a duplicate.
+		 */
+		while ( have_posts() ) {
 			the_post();
-			?>
-			<article <?php post_class( 'wtb-entry' ); ?>>
-				<div class="wtb-entry-content">
-					<?php the_content(); ?>
-				</div>
-			</article>
-			<?php
-		endwhile;
+			get_template_part( 'template-parts/content/content', null, [ 'hide_entry_head' => true ] );
+
+			if ( comments_open() || get_comments_number() ) {
+				comments_template();
+			}
+		}
 		?>
 	<?php endif; ?>
 </div>
