@@ -24,6 +24,15 @@
   padding-block: var(--space-3xl);
 }
 
+/* The admin turned the art column off (Customizer: Front page → Hero art
+ * column). Without this the two-column track stays declared and the copy
+ * keeps 1.15fr of the width, leaving a third of the hero empty — which
+ * reads as a broken image, exactly the impression the setting exists to
+ * avoid. */
+.wtb-hero__inner--single {
+  grid-template-columns: 1fr;
+}
+
 .wtb-hero__eyebrow {
   display: inline-flex;
   align-items: center;
