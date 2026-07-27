@@ -22,6 +22,9 @@ export default defineConfig({
         // Block Cart/Checkout bundle; Woo\BlockAssets.php enqueues it only
         // when the page actually contains one of the two blocks.
         wooBlocks: 'src/css/woo-blocks.css',
+        // Tokens only, for the block editor's admin document (ADR-010). Never
+        // the full bundle there — that would restyle wp-admin itself.
+        editorTokens: 'src/css/editor-tokens.css',
       },
     },
   },

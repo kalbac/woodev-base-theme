@@ -6,6 +6,7 @@
   "license": "GPL-2.0-or-later",
   "scripts": {
     "tokens": "node scripts/build-tokens.mjs",
+    "tokens:check": "node scripts/check-tokens.mjs",
     "fonts": "node scripts/build-fonts.mjs",
     "icons": "node scripts/copy-icons.mjs",
     "dev": "npm run tokens && npm run fonts && vite",

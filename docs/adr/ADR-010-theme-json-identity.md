@@ -1,7 +1,7 @@
 # ADR-010: `theme.json` carries `var()` references, and the editor gets the tokens
 
-- **Status:** **Proposed** (26.07.2026, s15) — awaiting Maksim's call. 🔴 irreversible-ish:
-  it changes how the identity is delivered to WordPress itself.
+- **Status:** **Accepted** (26.07.2026, s15) — Maksim approved option (b) on the measured
+  diff. 🔴: it changes how the identity is delivered to WordPress itself.
 - **Deciders:** Maksim + Claude
 - **Closes:** [#26](https://github.com/kalbac/woodev-base-theme/issues/26),
   [#25](https://github.com/kalbac/woodev-base-theme/issues/25)
@@ -87,12 +87,35 @@ requires; that ruling is about `styles.blocks`, and this is `styles.elements`.
   is a `theme.json` hunk plus one `add_editor_style` call. What is not cheap to undo is the
   expectation it sets — once the editor matches the site, going back is a visible downgrade.
 
+## Corrections made during implementation
+
+Two things this ADR got wrong, both found by running the change rather than reading it.
+Recorded here rather than quietly edited away, because each was a plausible belief.
+
+1. **`theme.json` was ALREADY a generated artifact.** `scripts/build-tokens.mjs` rewrites
+   it from `src/tokens/tokens.mjs` on every `npm run build`, and `buildThemeJson()` carried
+   a docblock asserting that theme.json "is static JSON that cannot follow a custom
+   property" — with a vitest case pinning `must be a literal` on those grounds. So the
+   first implementation, a hand edit, passed the whole PHP suite (which never builds) and
+   was then erased by the next build. The change belongs in the generator; the file it now
+   produces is byte-identical to the hand-written one. `npm run tokens:check` fails CI if a
+   committed generated file ever diverges again.
+2. **The editor is two documents, and only one of them was covered.** `add_editor_style()`
+   reaches the canvas iframe. The colour picker lives in the wp-admin document, where
+   Gutenberg paints each swatch from the RAW preset value — so with `var()` presets and no
+   tokens there, every swatch computed `rgba(0, 0, 0, 0)`. Measured, then fixed with a
+   tokens-only Vite entry (`src/css/editor-tokens.css`) enqueued on
+   `enqueue_block_editor_assets`. The full bundle must never go to wp-admin: it carries
+   Basecoat's base layer and the site chrome.
+
+The old docblock was half-right, which is why it survived: a `var()` preset IS broken in
+the editor — in the sidebar, not the canvas, and fixable rather than fatal.
+
 ## Rejected alternatives
 
-- **(a) Generate literal values from `src/tokens/tokens.mjs` at build time.** Fixes the
-  hand-maintenance problem but not the actual one: the result is still a static snapshot of
-  one palette in one scheme, so #25 survives in full. It also makes `theme.json` a generated
-  artifact that can drift silently from its committed form.
+- **(a) Emit literal values resolved from `src/tokens/tokens.mjs`.** This was the status
+  quo, not an alternative — see correction 1. It fixes nothing: the result is a static
+  snapshot of one palette in one scheme, so #25 survives in full.
 - **(c) Declare `styles.elements.button` only, leave the presets frozen.** Closes #26,
   leaves #25 open, and needs no editor work. Kept as the fallback **only** if the editor
   surface in the first consequence above turns out to be a real problem — measured, not

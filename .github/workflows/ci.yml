@@ -32,6 +32,11 @@ jobs:
       - run: npm ci
       - run: npm run lint:js
       - run: npm run format
+      # theme.json and inc/generated/palettes.php are generated from
+      # src/tokens/tokens.mjs and committed. Editing either by hand passes every
+      # other gate here and is then erased by the next build — s15 lost a change
+      # exactly that way. Read-only: it never rewrites the tree.
+      - run: npm run tokens:check
       - run: npm run test:js
       - run: npm run build
       - uses: actions/upload-artifact@v4
@@ -48,6 +53,11 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      # The asset tests resolve hashed filenames through the Vite manifest and
+      # markTestSkipped() without one. Without this step CI silently skipped
+      # four of them — a green job covering less than it appeared to, which is
+      # docs/gotchas/qa-gates-cover-less-than-they-claim.md in its purest form.
+      - run: npm run build
       # A config file of its own, so this spawns its own container set and
       # cannot collide with the e2e job's environment. See .wp-env.test.json.
       - run: npm run wp:test:start

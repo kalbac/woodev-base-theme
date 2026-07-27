@@ -1,6 +1,6 @@
 # Gotchas Index — Woodev Base
 
-> 35 entries. Each gotcha is a separate file in `docs/gotchas/`.
+> 36 entries. Each gotcha is a separate file in `docs/gotchas/`.
 
 | Gotcha | Area | Summary |
 |---|---|---|
@@ -39,3 +39,4 @@
 | [codex-critic-needs-inline-stdin-and-explicit-effort](gotchas/codex-critic-needs-inline-stdin-and-explicit-effort.md) | Tooling/Codex | The plugin route returns `approve` having read nothing — the sandbox denies its shell. Working recipe: whole diff on stdin, NO-TOOLS preamble, foreground, explicit `model_reasoning_effort="high"` (3.6x the tokens of the default). Watch the token count: a cheap `clean` looks identical to a real one |
 | [wp-env-mounts-the-theme-live](gotchas/wp-env-mounts-the-theme-live.md) | Tooling/wp-env | The theme dir is bind-mounted, so a worker's half-written PHP file is a fatal on the running store and kills an e2e run mid-seed. Separate theme edits from suite runs in TIME, not by file. The stack trace points at the seeding code, not the cause |
 | [wp-unittestcase-does-not-reset-wp-styles](gotchas/wp-unittestcase-does-not-reset-wp-styles.md) | Testing/WP core | The DB is rolled back; `$wp_styles` is not. An "asset is absent" test passes alone and fails in-suite because earlier tests registered the handle. `unset( $GLOBALS['wp_styles'] )` in `set_up()`, then mutation-verify so the reset has not made it vacuous |
+| [a-killed-e2e-run-leaves-theme-mods-dirty](gotchas/a-killed-e2e-run-leaves-theme-mods-dirty.md) | Testing/e2e | `theme-mods.spec.mjs` restores every mod it sets — unless the run is KILLED, and then the residue fails a **different spec file** in a way that reads as a product defect. Twice in s15: a leftover `sidebar_position` failed the post-grid breakpoints, a leftover `base_font_size` failed "an untouched site emits no inline style". Read `wp option get theme_mods_*` before diagnosing; clear with `wp theme mod remove`, never by guessing the default back. Both times the spec's own precondition assertion is what turned a confusing red into a one-line diagnosis |

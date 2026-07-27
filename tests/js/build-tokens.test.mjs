@@ -6,7 +6,6 @@ import {
   buildTokensCss,
   contrastFailures,
   contrastRatio,
-  formatColor,
   resolveColor,
   varsFor,
 } from '../../scripts/lib/build-tokens-lib.mjs';
@@ -345,7 +344,7 @@ describe('buildTokensCss', () => {
 });
 
 describe('buildThemeJson', () => {
-  it('emits theme.json v3 with a resolved, var-free editor palette', () => {
+  it('emits theme.json v3 whose palette references the live tokens (ADR-010)', () => {
     const result = buildThemeJson(tokens);
 
     expect(result.version).toBe(3);
@@ -355,16 +354,34 @@ describe('buildThemeJson', () => {
     const primary = palette.find((entry) => entry.slug === 'primary');
 
     expect(primary.name).toBe('Primary');
-    // theme.json is static JSON parsed by PHP: it cannot follow a custom
-    // property. A var() reaching it renders as an invalid colour in the editor
-    // while the front end looks fine — the kind of split nobody notices for
-    // weeks.
+
+    // This assertion used to be its exact inverse — "must be a literal", on the
+    // stated grounds that theme.json "cannot follow a custom property". Measured
+    // false in s15: WordPress serialises var() into --wp--preset--color--* verbatim,
+    // and add_editor_style() makes it resolve inside the editor canvas too. The
+    // literals were #25: a frozen light-scheme snapshot that followed neither the
+    // Customizer nor .dark.
     for (const entry of palette) {
-      expect(entry.color, `${entry.slug} must be a literal`).not.toContain('var(');
-      expect(entry.color).toMatch(/^oklch\(/);
+      expect(entry.color, `${entry.slug} must reference its token`).toBe(`var(--${entry.slug})`);
     }
 
-    expect(primary.color).toBe(formatColor({ l: 0.47, c: 0.088, h: 40, a: 1 }));
+    // No fallback: a `var(--x, <literal>)` reintroduces the second copy this change
+    // exists to delete, and it drifts silently.
+    expect(primary.color).toBe('var(--primary)');
+    expect(primary.color).not.toContain(',');
+  });
+
+  it('disables core’s default palette and displaces core’s button styling', () => {
+    const result = buildThemeJson(tokens);
+
+    expect(result.settings.color.defaultPalette).toBe(false);
+    expect(result.styles.elements.button.color).toEqual({
+      background: 'var(--primary)',
+      text: 'var(--primary-foreground)',
+    });
+
+    // ADR-009 decision 5: styles.blocks stays empty. This is styles.elements.
+    expect(result.styles.blocks).toBeUndefined();
   });
 
   it('emits the three type roles as font families', () => {

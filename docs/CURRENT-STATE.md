@@ -1,6 +1,6 @@
 # Current State — Woodev Base
 
-> Updated: 26.07.2026 (s14)
+> Updated: 27.07.2026 (s15)
 
 ## Phase status
 
@@ -15,30 +15,24 @@
 | Identity implementation (T0–T8) | ✅ **Merged s15** | ADR-007 (fonts) + ADR-008 (identity replaces the 8 style packs). Plan: `docs/plans/2026-07-25-visual-identity.md`. All four areas criticked and re-criticked (s12); test debt paid s13. PR [#24](https://github.com/kalbac/woodev-base-theme/pull/24) squashed onto `main` as `f040eaa` |
 | M2a — Woo storefront | ✅ **Merged s15**, in `f040eaa` | Classic storefront on the approved identity. The block cart/checkout gap was M2b |
 | M2b — Woo block cart & checkout | ✅ **Merged s15** | [ADR-009](adr/ADR-009-block-cart-checkout-styling.md) implemented B0–B6, criticked **and** re-criticked. PR [#29](https://github.com/kalbac/woodev-base-theme/pull/29) squashed onto `main` as `1d769ae` |
-| M3 — Public release prep | ⬜ Not started | |
+| M3 — Public release prep | 🟡 In flight | Plan: `docs/plans/2026-07-26-m3-release-prep.md`. **R1 done and merged** ([ADR-010](adr/ADR-010-theme-json-identity.md), closes #26 + #25). **R4 largely done** — `readme.txt`, direct-access guards, Theme Check run, `comment-reply`, the eight core CSS classes; screenshot deferred to [#36](https://github.com/kalbac/woodev-base-theme/issues/36). **R2 measured and cut down** to a provenance question ([#17](https://github.com/kalbac/woodev-base-theme/issues/17)). **R3 descoped** — translation files are Maksim's, in Poedit |
 
 ## Known bugs
 
-**None open.** `main` is green on the MERGED commit **`1d769ae`** (M1 identity + M2a + M2b), not per-branch.
+**None open.** `main` is green on the MERGED commit **`1d769ae`** (M1 identity + M2a + M2b), not per-branch. Merged `main` was verified tree-identical (`git diff --quiet`) to the CI-green PR head, which is what lets CI's result stand as a measurement of `main` rather than of a branch.
 
-Two sources, and the split is worth knowing because it is where the s15 blind spot lived:
+- **CI on `1d769ae`** (all four jobs) — phpcs 0 · phpstan L8 0 · eslint 0 · prettier 0 · unit 208 · vitest 56 · integration 40 · base e2e 57 · build OK.
+- **Local on the same tree** — e2e:woo 23/23, integration-dev 4/4, e2e-dev 2/2. CI runs none of these three, so they only ever exist as a local measurement.
 
-- **CI on `1d769ae`** (`gh run 30212031669`, all four jobs success) — phpcs 0 · phpstan L8 0 · eslint 0 · prettier 0 · **unit 208** (611 assertions, 0 skipped) · vitest 56 · **integration 40** (106 assertions, 4 skipped) · **base e2e 57 passed** · build OK.
-- **Local on the same tree** — **e2e:woo 23/23** (1.4m), integration-dev 4/4, e2e-dev 2/2. CI runs none of these three, so they only ever exist as a local measurement.
+**Branch `feat/m3-release-prep` (M3: R1 + R4, PR [#32](https://github.com/kalbac/woodev-base-theme/pull/32)) — s15:** phpcs **0** · phpstan L8 **0** · eslint **0** · prettier **0** · `tokens:check` **0** · unit **210** (1 skip) · vitest **57** · integration **50** (1 skip) · integration-dev **4** · base e2e **60** (run split: 49 + 11, the serial suite exceeds a 10-minute foreground) · **e2e:woo 23/23** · build OK.
 
-Note the skip counts differ by platform: unit skips 1 locally (Windows) and 0 in CI; integration skips 4 in CI and 1 locally. Neither is a failure, but "208 tests" means slightly different work on each.
+Note the skip counts differ by platform: unit skips 1 locally (Windows) and 0 in CI. Neither is a failure, but the same test count means slightly different work on each.
 
-Merged `main` was verified tree-identical (`git diff --quiet`) to the CI-green PR head `0a27273`, which is what lets CI's result stand as a measurement of `main` rather than of a branch.
-
-**Branch `feat/m2a-woo-storefront` (PR [#24](https://github.com/kalbac/woodev-base-theme/pull/24)) — every suite run on the current tree, s13, one at a time:** phpcs **0** · phpstan L8 **0** · eslint **0** · prettier (on the files we own) · unit **204** (1 skip) · vitest **56** · integration **37** (1 skip) · integration-dev **4** · base e2e **57/57** in one pass · **e2e:woo 16/16 in one pass** · e2e-dev **2/2** · build OK.
-
-**Branch `feat/m2b-block-cart-checkout` (M2b, 7 commits on top of the above) — every suite run by the orchestrator, s14:** phpcs **0** · phpstan L8 **0** · eslint **0** · prettier clean on the files we own · unit **208** (1 skip) · vitest **56** · integration **40** (1 skip) · **e2e:woo 23/23** (16 storefront + 7 new block-surface tests) · build OK, `wooBlocks` bundle **11.91 KB**, zero Tailwind preflight, zero `!important`, zero rules outside the two block scopes.
+**CI now covers more than it did.** `php-integration` never ran `npm run build`, so four asset tests were silently `markTestSkipped()`; the job now builds and integration went *Skipped: 4* → *Skipped: 1*, 122 → 130 assertions.
 
 **The critic gate is CLOSED for s13 and for M2b.** Eight passes ran in s14 — s13's code, B0, B1 CSS, B1 PHP, B2, B3–B5, B6, plus a re-critic of the fixes. Six clean, two with findings (2 on B1 PHP, 2 on B6), all four resolved: two fixed, one rejected with an AGENTS.md carve-out, one an ADR-009 amendment. The re-critic came back clean — **the first round on this project that did not find a defect inside the fixes**, which is worth watching rather than trusting. One caveat recorded honestly: s13's own diff was criticked at the DEFAULT reasoning effort, not `high`, because the quota ran out mid-re-run. Everything M2b ran at `high`.
 
 **The gate was broken for the wrong reason all morning, and it is worth not re-learning.** `/codex:adversarial-review` returns `verdict: approve` whose body admits it read nothing — the sandbox denies Codex's shell, and the plugin asks Codex to go and read the diff. The working route is inline-on-stdin with a NO-TOOLS preamble and an explicit `model_reasoning_effort="high"`; see [`codex-critic-needs-inline-stdin-and-explicit-effort`](gotchas/codex-critic-needs-inline-stdin-and-explicit-effort.md). A `CODEX_OK` smoke test distinguishes "sandbox" from "quota" in one command — do that before concluding anything about the account.
-
-**Base e2e (:8888) was NOT run in s14.** Nothing in the base theme changed, but it has not been re-verified on this branch and should run before merge.
 
 **Suites still contend for Docker.** Run them ONE AT A TIME even on different wp-env configs — s12 lost a run to a stall, and s13 watched wp-cli calls slow to a crawl with 15 containers up. Stop the environments you are not using.
 
@@ -69,10 +63,17 @@ s7's near-miss is worth carrying: the new `ScriptModuleGuard` reflected on `WP_S
 
 s5 found and fixed one real defect after merging — the mobile-drawer focus-trap e2e was red on merged `main` while green on each branch alone. Not a product regression: `x-trap` moves focus asynchronously and a premature `Tab` lands on the skip link, outside the nav (`docs/gotchas/x-trap-focus-move-is-async.md`, PR #7 `9dc2f3b`). Codex also caught a would-be **fatal on every front-end request** before merge — `(string) get_theme_mod()` throws `Error` for an object; now fails closed.
 
+**Branch `feat/m3-r1-theme-json-identity` (PR [#30](https://github.com/kalbac/woodev-base-theme/pull/30)) — CI green on head `30b1090`, and CI now covers more than it did:** php-qa · js-qa · php-integration · e2e all pass. unit **208** (613 assertions) · integration **46** (130 assertions, **Skipped: 1**, down from 4) · base e2e **60 passed**. Locally, on the same tree: e2e:woo **23/23** · integration-dev 4/4 · e2e-dev 2/2 · `tokens:check` 0.
+
+Two gate defects were fixed to get there, and both are the same shape as the prettier one above. **`php-integration` never ran `npm run build`**, so four asset tests were silently `markTestSkipped()` — a green job covering less than it looked like. And **`theme.json` is a generated artifact** (`scripts/build-tokens.mjs`), which nothing in the gate could see: a hand edit passed the whole PHP suite, which never builds, and was erased by the next build. `npm run tokens:check` now fails CI when a committed generated file drifts from its source.
+
+**The critic ran three rounds on R1** — 3 findings, then 2 *inside* those fixes, then 3 more that were all about the test's precision rather than the product. Every fix mutation-verified, several with the critic's own stated trigger. The product code has been clean since round 1.
+
 ## Deferred, tracked
 
 - ~~**Dev mode has no integration/e2e coverage**~~ — resolved s7, closing a Codex P2 open since s3. Integration: `tests/integration/Integration/DevMode/AssetsDevModeTest.php` via `npm run test:integration:dev` (a second PHPUnit config whose bootstrap defines the constant — never wp-env's `config` key, which leaks into both environments and persists), mirrored by `Integration/AssetsProductionTest.php`. e2e: `tests/e2e-dev/dev-mode.spec.mjs` via `npm run e2e:dev`, against `.wp-env.dev-mode.json` on :8892 with Playwright owning a live Vite dev server. The e2e asserts **computed style**, since the defect class it guards has the script tag present and the styles absent.
 - **Customizer overrides do nothing in dev mode.** Vite serves the pack CSS as a JS module that injects its `<style>` when the module EXECUTES — after `InlineStyles`' block was parsed — so `tokens.generated.css` wins on source order. Production is unaffected and an e2e mutation pins it (moving the block to `wp_head` 5 turns the accent assertion red). Raising selector specificity would fix dev at the cost of every real site's override path (Additional CSS), which is the wrong trade — see `InlineStyles`' docblock.
+- **The block editor has no tokens in dev mode** (s15, ADR-010, same family as the two entries around it). `theme.json` colours are now `var()` references, and both editor hooks bail in dev mode, so swatches render transparent and the canvas is unstyled there. Not fixable the obvious way: Vite dev serves CSS as a JS module and `add_editor_style()` takes a stylesheet URL. Production is covered by integration + e2e. Raised by the Codex critic and accepted rather than fixed — **judge the editor in a production build**.
 - **Self-hosted fonts 404 in dev mode** (s11, same root cause as the entry above). Vite dev injects the CSS through a JS-created `<style>`, which has no URL of its own, so `fonts.css`'s relative `url('../../fonts/…')` resolves against the *page* and misses at a depth-dependent path. `font-display: swap` hides it — the page renders in the fallback stack and merely looks slightly off, so **typography must be judged in a production build, never in dev**. Not fixed with a `/`-rooted path: that breaks subdirectory installs and is a wp.org review flag. Production verified (all 20 built `url()`s resolve). See `docs/gotchas/dev-mode-css-injection-breaks-relative-urls.md`.
 - **IBM Plex Mono 700 does not exist in the vendored subsets**, so the design's one `.totals .row.grand .amount` rule falls back to 600. Closes with the M3 `pyftsubset` re-instancing (ADR-007).
 - **Live OS-following is not pinned by a test.** Spec §6 says `system` keeps following `prefers-color-scheme` after load. `page.emulateMedia()` updates `matchMedia().matches` but does NOT dispatch `change` to registered listeners in this Chromium/CDP build, so the behaviour was verified by invoking the handler directly and the spec file says so rather than faking it.
@@ -128,28 +129,26 @@ T0→T1→T2 sequential; T3 parallel with T1/T2; T4–T6 parallelisable once T1�
 
 ## Last session
 
-s14 (26.07.2026): built M2b end to end (B0–B6, 7 commits on
-`feat/m2b-block-cart-checkout`), closed the critic gate for both s13 and M2b through a
-working direct-`codex exec` route, and corrected ADR-009's button finding.
+s15 (26–27.07.2026): merged both open milestones, opened M3, and found three separate gates
+that were reporting success while doing nothing. Full account in `docs/SESSION-LOG.md`.
 
 **Next session starts here:**
-1. **Merge decisions are Maksim's, and there are two.** PR
-   [#24](https://github.com/kalbac/woodev-base-theme/pull/24) (M1 identity + M2a) is still
-   open; `feat/m2b-block-cart-checkout` sits on top of it with no PR yet. Before either
-   merges: run the base e2e (`npm run e2e`, :8888) — it was not run in s14 — and, if you
-   want the belt-and-braces version, re-critic s13's own diff at `high` effort, since its
-   only pass ran at the default.
-2. **Then M3, release prep** — the last milestone. `pyftsubset` re-instancing (ADR-007,
-   closes [#17](https://github.com/kalbac/woodev-base-theme/issues/17)), the `.pot` file,
-   wp.org Theme Review compliance sweep.
-3. **Backlog worth pulling in:** [#26](https://github.com/kalbac/woodev-base-theme/issues/26)
-   (core's theme.json paints every `.wp-element-button` — already in Бэклог),
-   [#25](https://github.com/kalbac/woodev-base-theme/issues/25) (theme.json presets follow
-   neither the Customizer nor the dark scheme — solve with #26 in one pass),
-   [#23](https://github.com/kalbac/woodev-base-theme/issues/23) (e2e setup breaks on POSIX),
-   [#27](https://github.com/kalbac/woodev-base-theme/issues/27),
-   [#28](https://github.com/kalbac/woodev-base-theme/issues/28),
-   [#18](https://github.com/kalbac/woodev-base-theme/issues/18),
-   [#13](https://github.com/kalbac/woodev-base-theme/issues/13).
 
-See `next-session-promt.md` for the full handoff, including the traps this session paid for.
+1. **M3 is the only milestone left, and most of it is now questions rather than code.**
+   Read `docs/plans/2026-07-26-m3-release-prep.md` — R1 is done, R4 is largely done, and R2
+   and R3 were cut down by measurement rather than executed.
+2. **Two decisions are Maksim's and both are in Бэклог**, so they are pickable on his word:
+   [#35](https://github.com/kalbac/woodev-base-theme/issues/35) (slug / directory /
+   text-domain do not match — cheap now, expensive after the theme is installed anywhere,
+   and it touches a constant `CLAUDE.md` fixes) and
+   [#34](https://github.com/kalbac/woodev-base-theme/issues/34) (`settings.layout` absent, so
+   the editor's "Wide width" control does nothing; the `var()` route is UNMEASURED for the
+   layout path — core handles it in different code from colour presets).
+3. **R3, translation-readiness, is unclaimed and self-contained.** Audit the 85 i18n call
+   sites for anything un-extractable, confirm the Russian plural rule still holds, and stop.
+   The `.pot`/`.po`/`.mo` are Maksim's, in Poedit, once the strings are final.
+4. **Worth doing early, not late:** [#33](https://github.com/kalbac/woodev-base-theme/issues/33)
+   — four wp-env environments where two would do, three containers running idle. Every
+   session pays for this in Docker contention.
+5. Then the release itself: version bump off `0.1.0`, and the `Update URI` header comes out
+   of `style.css` **only** at wp.org submission — ADR-005 makes it correct for v1.

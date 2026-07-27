@@ -373,3 +373,69 @@
   align-items: center;
   gap: 0.5rem;
 }
+
+/* ---------------------------------------------------------------------------
+ * The classes WordPress itself emits and every theme is expected to style.
+ *
+ * These are not decoration and not legacy: `wp_get_attachment_image` captions,
+ * classic-editor alignment, galleries, sticky posts and post-author comments all
+ * emit them today, and Theme Check flags a theme that ships none of them. Before
+ * this block a left-aligned image in post content simply did not float — the
+ * markup was correct and nothing in the theme responded to it.
+ *
+ * Alignment uses logical properties so it follows an RTL locale without a second
+ * stylesheet. `.aligncenter` needs a width to centre against, which is why
+ * `display: block` is on the caption wrapper rather than assumed.
+ * ------------------------------------------------------------------------- */
+
+.alignleft {
+  float: left;
+  margin-inline-end: 1.5rem;
+  margin-block-end: 1rem;
+}
+
+.alignright {
+  float: right;
+  margin-inline-start: 1.5rem;
+  margin-block-end: 1rem;
+}
+
+.aligncenter {
+  display: block;
+  margin-inline: auto;
+  margin-block-end: 1rem;
+}
+
+.wp-caption {
+  max-width: 100%;
+  margin-block-end: 1.5rem;
+}
+
+.wp-caption img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-lg, 0.5rem);
+}
+
+.wp-caption-text,
+.gallery-caption {
+  margin-block-start: 0.5rem;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+/* A sticky post is a state, not a component: it keeps the entry-card shape and
+ * gains an accent edge, so the distinction survives a palette change. */
+.sticky {
+  border-inline-start: 3px solid var(--primary);
+}
+
+/* Core marks the site author's own comments. Kept deliberately quiet — a loud
+ * treatment here reads as "staff pick" rather than "author". */
+.bypostauthor > .comment-body .fn {
+  color: var(--primary);
+  font-weight: 600;
+}

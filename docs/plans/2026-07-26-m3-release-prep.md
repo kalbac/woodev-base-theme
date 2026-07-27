@@ -8,13 +8,16 @@
 the identity reaching core's own blocks, the font payload honest, the strings extractable,
 and the review checklist actually run rather than assumed.
 
-**Architecture:** four independent tracks. R1 changes how the identity is delivered to
-WordPress (needs a decision recorded first). R2 replaces the font derivation pipeline. R3
-adds the translation artifacts. R4 is the compliance sweep and must run **last**, on the
-tree the other three produce.
+**Not in scope, deliberately:** the translation files. `.pot`, `.po` and `.mo` are Maksim's,
+produced in Poedit once the strings are final. See R3.
 
-**Tech stack:** unchanged, plus one new build-time dependency in R2 (`fonttools` +
-`brotli`, Python) which is **optional for contributors** — its outputs are committed.
+**Architecture:** four independent tracks. R1 changes how the identity is delivered to
+WordPress — **done**. R2 was to replace the font derivation pipeline; measurement has since
+cut it down to a provenance question. R3 is translation-READINESS only, the files are
+Maksim's. R4 is the compliance sweep and must run **last**, on the tree the others produce.
+
+**Tech stack:** unchanged. R2 would have added a Python font toolchain; whether it is worth
+adding at all is now an open question — see R2-2.
 
 ---
 
@@ -50,7 +53,12 @@ already followed. And the font-licence files already ship.
 
 ---
 
-## R1 — the identity reaches core's blocks (#26 + #25)
+## R1 — the identity reaches core's blocks (#26 + #25) — ✅ DONE
+
+> Shipped in PR [#30](https://github.com/kalbac/woodev-base-theme/pull/30), CI green.
+> [ADR-010](../adr/ADR-010-theme-json-identity.md) accepted; three critic rounds, every fix
+> mutation-verified. Two things the plan did not foresee, both recorded in the ADR: theme.json
+> was ALREADY a generated artifact, and the editor is two documents, not one.
 
 These are one problem seen twice and must be solved in one pass: both turn on *whether a
 `theme.json` value may be a `var()` reference*, and that depends on whether our tokens
@@ -58,17 +66,17 @@ exist inside the editor. Nothing here may be coded before R1-1 answers it.
 
 ### R1-1 — Measure the editor, then decide 🔴
 
-- [ ] **Step 1: measure.** With `wp:start` up, open the block editor for a page and read,
+- [x] **Step 1: measure.** With `wp:start` up, open the block editor for a page and read,
       inside the editor canvas (which is an iframe in WP 6.8+), whether
       `getComputedStyle(document.documentElement).getPropertyValue('--primary')` and
       `--wtb-*` resolve to anything. Do the same after adding a throwaway
       `add_editor_style()` pointing at the built token CSS, to learn whether that route
       reaches the iframe at all. Record both results verbatim.
-- [ ] **Step 2: measure the second half.** Patch `theme.json` by hand so one preset is
+- [x] **Step 2: measure the second half.** Patch `theme.json` by hand so one preset is
       `"color": "var(--primary)"`, and read `--wp--preset--color--primary` on the front end
       **and** in the editor. WordPress may serialise, sanitise, or reject a `var()` there —
       find out which, do not reason about it.
-- [ ] **Step 3: write `ADR-010-theme-json-identity.md`** with the measurements in it. The
+- [x] **Step 3: write `ADR-010-theme-json-identity.md`** with the measurements in it. The
       live options, to be settled by what steps 1–2 return:
       **(a)** literal values regenerated from `src/tokens/tokens.mjs` at build time —
       single source of truth, still a static snapshot, still schema-blind;
@@ -78,47 +86,50 @@ exist inside the editor. Nothing here may be coded before R1-1 answers it.
       #25 open, and is the honest fallback if (b) proves impossible.
       Also decide `settings.color.defaultPalette` (core's `black`/`vivid-red`/`pale-pink`
       currently sit beside our 15).
-- [ ] **Step 4: surface it to Maksim before implementing.** This changes how the identity
+- [x] **Step 4: surface it to Maksim before implementing.** This changes how the identity
       is delivered and touches ADR-008. Show the concrete diff, not a description of it.
 
 **Do not proceed past this task without the ADR recorded.**
 
 ### R1-2 — `styles.elements.button` displaces core's default
 
-- [ ] **Step 1: the failing test.** Integration test asserting that the CSS WordPress emits
+- [x] **Step 1: the failing test.** Integration test asserting that the CSS WordPress emits
       for `.wp-element-button` does **not** contain `#32373c`, and does contain our
       primary. Render through `wp_get_global_stylesheet()` rather than scraping a page, so
       the assertion names the mechanism.
-- [ ] **Step 2: run it, watch it fail** with core's grey present.
-- [ ] **Step 3: implement** `styles.elements.button` in `theme.json` per ADR-010's choice.
-- [ ] **Step 4: run it, watch it pass. Then mutate:** revert the `theme.json` hunk, confirm
+- [x] **Step 2: run it, watch it fail** with core's grey present.
+- [x] **Step 3: implement** `styles.elements.button` in `theme.json` per ADR-010's choice.
+- [x] **Step 4: run it, watch it pass. Then mutate:** revert the `theme.json` hunk, confirm
       red, restore.
-- [ ] **Step 5: e2e.** A core Button block on a plain page computes our primary background
+- [x] **Step 5: e2e.** A core Button block on a plain page computes our primary background
       in **both** schemes — light and dark, both asserted. (M2b shipped a "both schemes"
       spec that only checked dark; do not repeat that.)
-- [ ] **Step 6: commit.**
+- [x] **Step 6: commit.**
 
 ### R1-3 — presets follow the identity
 
-- [ ] Implement whichever of (a)/(b) ADR-010 chose; if it chose (c), close #25 as
+- [x] Implement whichever of (a)/(b) ADR-010 chose; if it chose (c), close #25 as
       "not planned" with the reason in Russian and skip to R2.
-- [ ] **Test:** the desync guard #25 asks for — a test that fails when a preset and its
+- [x] **Test:** the desync guard #25 asks for — a test that fails when a preset and its
       live token disagree. Mutation-verify by changing one palette value in the generator
       alone.
-- [ ] If `theme.json` becomes a generated artifact, wire it into `npm run tokens`, add it
+- [x] If `theme.json` becomes a generated artifact, wire it into `npm run tokens`, add it
       to the build, and make CI fail when the committed file differs from a fresh
       generation. A generated file that can drift silently is worse than a hand-written one.
-- [ ] Commit; `Closes #26` and `#25` as applicable.
+- [x] Commit; `Closes #26` and `#25` as applicable.
 
 ---
 
-## R2 — re-instance the fonts with `pyftsubset` (#17, ADR-007)
+## R2 — the fonts (#17, ADR-007) — 🟡 measured, and the task inverted
 
 Independent of R1. The current pipeline derives from a `fonts.googleapis.com` response
 vendored on 25.07.2026 — deterministic and offline, but pinned to whatever Google served
-that day, and missing Mono 700.
+that day.
 
-### R2-1 — the toolchain, and the decision that it stays optional
+**Read R2-2 first: it ran, and it removed most of this track's reason to exist.**
+R2-1 and R2-3 below are conditional on a decision that has not been taken.
+
+### R2-1 — the toolchain, and the decision that it stays optional (only if R2-2's decision is yes)
 
 - [ ] Add `scripts/fonts/requirements.txt` (`fonttools[woff]`, `brotli`) and document the
       one-command setup in `docs/` — **not** in the npm install path. The `woff2` outputs
@@ -127,58 +138,60 @@ that day, and missing Mono 700.
 - [ ] Vendor the upstream OFL sources (Golos Text, IBM Plex Sans, IBM Plex Mono) from their
       **release tags**, with the tag recorded, replacing "whatever Google served".
 
-### R2-2 — decide the weight set from the shipped CSS, not from taste
+### R2-2 — DONE, and it inverted the task 🔴
 
-- [ ] Enumerate every `font-weight` actually used, across `src/css/**` **and** the built
-      bundle in `assets/dist` — the built artifact is the authority here, since Tailwind
-      contributes rules no source grep can see.
-- [ ] Mono's set is the live question: the design asks for 400/500/600 **and** 700 once.
-      Ship the weights the built CSS requests and no others; if 700 is requested exactly
-      once, say so in the commit rather than quietly dropping it.
+Measured 27.07.2026 in a browser, across the base site and the store, both schemes. Full
+table in [ADR-007](../adr/ADR-007-self-hosted-fonts.md)'s amendment and in
+[#17](https://github.com/kalbac/woodev-base-theme/issues/17):
 
-### R2-3 — build, measure, gate
+- IBM Plex Sans uses its **whole** 400–700 axis. Nothing to trim.
+- Golos Text renders at 600, **650**, 700, 800 — an intermediate value only a variable
+  font produces, so no static replacement is possible. Only the unused 500–600 range is
+  trimmable, which is a small saving.
+- IBM Plex Mono uses **all three** shipped weights. The single biggest hoped-for saving,
+  131 KB, does not exist.
+- `@ibm/plex-mono` has **no variable release** (checked, 2.5.0: 96 static `woff2`).
+- Glyph-subsetting to observed content is **unusable by construction** for a theme that
+  renders arbitrary user text.
 
-- [ ] **Step 1: the failing test.** A vitest assertion that every family/subset the CSS
-      declares has a matching file on disk, that each is a valid woff2 (magic bytes **and**
-      a plausible size floor — a 4-byte file passed this check once), and that Mono 700
-      exists.
-- [ ] **Step 2: run it, watch it fail** on the missing Mono 700.
-- [ ] **Step 3: implement** `scripts/fonts/build.py` (or extend `build-fonts.mjs` to shell
-      out to it): subset to latin + latin-ext + cyrillic + cyrillic-ext, cut the weight axis
-      on the variable faces to the used range, emit one file per (family, subset).
-- [ ] **Step 4: run it, watch it pass. Mutate:** truncate one woff2 to 4 bytes, confirm the
-      size floor catches it, restore.
-- [ ] **Step 5: measure and record** shipped-on-disk and fetched-by-a-Russian-page, the
-      same two numbers ADR-007 carries, and update that table. If the ~120 KB target is not
-      reached, **write the real number** — ADR-007 already had to be corrected once for
-      carrying an estimate as if it were a measurement.
-- [ ] **Step 6:** confirm all built `url()`s resolve in a **production build** (dev mode
-      404s fonts by design), and that the licence files still match their pinned identity.
-- [ ] **Step 7: commit.** `Closes #17`.
+**So the ~120 KB target is struck, not pursued.** What remains worth doing is a provenance
+change, not a size one — and it is Maksim's call whether it is worth a session at all:
 
----
+- [ ] Decide with Maksim whether to re-instance from upstream OFL **release tags** purely
+      for a citable version at wp.org review. It costs a Python toolchain the repo does
+      not have and saves no meaningful bytes. Doing nothing is defensible: the current
+      files are correctly subset OFL `woff2` derived by a deterministic script.
+- [ ] If yes: `scripts/fonts/requirements.txt` (`fonttools[woff]`, `brotli`), outputs stay
+      committed so no contributor needs Python, record the release tag, and re-verify all
+      20 built `url()`s resolve in a PRODUCTION build (dev mode 404s fonts by design).
+- [ ] Either way: do NOT add Mono 700. Measured absent from every rendered page — it would
+      add bytes for a rule nothing reaches.
 
-## R3 — the `.pot`, and a real `ru_RU` (ADR-006)
+## R3 — translation-READINESS only. The files themselves are Maksim's.
 
-Independent of R1 and R2.
+**Scope corrected 27.07.2026, on Maksim's call.** An earlier draft of this plan had me
+generate the `.pot` and translate `ru_RU`. That was wrong twice over: the string set is not
+final until R2 and R4 land, so any `.pot` produced now gets regenerated anyway, and wp.org
+does not require a shipped `.pot` at all — GlotPress builds its own from the source. Maksim
+produces `.pot`, `.po` and `.mo` himself in **Poedit**, at the end. Do not generate them,
+and do not "save him time" by pre-filling them.
 
-- [ ] **Step 1: the failing test.** Integration assertion that
-      `get_template_directory() . '/languages/woodev-base-theme.pot'` exists and that
-      `load_theme_textdomain()` returns true for `ru_RU`. It currently points at a directory
-      that does not exist, so this fails honestly today.
-- [ ] **Step 2: run it, watch it fail.**
-- [ ] **Step 3: generate** via wp-cli inside wp-env:
-      `wp i18n make-pot wp-content/themes/woodev-base-theme wp-content/themes/woodev-base-theme/languages/woodev-base-theme.pot --domain=woodev-base-theme`.
-      Add an npm script so it is reproducible, not a remembered command.
-- [ ] **Step 4: audit the extraction.** Compare the `.pot` entry count against the 85 call
-      sites. A string that uses a variable inside an i18n function does not extract and is
-      a defect, not a discrepancy — fix any at the source.
-- [ ] **Step 5: translate `ru_RU`** (`.po` + compiled `.mo`), informal register to match the
-      product's voice. Every count-sensitive string must stay count-agnostic — the Russian
-      3-form plural rule is why `_n()` is banned here (`comments.php:94` documents it).
-- [ ] **Step 6: e2e.** With `WPLANG=ru_RU`, a known front-end string renders in Russian.
-      Mutation-verify by removing the `.mo`.
-- [ ] **Step 7: commit.**
+What IS ours is that the code is extractable and correct when he runs Poedit over it:
+
+- [ ] **Audit every i18n call site** (85 at the time of writing) for the defects that make a
+      string un-extractable or mis-extractable: a variable inside an i18n function, a
+      missing or wrong text domain, a concatenation where a placeholder belongs, a
+      translator comment missing on an ambiguous string.
+- [ ] **Confirm the plural rule holds.** `_n()` is banned here because Russian has three
+      forms; count-sensitive copy must be count-agnostic plus `number_format_i18n()`.
+      `comments.php:94` documents the one place this came up. Verify nothing new violates it.
+- [ ] **Test what is testable without the files.** `load_theme_textdomain()` is called with
+      the right domain and path (`Setup.php:38`); every user-facing string carries
+      `woodev-base-theme`. Do NOT assert that a `.pot` exists — that is his artefact, and a
+      test demanding it would fail the suite for a reason that is not a defect.
+- [ ] **Create `languages/` with an index.php stub** if wp.org's checklist wants the
+      directory present, and leave it otherwise empty.
+- [ ] **Report the audit to Maksim** so he knows the source is clean before opening Poedit.
 
 ---
 
@@ -192,10 +205,25 @@ must run on the final tree.
       section naming every bundled third-party asset with its licence and source URL** —
       Golos Text (OFL), IBM Plex Sans/Mono (OFL), Basecoat UI, Lucide (ISC), Alpine.js,
       Tailwind. A missing credit is a standard rejection reason.
-- [ ] **`screenshot.png`** — does not exist yet. 1200×900, showing the actual theme, no
-      text that is not in the theme, no mockup chrome.
-- [ ] **Run Theme Check** (the plugin) against the built theme inside wp-env and fix every
-      ERROR; record each WARNING with a decision rather than leaving it unread.
+- [ ] **`screenshot.png`** — **deferred, tracked as [#36](https://github.com/kalbac/woodev-base-theme/issues/36).**
+      `scripts/make-screenshot.mjs` exists and captures the running theme at 1200×900
+      from a production build. What is missing is something worth photographing: over
+      the e2e fixtures the shot reads as a broken theme, and a first attempt with
+      hastily-invented demo copy was rejected — the screenshot is the first thing a
+      reviewer sees and deserves real content. Blocked on
+      [#18](https://github.com/kalbac/woodev-base-theme/issues/18): the front-page
+      merchandising markup exists as CSS but is wired to no template.
+- [x] **Run Theme Check** — done 27.07.2026, headlessly via `run_themechecks_against_theme()`.
+      Two REQUIRED, one WARNING, 18 RECOMMENDED. Fixed: the `comment-reply` script was
+      enqueued nowhere (four integration tests, mutation-verified) and eight classes
+      WordPress itself emits had no rule at all — `.alignleft`, `.alignright`,
+      `.aligncenter`, `.wp-caption`, `.wp-caption-text`, `.gallery-caption`, `.sticky`,
+      `.bypostauthor`. Deliberately NOT fixed: the `Update URI` REQUIRED, which
+      [ADR-005](../adr/ADR-005-distribution-github-first.md) makes v1's self-update
+      channel — Theme Check flags it precisely because it is for themes distributed
+      outside the directory, which v1 is. Remove it at submission, not before.
+      Surfaced instead of decided: the slug/directory/text-domain mismatch,
+      [#35](https://github.com/kalbac/woodev-base-theme/issues/35).
 - [ ] **`Tags:`** — currently three. Validate against wp.org's *current* allowed list, which
       is versioned and drops tags over time; do not copy them from another theme.
 - [ ] **Escaping/prefix audit** on the whole tree, not on the diff: every echo escaped,

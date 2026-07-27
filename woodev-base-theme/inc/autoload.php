@@ -9,6 +9,10 @@ declare(strict_types=1);
 
 namespace Woodev\Theme\Base;
 
+// Direct access to a theme file runs outside WordPress: the fatal that follows
+// prints a path. Fail closed instead.
+defined( 'ABSPATH' ) || exit;
+
 const NS_PREFIX = __NAMESPACE__ . '\\';
 
 /**

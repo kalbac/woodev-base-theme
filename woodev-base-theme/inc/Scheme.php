@@ -10,6 +10,10 @@ declare(strict_types=1);
 
 namespace Woodev\Theme\Base;
 
+// Direct access to a theme file runs outside WordPress: the fatal that follows
+// prints a path. Fail closed instead.
+defined( 'ABSPATH' ) || exit;
+
 /**
  * One validator per setting, used twice: as the Customizer sanitize_callback
  * and as the front-end resolver — the same pattern as Customizer\Settings.

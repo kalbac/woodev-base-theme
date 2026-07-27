@@ -9,6 +9,10 @@ declare(strict_types=1);
 
 namespace Woodev\Theme\Base\Woo;
 
+// Direct access to a theme file runs outside WordPress: the fatal that follows
+// prints a path. Fail closed instead.
+defined( 'ABSPATH' ) || exit;
+
 /**
  * Declares the theme_support flags WooCommerce reads on boot, and routes
  * WooCommerce page output into the theme's own content shell.

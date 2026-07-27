@@ -9,6 +9,10 @@ declare(strict_types=1);
 
 namespace Woodev\Theme\Base;
 
+// Direct access to a theme file runs outside WordPress: the fatal that follows
+// prints a path. Fail closed instead.
+defined( 'ABSPATH' ) || exit;
+
 use Woodev\Theme\Base\Customizer\Settings;
 
 /**
@@ -16,9 +20,10 @@ use Woodev\Theme\Base\Customizer\Settings;
  */
 final class Assets {
 
-	private const DEV_SERVER = 'http://localhost:5173';
-	private const JS_ENTRY   = 'src/js/app.js';
-	private const CSS_ENTRY  = 'src/css/app.css';
+	private const DEV_SERVER          = 'http://localhost:5173';
+	private const JS_ENTRY            = 'src/js/app.js';
+	private const CSS_ENTRY           = 'src/css/app.css';
+	private const EDITOR_TOKENS_ENTRY = 'src/css/editor-tokens.css';
 
 	/**
 	 * Hook asset enqueuing into WordPress.
@@ -26,12 +31,16 @@ final class Assets {
 	public function register(): void {
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue' ] );
 		add_filter( 'wp_preload_resources', [ $this, 'preload_display_font' ] );
+		add_action( 'after_setup_theme', [ $this, 'register_editor_style' ] );
+		add_action( 'enqueue_block_editor_assets', [ $this, 'enqueue_editor_tokens' ] );
 	}
 
 	/**
 	 * Enqueue the built (or dev-server) theme assets.
 	 */
 	public function enqueue(): void {
+		$this->enqueue_comment_reply();
+
 		if ( \defined( 'WOODEV_BASE_DEV' ) && WOODEV_BASE_DEV ) {
 			$this->enqueue_dev();
 			return;
@@ -54,6 +63,106 @@ final class Assets {
 		foreach ( self::entry_css( $manifest, self::JS_ENTRY ) as $index => $imported ) {
 			wp_enqueue_style( "woodev-base-app-{$index}", "{$dist_uri}/{$imported}", [], null );
 		}
+	}
+
+	/**
+	 * Core's threaded-reply script, on the three conditions core itself documents.
+	 *
+	 * Without it the Reply link still works — WordPress falls back to
+	 * `?replytocom=N#respond` and pre-fills the form server-side — so this is a
+	 * degradation rather than a break, which is exactly why it goes unnoticed. Theme
+	 * Check flags its absence, and `readme.txt` claims the `threaded-comments` tag.
+	 *
+	 * Enqueued before the dev-mode branch on purpose: it is core's script, not ours, and
+	 * has nothing to do with which of our bundles is being served.
+	 */
+	private function enqueue_comment_reply(): void {
+		if ( is_singular() && comments_open() && (bool) get_option( 'thread_comments' ) ) {
+			wp_enqueue_script( 'comment-reply' );
+		}
+	}
+
+	/**
+	 * Give the block editor the stylesheet that defines the theme's tokens.
+	 *
+	 * ADR-010 makes every theme.json colour a `var()` reference to a live token, and
+	 * the editor consumes those values in TWO different documents:
+	 *
+	 * - the CANVAS, an iframe that loads only core's own stylesheets. Measured:
+	 *   `--primary` reads empty inside it, and resolves once add_editor_style() puts
+	 *   the built bundle there. That is this method.
+	 * - the SIDEBAR colour picker, which lives in the wp-admin document and is handled
+	 *   by enqueue_editor_tokens() below — a different hook, a different file, and the
+	 *   full bundle must never go there.
+	 *
+	 * The filename is hashed by Vite, so it is resolved through the manifest, never
+	 * written out. If the manifest or the entry is missing the editor simply keeps
+	 * core's styling, which is the same failure mode the front end already has.
+	 *
+	 * KNOWN DEV-MODE GAP, raised by the critic and accepted rather than fixed. In dev
+	 * mode both this and enqueue_editor_tokens() bail, so the editor gets no tokens and
+	 * theme.json's var() references resolve to nothing: palette swatches render
+	 * transparent and the canvas is unstyled. It is not fixable the obvious way — the
+	 * Vite dev server serves CSS as a JS MODULE that injects a <style> when it executes
+	 * (docs/gotchas/dev-mode-css-injection-breaks-relative-urls.md), and
+	 * add_editor_style() takes a stylesheet URL, not a module. This joins the two
+	 * dev-mode limitations already recorded (Customizer overrides lose to
+	 * tokens.generated.css; self-hosted fonts 404). Production is unaffected and is
+	 * covered by integration and e2e. Judge the editor in a production build.
+	 */
+	public function register_editor_style(): void {
+		if ( \defined( 'WOODEV_BASE_DEV' ) && WOODEV_BASE_DEV ) {
+			return;
+		}
+
+		$css = $this->dist_entry( self::CSS_ENTRY );
+
+		if ( null === $css ) {
+			return;
+		}
+
+		add_theme_support( 'editor-styles' );
+		add_editor_style( "assets/dist/{$css}" );
+	}
+
+	/**
+	 * Give the wp-admin document the token declarations the colour picker needs.
+	 *
+	 * Gutenberg paints each palette swatch from the RAW preset value, which is now
+	 * `var(--primary)`. The admin document carries none of the theme's CSS, so every
+	 * swatch computed to `rgba(0, 0, 0, 0)` — measured in a browser, not inferred.
+	 *
+	 * This enqueues the tokens-only entry, never the full bundle: that one carries
+	 * Basecoat's base layer and the site chrome and would restyle wp-admin itself.
+	 */
+	public function enqueue_editor_tokens(): void {
+		if ( \defined( 'WOODEV_BASE_DEV' ) && WOODEV_BASE_DEV ) {
+			return;
+		}
+
+		$css = $this->dist_entry( self::EDITOR_TOKENS_ENTRY );
+
+		if ( null === $css ) {
+			return;
+		}
+
+		wp_enqueue_style(
+			'woodev-base-editor-tokens',
+			get_template_directory_uri() . "/assets/dist/{$css}",
+			[],
+			null
+		);
+	}
+
+	/**
+	 * Resolve one manifest entry to its built file name, or null if unavailable.
+	 *
+	 * @param string $entry Manifest entry key, e.g. `src/css/app.css`.
+	 */
+	private function dist_entry( string $entry ): ?string {
+		$manifest = self::read_manifest( get_template_directory() . '/assets/dist/.vite/manifest.json' );
+
+		return self::entry_file( $manifest, $entry );
 	}
 
 	/**

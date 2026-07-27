@@ -1,6 +1,6 @@
 # QA gates cover less than their exit code implies
 
-> Discovered s3 (19–20.07.2026) — three separate instances in one session, which is why this is a pattern and not a bug report.
+> Discovered s3 (19–20.07.2026) — three separate instances in one session, which is why this is a pattern and not a bug report. Three more in s15 (26–27.07.2026), which is why it is still open.
 
 ## The trap
 
@@ -29,16 +29,24 @@ The second one is the more dangerous, because it is a **success message produced
 - **A docs note claiming a check "is not in the gate battery" is a claim about CI that only CI can settle.** Read `.github/workflows/ci.yml`. The note was written by someone who did not check either, and it propagated for two sessions.
 - **A skipped CI job is not a passing one.** `gh pr checks` reported `e2e  skipping` next to three passes, which scans as "fine". Any job with `needs:` disappears silently when its dependency fails — check for `skipping` explicitly before calling a PR green.
 
-## How to apply here
+## The third s15 instance: a security guard that turned the suite off
 
-- **Check what a gate scanned, not just what it returned.** PHPCS prints `20 / 20`; if that number does not roughly match the files you touched plus their neighbours, the gate is not covering your work. `vendor/bin/phpcs --report=summary` lists them.
-- **Run every gate after every task, not the ones that look relevant.** "This change is PHP-only" is how the ESLint failure reached CI. The full set is: `phpcs`, `phpstan`, `test:unit`, `test:integration`, `format`, `lint:js`, `test:js`, `build`.
-- **A gate that is green on one platform and red on the other is a defect in the gate**, until proven otherwise. Both of the platform splits here were config bugs, not environment problems.
-- **Ignore patterns need `**/` in ESLint flat config** — `vendor/**` is anchored, `**/vendor/**` is not. `.prettierignore` uses gitignore syntax and does not have this problem, which is why it never broke.
+Adding `defined( 'ABSPATH' ) || exit;` to all 45 shipped PHP files — a wp.org expectation, and correct — **silently disabled the entire unit suite**. The unit suite runs on Brain\Monkey *without* WordPress, so `ABSPATH` is undefined, and the first `require` of the theme autoloader hit that `exit`. PHPUnit died before printing a single character and returned **exit code 0**.
 
-When a gate's scope is deliberately narrow, say so in the config. `phpcs.xml.dist` now carries its test-only relaxations with a written reason for each, so the next person can tell "excluded on purpose" from "never covered".
+```
+$ composer test:unit
+$ echo $?
+0
+```
+
+That is the whole output. A suite that never ran looks exactly like a suite that passed — and `exit 0` means every downstream check, including CI, would have agreed. It was caught only because the output was *empty* rather than *wrong*, which is luck, not process.
+
+- **When a change makes a gate quieter, that is the signal.** The reflex is to be pleased; the correct reflex is to ask what stopped running. Compare the test COUNT against the previous run, not just the exit code — 208 tests to zero tests is invisible in `$?` and obvious in the count.
+- **`exit` in shipped code is a landmine for every non-WordPress consumer** — unit suites, static analysers, scripts. The fix is one line in the test bootstrap (`defined( 'ABSPATH' ) || define( 'ABSPATH', … )`), and it is not faking anything: the constant's job is to assert "WordPress is loading this", which is as true of the suite as of a request.
+- The matching guard test reads the file's **executable head** (comments stripped) rather than a fixed character window. The first version used 800 characters and reported a false defect in `woocommerce/content-product.php`, whose perfectly good guard sits behind a 22-line upstream docblock.
 
 ## Related
 
 - [[wp-test-suite-removes-html5-support]] — the same session's other flavour of false confidence: a test that passes for a reason unrelated to what it claims
 - [[codex-cli-dies-silently]] — a tool whose failure modes all exit 0
+- [[wp-env-mounts-the-theme-live]] — another failure whose symptom points at the wrong file

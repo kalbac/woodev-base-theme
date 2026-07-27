@@ -9,6 +9,10 @@ declare(strict_types=1);
 
 namespace Woodev\Theme\Base\Customizer;
 
+// Direct access to a theme file runs outside WordPress: the fatal that follows
+// prints a path. Fail closed instead.
+defined( 'ABSPATH' ) || exit;
+
 /**
  * Emits the settings that are CSS custom properties (spec §6, extended by
  * ADR-008's five identity controls — T7 of
