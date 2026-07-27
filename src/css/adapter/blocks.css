@@ -158,6 +158,57 @@
   background-color: var(--surface-2);
 }
 
+/* ================================================================== *
+ * `.wtb-plate` — the Templates\Plate SVG art recipe (inc/Templates/Plate.php).
+ * Same five custom properties ProductPlaceholder's `.plate` declares in
+ * woo.css, sourced from the identity tokens rather than that recipe's own
+ * (that block stays owned by woo.css and unrelated to this one — see this
+ * file's own header on why this port has no content source to invent).
+ *
+ * The five values are the mockup's own `.plate` recipe, copied rather than
+ * re-derived (docs/design/v2-mockup/woodev-base-identity.html, the `.plate`
+ * rule): the objects carry the ACCENT, the .14 circle behind them is a
+ * neutral wash and the .92 detail is a light card face. A first pass mapped
+ * them by feel — objects muted, both accents `--primary` — which reads as a
+ * different picture: the highlight block turned into a solid slab of accent
+ * and the wash lost its neutrality. The artwork is approved (ADR-008); its
+ * colour recipe is part of what was approved.
+ * ================================================================== */
+.wtb-plate {
+  --c-bg: var(--surface-3);
+  --c-obj: var(--primary);
+  --c-obj2: var(--foreground);
+  --c-obj3: var(--card);
+  --c-ln: var(--foreground);
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* A tile with no category thumbnail gets a plate instead of a photo, and the
+ * two want opposite treatments: a photo fills the tile (`.bg` above), while
+ * the mockup's tile art sits as an object in the lower-right, backdrop
+ * dropped (`.plate--bare`) and faded, so the label stays readable over the
+ * tile's own surface. The offsets are the mockup's, which carries them as an
+ * inline style on the tile's `.bg` span. */
+.wtb-cat-tile .bg--plate {
+  inset: auto -8% -12% 34%;
+  opacity: 0.6;
+}
+
+.wtb-cat-tile .bg--plate .wtb-plate {
+  --c-bg: transparent;
+}
+
+/* Mirrors the mockup's `.hero__art .plate,.promo__art .plate` rule: the art
+ * column already has the aspect ratio, radius and clip (hero.css/blocks.css);
+ * the plate only needs to fill it. */
+.wtb-hero__art .wtb-plate,
+.wtb-promo__art .wtb-plate {
+  position: absolute;
+  inset: 0;
+}
+
 @media (max-width: 53.75rem) {
   .wtb-promo {
     grid-template-columns: 1fr;

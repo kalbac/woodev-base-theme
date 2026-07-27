@@ -30,6 +30,9 @@ parameters:
 			# Settings::*_DEFAULT / Scheme's fallback, the resolvers, and
 			# CustomizerTest's assertSame() all agree on the non-string type — so
 			# this is a documented stub-precision gap, not a bug in our code.
+			# F2 (front page completion) adds a third: front_promo_image via
+			# add_media(), an attachment ID that stays an int end to end for the
+			# same reason.
 			message: '#^Parameter \#2 \$args of method WP_Customize_Manager::add_setting\(\) expects array#'
 			path: woodev-base-theme/inc/Customizer/Customizer.php
-			count: 2
+			count: 3

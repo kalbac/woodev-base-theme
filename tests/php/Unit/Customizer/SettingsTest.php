@@ -18,6 +18,41 @@ final class SettingsTest extends TestCase {
 		// unless a test below overrides this for the corrupted-file path.
 		Functions\when( 'get_template_directory' )
 			->justReturn( \dirname( __DIR__, 4 ) . '/woodev-base-theme' );
+
+		// Front page (F2) sanitizers call these real WP functions directly.
+		// No WordPress code loads under Brain\Monkey, so every one of them
+		// needs an explicit alias — a close-enough approximation of core's
+		// behaviour, not a re-implementation of it.
+		Functions\when( 'sanitize_text_field' )->alias(
+			static fn ( $value ): string => \trim( (string) \preg_replace( '/[\r\n\t ]+/', ' ', \strip_tags( (string) $value ) ) )
+		);
+		Functions\when( 'sanitize_textarea_field' )->alias(
+			static fn ( $value ): string => \trim( \strip_tags( (string) $value ) )
+		);
+		Functions\when( 'esc_url_raw' )->alias(
+			static function ( $value ): string {
+				if ( ! \is_string( $value ) ) {
+					return '';
+				}
+
+				$value = \trim( $value );
+
+				if ( '' === $value ) {
+					return '';
+				}
+
+				$scheme = \strtolower( (string) \parse_url( $value, PHP_URL_SCHEME ) );
+
+				$allowed_schemes = [ 'http', 'https', 'mailto', 'ftp', 'ftps', 'tel' ];
+
+				if ( '' !== $scheme && ! \in_array( $scheme, $allowed_schemes, true ) ) {
+					return '';
+				}
+
+				return $value;
+			}
+		);
+		Functions\when( 'absint' )->alias( static fn ( $value ): int => \abs( (int) $value ) );
 	}
 
 	private function stub_theme_mod( mixed $value ): void {
@@ -191,5 +226,308 @@ final class SettingsTest extends TestCase {
 	public function test_cta_reveal_resolver_reads_the_theme_mod_through_the_sanitizer(): void {
 		$this->stub_theme_mod( 'always' );
 		self::assertSame( 'always', Settings::cta_reveal() );
+	}
+
+	// --- front page (F2, docs/plans/2026-07-28-front-page-completion.md) ---
+
+	public function test_front_hero_eyebrow_sanitizes_a_valid_value(): void {
+		self::assertSame( 'New arrivals', Settings::sanitize_front_hero_eyebrow( '  New arrivals  ' ) );
+	}
+
+	public function test_front_hero_eyebrow_rejects_non_string_input(): void {
+		self::assertSame( '', Settings::sanitize_front_hero_eyebrow( [ 'x' ] ) );
+		self::assertSame( '', Settings::sanitize_front_hero_eyebrow( new \stdClass() ) );
+		self::assertSame( '', Settings::sanitize_front_hero_eyebrow( 42 ) );
+	}
+
+	public function test_front_hero_eyebrow_resolver_reads_the_theme_mod_through_the_sanitizer(): void {
+		$this->stub_theme_mod( '  Hello  ' );
+		self::assertSame( 'Hello', Settings::front_hero_eyebrow() );
+	}
+
+	public function test_front_hero_lede_sanitizes_a_valid_value(): void {
+		self::assertSame( 'Quality that lasts.', Settings::sanitize_front_hero_lede( 'Quality that lasts.' ) );
+	}
+
+	public function test_front_hero_lede_rejects_non_string_input(): void {
+		self::assertSame( '', Settings::sanitize_front_hero_lede( [ 'x' ] ) );
+		self::assertSame( '', Settings::sanitize_front_hero_lede( new \stdClass() ) );
+		self::assertSame( '', Settings::sanitize_front_hero_lede( false ) );
+	}
+
+	public function test_front_hero_lede_resolver_reads_the_theme_mod_through_the_sanitizer(): void {
+		$this->stub_theme_mod( 'Tagline override' );
+		self::assertSame( 'Tagline override', Settings::front_hero_lede() );
+	}
+
+	public function test_front_hero_trust_resolver_parses_valid_lines_into_structured_items(): void {
+		$this->stub_theme_mod( "Free shipping | truck\nSecure checkout | shield-check" );
+
+		self::assertSame(
+			[
+				[
+					'label' => 'Free shipping',
+					'icon'  => 'truck',
+				],
+				[
+					'label' => 'Secure checkout',
+					'icon'  => 'shield-check',
+				],
+			],
+			Settings::front_hero_trust()
+		);
+	}
+
+	public function test_front_hero_trust_sanitizer_rejects_non_string_input(): void {
+		self::assertSame( '', Settings::sanitize_front_hero_trust( [ 'x' ] ) );
+		self::assertSame( '', Settings::sanitize_front_hero_trust( new \stdClass() ) );
+		self::assertSame( '', Settings::sanitize_front_hero_trust( 42 ) );
+	}
+
+	/**
+	 * A nine-line textarea must yield exactly FRONT_HERO_TRUST_MAX_ITEMS (3)
+	 * items — the cap applies to the raw line count, not to how many the
+	 * admin intended.
+	 */
+	public function test_front_hero_trust_caps_at_three_items(): void {
+		$this->stub_theme_mod(
+			\implode(
+				"\n",
+				[
+					'One | truck',
+					'Two | leaf',
+					'Three | package',
+					'Four | check',
+					'Five | check',
+					'Six | check',
+					'Seven | check',
+					'Eight | check',
+					'Nine | check',
+				]
+			)
+		);
+
+		$items = Settings::front_hero_trust();
+
+		self::assertCount( 3, $items );
+		self::assertSame( 'One', $items[0]['label'] );
+		self::assertSame( 'Three', $items[2]['label'] );
+	}
+
+	public function test_front_hero_trust_drops_a_line_with_an_empty_label(): void {
+		$this->stub_theme_mod( " | truck\nReal badge | leaf" );
+
+		self::assertSame(
+			[
+				[
+					'label' => 'Real badge',
+					'icon'  => 'leaf',
+				],
+			],
+			Settings::front_hero_trust()
+		);
+	}
+
+	public function test_front_hero_trust_defaults_the_icon_when_missing_or_unrecognised(): void {
+		$this->stub_theme_mod( "No icon badge |\nUnknown icon badge | not-a-real-icon" );
+
+		self::assertSame(
+			[
+				[
+					'label' => 'No icon badge',
+					'icon'  => 'check',
+				],
+				[
+					'label' => 'Unknown icon badge',
+					'icon'  => 'check',
+				],
+			],
+			Settings::front_hero_trust()
+		);
+	}
+
+	public function test_front_hero_art_is_a_closed_set(): void {
+		self::assertSame( 'auto', Settings::sanitize_front_hero_art( 'auto' ) );
+		self::assertSame( 'off', Settings::sanitize_front_hero_art( 'off' ) );
+		self::assertSame( 'auto', Settings::sanitize_front_hero_art( 'sometimes' ) );
+		self::assertSame( 'auto', Settings::sanitize_front_hero_art( [] ) );
+		self::assertSame( 'auto', Settings::sanitize_front_hero_art( new \stdClass() ) );
+	}
+
+	public function test_front_hero_art_resolver_reads_the_theme_mod_through_the_sanitizer(): void {
+		$this->stub_theme_mod( 'off' );
+		self::assertSame( 'off', Settings::front_hero_art() );
+	}
+
+	public function test_front_value_items_resolver_parses_valid_lines_into_structured_items(): void {
+		$this->stub_theme_mod( "Fast delivery | Same-day dispatch | truck\nEco packaging | Recycled materials | leaf" );
+
+		self::assertSame(
+			[
+				[
+					'title' => 'Fast delivery',
+					'text'  => 'Same-day dispatch',
+					'icon'  => 'truck',
+				],
+				[
+					'title' => 'Eco packaging',
+					'text'  => 'Recycled materials',
+					'icon'  => 'leaf',
+				],
+			],
+			Settings::front_value_items()
+		);
+	}
+
+	public function test_front_value_items_sanitizer_rejects_non_string_input(): void {
+		self::assertSame( '', Settings::sanitize_front_value_items( [ 'x' ] ) );
+		self::assertSame( '', Settings::sanitize_front_value_items( new \stdClass() ) );
+		self::assertSame( '', Settings::sanitize_front_value_items( false ) );
+	}
+
+	/**
+	 * A nine-line textarea must yield exactly FRONT_VALUE_ITEMS_MAX_ITEMS (4)
+	 * items.
+	 */
+	public function test_front_value_items_caps_at_four_items(): void {
+		$this->stub_theme_mod(
+			\implode(
+				"\n",
+				[
+					'One | a | truck',
+					'Two | b | leaf',
+					'Three | c | package',
+					'Four | d | check',
+					'Five | e | check',
+					'Six | f | check',
+					'Seven | g | check',
+					'Eight | h | check',
+					'Nine | i | check',
+				]
+			)
+		);
+
+		$items = Settings::front_value_items();
+
+		self::assertCount( 4, $items );
+		self::assertSame( 'Four', $items[3]['title'] );
+	}
+
+	public function test_front_value_items_drops_a_line_with_an_empty_title(): void {
+		$this->stub_theme_mod( " | Text only | truck\nReal item | Text | leaf" );
+
+		self::assertSame(
+			[
+				[
+					'title' => 'Real item',
+					'text'  => 'Text',
+					'icon'  => 'leaf',
+				],
+			],
+			Settings::front_value_items()
+		);
+	}
+
+	public function test_front_value_items_allows_an_empty_text_field_and_defaults_the_icon(): void {
+		$this->stub_theme_mod( "Title only |  | \nUnknown icon | Text | not-a-real-icon" );
+
+		self::assertSame(
+			[
+				[
+					'title' => 'Title only',
+					'text'  => '',
+					'icon'  => 'check',
+				],
+				[
+					'title' => 'Unknown icon',
+					'text'  => 'Text',
+					'icon'  => 'check',
+				],
+			],
+			Settings::front_value_items()
+		);
+	}
+
+	public function test_front_promo_title_sanitizes_a_valid_value(): void {
+		self::assertSame( 'Summer sale', Settings::sanitize_front_promo_title( '  Summer sale  ' ) );
+	}
+
+	public function test_front_promo_title_rejects_non_string_input(): void {
+		self::assertSame( '', Settings::sanitize_front_promo_title( [ 'x' ] ) );
+		self::assertSame( '', Settings::sanitize_front_promo_title( new \stdClass() ) );
+	}
+
+	public function test_front_promo_title_resolver_reads_the_theme_mod_through_the_sanitizer(): void {
+		$this->stub_theme_mod( 'Summer sale' );
+		self::assertSame( 'Summer sale', Settings::front_promo_title() );
+	}
+
+	public function test_front_promo_text_sanitizes_a_valid_value_and_keeps_line_breaks(): void {
+		self::assertSame( "Line one\nLine two", Settings::sanitize_front_promo_text( "Line one\nLine two " ) );
+	}
+
+	public function test_front_promo_text_rejects_non_string_input(): void {
+		self::assertSame( '', Settings::sanitize_front_promo_text( [ 'x' ] ) );
+		self::assertSame( '', Settings::sanitize_front_promo_text( new \stdClass() ) );
+	}
+
+	public function test_front_promo_text_resolver_reads_the_theme_mod_through_the_sanitizer(): void {
+		$this->stub_theme_mod( 'Body copy' );
+		self::assertSame( 'Body copy', Settings::front_promo_text() );
+	}
+
+	public function test_front_promo_cta_label_sanitizes_a_valid_value(): void {
+		self::assertSame( 'Shop now', Settings::sanitize_front_promo_cta_label( '  Shop now  ' ) );
+	}
+
+	public function test_front_promo_cta_label_rejects_non_string_input(): void {
+		self::assertSame( '', Settings::sanitize_front_promo_cta_label( [ 'x' ] ) );
+		self::assertSame( '', Settings::sanitize_front_promo_cta_label( new \stdClass() ) );
+	}
+
+	public function test_front_promo_cta_label_resolver_reads_the_theme_mod_through_the_sanitizer(): void {
+		$this->stub_theme_mod( 'Shop now' );
+		self::assertSame( 'Shop now', Settings::front_promo_cta_label() );
+	}
+
+	public function test_front_promo_cta_url_accepts_a_valid_url(): void {
+		self::assertSame( 'https://example.com/sale', Settings::sanitize_front_promo_cta_url( 'https://example.com/sale' ) );
+	}
+
+	/**
+	 * The one setting in this class that lands directly in an href — pinned
+	 * with the exact hostile payload named in the task, not just "some
+	 * disallowed scheme".
+	 */
+	public function test_front_promo_cta_url_rejects_a_javascript_scheme(): void {
+		self::assertSame( '', Settings::sanitize_front_promo_cta_url( 'javascript:alert(1)' ) );
+	}
+
+	public function test_front_promo_cta_url_rejects_non_string_input(): void {
+		self::assertSame( '', Settings::sanitize_front_promo_cta_url( [ 'x' ] ) );
+		self::assertSame( '', Settings::sanitize_front_promo_cta_url( new \stdClass() ) );
+	}
+
+	public function test_front_promo_cta_url_resolver_reads_the_theme_mod_through_the_sanitizer(): void {
+		$this->stub_theme_mod( 'https://example.com' );
+		self::assertSame( 'https://example.com', Settings::front_promo_cta_url() );
+	}
+
+	public function test_front_promo_image_accepts_a_numeric_attachment_id(): void {
+		self::assertSame( 42, Settings::sanitize_front_promo_image( '42' ) );
+		self::assertSame( 42, Settings::sanitize_front_promo_image( 42 ) );
+		self::assertSame( 42, Settings::sanitize_front_promo_image( 42.9 ) );
+	}
+
+	public function test_front_promo_image_rejects_non_numeric_input(): void {
+		self::assertSame( 0, Settings::sanitize_front_promo_image( [ 'x' ] ) );
+		self::assertSame( 0, Settings::sanitize_front_promo_image( new \stdClass() ) );
+		self::assertSame( 0, Settings::sanitize_front_promo_image( 'not-a-number' ) );
+		self::assertSame( 0, Settings::sanitize_front_promo_image( false ) );
+	}
+
+	public function test_front_promo_image_resolver_reads_the_theme_mod_through_the_sanitizer(): void {
+		$this->stub_theme_mod( '7' );
+		self::assertSame( 7, Settings::front_promo_image() );
 	}
 }

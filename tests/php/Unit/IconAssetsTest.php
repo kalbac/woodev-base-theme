@@ -43,7 +43,24 @@ final class IconAssetsTest extends BaseTestCase {
 		\sort( $found );
 
 		self::assertSame(
-			[ 'chevron-down', 'chevron-left', 'chevron-right', 'menu', 'moon', 'search', 'sun', 'x' ],
+			[
+				'check',
+				'chevron-down',
+				'chevron-left',
+				'chevron-right',
+				'credit-card',
+				'headphones',
+				'leaf',
+				'menu',
+				'moon',
+				'package',
+				'refresh-cw',
+				'search',
+				'shield-check',
+				'sun',
+				'truck',
+				'x',
+			],
 			$found,
 			'Icon set drifted from scripts/copy-icons.mjs — re-run `npm run icons`.'
 		);

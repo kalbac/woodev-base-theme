@@ -23,6 +23,14 @@ const ICONS = [
   'chevron-left', // pagination, previous (M1-02)
   'chevron-right', // pagination, next (M1-02)
   'search', // search form (M1-02)
+  'check', // front-page value band / hero trust badges: fallback icon (s17 #18)
+  'truck', // front-page value band / hero trust badges: shipping perk (s17 #18)
+  'shield-check', // front-page value band / hero trust badges: warranty perk (s17 #18)
+  'refresh-cw', // front-page value band / hero trust badges: returns perk (s17 #18)
+  'leaf', // front-page value band / hero trust badges: eco/sustainability perk (s17 #18)
+  'package', // front-page value band / hero trust badges: packaging perk (s17 #18)
+  'credit-card', // front-page value band / hero trust badges: payment perk (s17 #18)
+  'headphones', // front-page value band / hero trust badges: support perk (s17 #18)
 ];
 
 await mkdir(DEST, { recursive: true });

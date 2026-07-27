@@ -202,6 +202,123 @@ final class Customizer {
 			Settings::sanitize_cta_reveal( ... ),
 			__( 'Whether the add-to-cart button on a product card appears only on hover/focus, or is always shown.', 'woodev-base-theme' )
 		);
+
+		// --- Front page (F2, docs/plans/2026-07-28-front-page-completion.md) ---
+
+		$this->add_section( $wp_customize, 'woodev_base_front', __( 'Front page', 'woodev-base-theme' ), 45 );
+
+		$this->add_text(
+			$wp_customize,
+			'front_hero_eyebrow',
+			'woodev_base_front',
+			__( 'Hero eyebrow', 'woodev-base-theme' ),
+			Settings::FRONT_HERO_EYEBROW_DEFAULT,
+			Settings::sanitize_front_hero_eyebrow( ... ),
+			__( 'One short line shown above the hero headline. Leave empty to hide it.', 'woodev-base-theme' )
+		);
+
+		$this->add_textarea(
+			$wp_customize,
+			'front_hero_lede',
+			'woodev_base_front',
+			__( 'Hero subtitle', 'woodev-base-theme' ),
+			Settings::FRONT_HERO_LEDE_DEFAULT,
+			Settings::sanitize_front_hero_lede( ... ),
+			__( 'Shown under the hero headline. Leave empty to use the site tagline instead.', 'woodev-base-theme' )
+		);
+
+		$this->add_textarea(
+			$wp_customize,
+			'front_hero_trust',
+			'woodev_base_front',
+			__( 'Hero trust badges', 'woodev-base-theme' ),
+			Settings::FRONT_HERO_TRUST_DEFAULT,
+			Settings::sanitize_front_hero_trust( ... ),
+			sprintf(
+				/* translators: %s: comma-separated list of allowed icon slugs. */
+				__( 'Up to three badges, one per line, formatted as "Text | icon". The icon is optional and must be one of: %s. Any other value, or a missing icon, falls back to "check".', 'woodev-base-theme' ),
+				implode( ', ', Settings::FRONT_ICONS )
+			)
+		);
+
+		$this->add_select(
+			$wp_customize,
+			'front_hero_art',
+			'woodev_base_front',
+			__( 'Hero art column', 'woodev-base-theme' ),
+			[
+				Settings::FRONT_HERO_ART_AUTO => __( 'Auto (featured image, or a themed illustration)', 'woodev-base-theme' ),
+				Settings::FRONT_HERO_ART_OFF  => __( 'Off (no art column)', 'woodev-base-theme' ),
+			],
+			Settings::FRONT_HERO_ART_DEFAULT,
+			Settings::sanitize_front_hero_art( ... ),
+			__( 'Auto shows the front page\'s featured image, or a themed illustration when it has none. Off removes the art column entirely and the hero renders single-column.', 'woodev-base-theme' )
+		);
+
+		$this->add_textarea(
+			$wp_customize,
+			'front_value_items',
+			'woodev_base_front',
+			__( 'Value band items', 'woodev-base-theme' ),
+			Settings::FRONT_VALUE_ITEMS_DEFAULT,
+			Settings::sanitize_front_value_items( ... ),
+			sprintf(
+				/* translators: %s: comma-separated list of allowed icon slugs. */
+				__( 'Up to four items, one per line, formatted as "Title | Text | icon". The icon is optional and must be one of: %s. Any other value, or a missing icon, falls back to "check". A line with no title is skipped.', 'woodev-base-theme' ),
+				implode( ', ', Settings::FRONT_ICONS )
+			)
+		);
+
+		$this->add_text(
+			$wp_customize,
+			'front_promo_title',
+			'woodev_base_front',
+			__( 'Promo heading', 'woodev-base-theme' ),
+			Settings::FRONT_PROMO_TITLE_DEFAULT,
+			Settings::sanitize_front_promo_title( ... ),
+			__( 'Heading for the promo section. Leave empty to hide the whole section.', 'woodev-base-theme' )
+		);
+
+		$this->add_textarea(
+			$wp_customize,
+			'front_promo_text',
+			'woodev_base_front',
+			__( 'Promo text', 'woodev-base-theme' ),
+			Settings::FRONT_PROMO_TEXT_DEFAULT,
+			Settings::sanitize_front_promo_text( ... ),
+			__( 'Body copy for the promo section. Plain text only, no HTML.', 'woodev-base-theme' )
+		);
+
+		$this->add_text(
+			$wp_customize,
+			'front_promo_cta_label',
+			'woodev_base_front',
+			__( 'Promo button label', 'woodev-base-theme' ),
+			Settings::FRONT_PROMO_CTA_LABEL_DEFAULT,
+			Settings::sanitize_front_promo_cta_label( ... ),
+			__( 'Text for the promo button. The button only renders when both a label and a URL are set.', 'woodev-base-theme' )
+		);
+
+		$this->add_text(
+			$wp_customize,
+			'front_promo_cta_url',
+			'woodev_base_front',
+			__( 'Promo button URL', 'woodev-base-theme' ),
+			Settings::FRONT_PROMO_CTA_URL_DEFAULT,
+			Settings::sanitize_front_promo_cta_url( ... ),
+			__( 'Where the promo button links to. The button only renders when both a label and a URL are set.', 'woodev-base-theme' ),
+			'url'
+		);
+
+		$this->add_media(
+			$wp_customize,
+			'front_promo_image',
+			'woodev_base_front',
+			__( 'Promo image', 'woodev-base-theme' ),
+			Settings::FRONT_PROMO_IMAGE_DEFAULT,
+			Settings::sanitize_front_promo_image( ... ),
+			__( 'Image shown beside the promo text. Leave empty to use a themed illustration instead.', 'woodev-base-theme' )
+		);
 	}
 
 	/**
@@ -430,6 +547,139 @@ final class Customizer {
 				'description' => $description,
 				'section'     => $section,
 				'type'        => 'color',
+			]
+		);
+	}
+
+	/**
+	 * Register a textarea-type setting and its control.
+	 *
+	 * @param \WP_Customize_Manager $wp_customize  Customizer manager.
+	 * @param string                $id            Setting id.
+	 * @param string                $section       Section id.
+	 * @param string                $label         Control label.
+	 * @param string                $default_value Default value.
+	 * @param callable              $sanitize      Sanitize callback.
+	 * @param string                $description   Optional control description.
+	 */
+	private function add_textarea( \WP_Customize_Manager $wp_customize, string $id, string $section, string $label, string $default_value, callable $sanitize, string $description = '' ): void {
+		$wp_customize->add_setting(
+			$id,
+			[
+				'default'           => $default_value,
+				'sanitize_callback' => $sanitize,
+				'transport'         => 'refresh',
+			]
+		);
+
+		$wp_customize->add_control(
+			$id,
+			[
+				'label'       => $label,
+				'description' => $description,
+				'section'     => $section,
+				'type'        => 'textarea',
+			]
+		);
+	}
+
+	/**
+	 * Register a single-line text setting and its control.
+	 *
+	 * Separate from add_textarea() for the admin's sake, not the data's:
+	 * sanitize_text_field() collapses newlines either way, so a one-line
+	 * value stored through a `<textarea>` comes out identical. What differs
+	 * is what the control invites — a multi-line box for a button label
+	 * suggests a paragraph belongs there, and Enter inside it inserts a
+	 * newline the sanitizer then silently eats. The URL field takes
+	 * `type => 'url'` so the browser's own keyboard and validation apply;
+	 * it is still sanitized server-side by esc_url_raw(), which is what
+	 * actually enforces the scheme.
+	 *
+	 * @param \WP_Customize_Manager $wp_customize  Customizer manager.
+	 * @param string                $id            Setting id.
+	 * @param string                $section       Section id.
+	 * @param string                $label         Control label.
+	 * @param string                $default_value Default value.
+	 * @param callable              $sanitize      Sanitize callback.
+	 * @param string                $description   Optional control description.
+	 * @param string                $type          Input type: 'text' or 'url'.
+	 */
+	private function add_text( \WP_Customize_Manager $wp_customize, string $id, string $section, string $label, string $default_value, callable $sanitize, string $description = '', string $type = 'text' ): void {
+		$wp_customize->add_setting(
+			$id,
+			[
+				'default'           => $default_value,
+				'sanitize_callback' => $sanitize,
+				'transport'         => 'refresh',
+			]
+		);
+
+		$wp_customize->add_control(
+			$id,
+			[
+				'label'       => $label,
+				'description' => $description,
+				'section'     => $section,
+				'type'        => $type,
+			]
+		);
+	}
+
+	/**
+	 * Register a media (image) setting and its control.
+	 *
+	 * WP_Customize_Media_Control is the real class WordPress core registers
+	 * for its media-library picker UI; it is only autoloadable when
+	 * WordPress' own customize-controls machinery has loaded, which the
+	 * Brain\Monkey unit suite never does (no WP code runs there at all — see
+	 * add_color()'s note on the same pattern). class_exists() picks a plain
+	 * number control as a fallback there; the integration suite runs under
+	 * real WordPress, where the class always exists and the media picker
+	 * renders for real.
+	 *
+	 * @param \WP_Customize_Manager $wp_customize  Customizer manager.
+	 * @param string                $id            Setting id.
+	 * @param string                $section       Section id.
+	 * @param string                $label         Control label.
+	 * @param int                   $default_value Default value (attachment ID, 0 = none).
+	 * @param callable              $sanitize      Sanitize callback.
+	 * @param string                $description   Optional control description.
+	 */
+	private function add_media( \WP_Customize_Manager $wp_customize, string $id, string $section, string $label, int $default_value, callable $sanitize, string $description = '' ): void {
+		$wp_customize->add_setting(
+			$id,
+			[
+				'default'           => $default_value,
+				'sanitize_callback' => $sanitize,
+				'transport'         => 'refresh',
+			]
+		);
+
+		if ( class_exists( \WP_Customize_Media_Control::class ) ) {
+			$wp_customize->add_control(
+				new \WP_Customize_Media_Control(
+					$wp_customize,
+					$id,
+					[
+						'label'       => $label,
+						'description' => $description,
+						'section'     => $section,
+						'mime_type'   => 'image',
+					]
+				)
+			);
+
+			return;
+		}
+
+		$wp_customize->add_control(
+			$id,
+			[
+				'label'       => $label,
+				'description' => $description,
+				'section'     => $section,
+				'type'        => 'number',
 			]
 		);
 	}
