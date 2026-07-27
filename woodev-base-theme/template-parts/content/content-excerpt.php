@@ -42,17 +42,25 @@ defined( 'ABSPATH' ) || exit;
 
 	<footer>
 		<a class="wtb-entry-more" href="<?php the_permalink(); ?>">
-			<?php esc_html_e( 'Read more', 'woodev-base-theme' ); ?>
-			<?php woodev_base_icon( 'chevron-right' ); ?>
-			<span class="sr-only">
-				<?php
-				printf(
+			<?php
+			/*
+			 * One string, not two. The visible label and the screen-reader tail are one
+			 * sentence, and splitting them handed the translator a fragment that began
+			 * with a space — unreorderable, and leading whitespace is exactly what a PO
+			 * editor silently trims. The markup travels inside the string (WordPress
+			 * canon, cf. core's "Continue reading" link) so a translation can put the
+			 * title first; wp_kses bounds what a translation is allowed to inject.
+			 */
+			printf(
+				wp_kses(
 					/* translators: %s: post title. */
-					esc_html__( ' about "%s"', 'woodev-base-theme' ),
-					esc_html( get_the_title() )
-				);
-				?>
-			</span>
+					__( 'Read more<span class="sr-only"> about &ldquo;%s&rdquo;</span>', 'woodev-base-theme' ),
+					[ 'span' => [ 'class' => [] ] ]
+				),
+				esc_html( get_the_title() )
+			);
+			?>
+			<?php woodev_base_icon( 'chevron-right' ); ?>
 		</a>
 	</footer>
 </article>
