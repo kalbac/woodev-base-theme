@@ -82,24 +82,35 @@ test.describe('mobile drawer', () => {
 
     // x-trap moves focus into the drawer ASYNCHRONOUSLY — it is still on <body>
     // synchronously after the click and through the next microtask. A Tab fired in
-    // that window walks from <body> to the document's first focusable, which is
-    // the skip link OUTSIDE .wtb-nav, and the loop below then fails on i=0 for a
-    // reason that is not a trap failure. Wait for the precondition rather than
-    // racing it.
+    // that window walks to the document's first focusable, which is the skip link
+    // OUTSIDE the drawer, and the loop below then fails for a reason that is not a
+    // trap failure. Wait for the precondition rather than racing it.
+    //
+    // Poll the MENU, not .wtb-nav. The s5 fix polled .wtb-nav and that precondition
+    // is a no-op: `x-trap` is bound to the <ul>, but the toggle BUTTON also lives
+    // inside .wtb-nav, so `.wtb-nav.contains(activeElement)` is already true the
+    // instant the click lands and the poll returns without waiting for anything.
+    // It passed anyway for as long as the trap happened to engage before
+    // Playwright's first Tab; CI is slower, lost that race, and failed inside the
+    // loop rather than before it (s16).
     await expect
       .poll(async () =>
-        page.evaluate(() => document.querySelector('.wtb-nav').contains(document.activeElement)),
+        page.evaluate(() =>
+          document.querySelector('#wtb-primary-menu').contains(document.activeElement),
+        ),
       )
       .toBe(true);
 
     // Focus trap: x-trap moves focus into the drawer; tabbing never escapes it.
+    // Asserted against the trapped <ul> rather than .wtb-nav for the same reason —
+    // the toggle is inside .wtb-nav but OUTSIDE the trap, so the looser assertion
+    // would pass on focus the trap should never have allowed.
     for (let i = 0; i < 5; i += 1) {
       await page.keyboard.press('Tab');
-      const insideNav = await page.evaluate(() => {
-        const nav = document.querySelector('.wtb-nav');
-        return nav.contains(document.activeElement);
-      });
-      expect(insideNav).toBe(true);
+      const insideMenu = await page.evaluate(() =>
+        document.querySelector('#wtb-primary-menu').contains(document.activeElement),
+      );
+      expect(insideMenu).toBe(true);
     }
 
     // Escape closes AND returns focus to the toggle (x-trap teardown).
