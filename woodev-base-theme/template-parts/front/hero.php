@@ -45,7 +45,8 @@ $wtb_hero_image = ( $wtb_front_id > 0 && has_post_thumbnail( $wtb_front_id ) )
 	: '';
 ?>
 <section class="wtb-hero">
-	<div class="wtb-container wtb-hero__inner">
+	<?php /* No .wtb-container: header.php already opens main.wtb-container. */ ?>
+	<div class="wtb-hero__inner">
 		<div class="wtb-hero__copy">
 			<h1><?php echo esc_html( get_bloginfo( 'name', 'display' ) ); ?></h1>
 

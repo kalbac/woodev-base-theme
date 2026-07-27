@@ -46,69 +46,68 @@ if ( is_wp_error( $wtb_categories ) || empty( $wtb_categories ) ) {
 }
 ?>
 <section class="wtb-front-section">
-	<div class="wtb-container">
-		<div class="wtb-section-head">
-			<h2><?php esc_html_e( 'Categories', 'woodev-base-theme' ); ?></h2>
-		</div>
+	<?php /* No .wtb-container wrapper: header.php already opens main.wtb-container. */ ?>
+	<div class="wtb-section-head">
+		<h2><?php esc_html_e( 'Categories', 'woodev-base-theme' ); ?></h2>
+	</div>
 
-		<div class="wtb-cat-tiles">
-			<?php foreach ( $wtb_categories as $wtb_category ) : ?>
+	<div class="wtb-cat-tiles">
+		<?php foreach ( $wtb_categories as $wtb_category ) : ?>
+			<?php
+			/*
+			 * get_term_link() returns WP_Error, not a string, when a term cannot be
+			 * resolved — and casting WP_Error to string is a fatal in PHP 8, on the
+			 * front page of the site. A tile with nowhere to go is worth losing;
+			 * the page is not.
+			 */
+			$wtb_term_link = get_term_link( $wtb_category );
+
+			if ( is_wp_error( $wtb_term_link ) ) {
+				continue;
+			}
+
+			$wtb_thumbnail_id = (int) get_term_meta( $wtb_category->term_id, 'thumbnail_id', true );
+			?>
+			<a class="wtb-cat-tile" href="<?php echo esc_url( $wtb_term_link ); ?>">
+				<?php if ( $wtb_thumbnail_id > 0 ) : ?>
+					<span class="bg">
+						<?php
+						// Core's own markup, already escaped.
+						echo wp_get_attachment_image( $wtb_thumbnail_id, 'medium', false, [ 'alt' => '' ] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_get_attachment_image() output.
+						?>
+					</span>
+				<?php endif; ?>
+
+				<span class="arrow"><?php woodev_base_icon( 'chevron-right', [ 'size' => 16 ] ); ?></span>
+
 				<?php
 				/*
-				 * get_term_link() returns WP_Error, not a string, when a term cannot be
-				 * resolved — and casting WP_Error to string is a fatal in PHP 8, on the
-				 * front page of the site. A tile with nowhere to go is worth losing;
-				 * the page is not.
+				 * A div, not the mockup's span: a span accepts phrasing content only,
+				 * and an h3 is flow content, so the mockup's markup is invalid HTML
+				 * and gives the accessibility tree something to guess at. The CSS is
+				 * unaffected — blocks.css selects `.label`, not the element.
 				 */
-				$wtb_term_link = get_term_link( $wtb_category );
-
-				if ( is_wp_error( $wtb_term_link ) ) {
-					continue;
-				}
-
-				$wtb_thumbnail_id = (int) get_term_meta( $wtb_category->term_id, 'thumbnail_id', true );
 				?>
-				<a class="wtb-cat-tile" href="<?php echo esc_url( $wtb_term_link ); ?>">
-					<?php if ( $wtb_thumbnail_id > 0 ) : ?>
-						<span class="bg">
-							<?php
-							// Core's own markup, already escaped.
-							echo wp_get_attachment_image( $wtb_thumbnail_id, 'medium', false, [ 'alt' => '' ] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_get_attachment_image() output.
-							?>
-						</span>
-					<?php endif; ?>
-
-					<span class="arrow"><?php woodev_base_icon( 'chevron-right', [ 'size' => 16 ] ); ?></span>
-
+				<div class="label">
+					<h3><?php echo esc_html( $wtb_category->name ); ?></h3>
 					<?php
 					/*
-					 * A div, not the mockup's span: a span accepts phrasing content only,
-					 * and an h3 is flow content, so the mockup's markup is invalid HTML
-					 * and gives the accessibility tree something to guess at. The CSS is
-					 * unaffected — blocks.css selects `.label`, not the element.
+					 * Count-agnostic phrasing rather than _n(): Russian has three
+					 * plural forms and gettext's two-form call cannot express them
+					 * (AGENTS.md). number_format_i18n() localises the digits.
 					 */
 					?>
-					<div class="label">
-						<h3><?php echo esc_html( $wtb_category->name ); ?></h3>
+					<span class="count">
 						<?php
-						/*
-						 * Count-agnostic phrasing rather than _n(): Russian has three
-						 * plural forms and gettext's two-form call cannot express them
-						 * (AGENTS.md). number_format_i18n() localises the digits.
-						 */
+						printf(
+							/* translators: %s: number of products in the category, already localized. */
+							esc_html__( 'Products: %s', 'woodev-base-theme' ),
+							esc_html( number_format_i18n( (int) $wtb_category->count ) )
+						);
 						?>
-						<span class="count">
-							<?php
-							printf(
-								/* translators: %s: number of products in the category, already localized. */
-								esc_html__( 'Products: %s', 'woodev-base-theme' ),
-								esc_html( number_format_i18n( (int) $wtb_category->count ) )
-							);
-							?>
-						</span>
-					</div>
-				</a>
-			<?php endforeach; ?>
-		</div>
+					</span>
+				</div>
+			</a>
+		<?php endforeach; ?>
 	</div>
 </section>
