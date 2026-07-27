@@ -205,10 +205,25 @@ must run on the final tree.
       section naming every bundled third-party asset with its licence and source URL** —
       Golos Text (OFL), IBM Plex Sans/Mono (OFL), Basecoat UI, Lucide (ISC), Alpine.js,
       Tailwind. A missing credit is a standard rejection reason.
-- [ ] **`screenshot.png`** — does not exist yet. 1200×900, showing the actual theme, no
-      text that is not in the theme, no mockup chrome.
-- [ ] **Run Theme Check** (the plugin) against the built theme inside wp-env and fix every
-      ERROR; record each WARNING with a decision rather than leaving it unread.
+- [ ] **`screenshot.png`** — **deferred, tracked as [#36](https://github.com/kalbac/woodev-base-theme/issues/36).**
+      `scripts/make-screenshot.mjs` exists and captures the running theme at 1200×900
+      from a production build. What is missing is something worth photographing: over
+      the e2e fixtures the shot reads as a broken theme, and a first attempt with
+      hastily-invented demo copy was rejected — the screenshot is the first thing a
+      reviewer sees and deserves real content. Blocked on
+      [#18](https://github.com/kalbac/woodev-base-theme/issues/18): the front-page
+      merchandising markup exists as CSS but is wired to no template.
+- [x] **Run Theme Check** — done 27.07.2026, headlessly via `run_themechecks_against_theme()`.
+      Two REQUIRED, one WARNING, 18 RECOMMENDED. Fixed: the `comment-reply` script was
+      enqueued nowhere (four integration tests, mutation-verified) and eight classes
+      WordPress itself emits had no rule at all — `.alignleft`, `.alignright`,
+      `.aligncenter`, `.wp-caption`, `.wp-caption-text`, `.gallery-caption`, `.sticky`,
+      `.bypostauthor`. Deliberately NOT fixed: the `Update URI` REQUIRED, which
+      [ADR-005](../adr/ADR-005-distribution-github-first.md) makes v1's self-update
+      channel — Theme Check flags it precisely because it is for themes distributed
+      outside the directory, which v1 is. Remove it at submission, not before.
+      Surfaced instead of decided: the slug/directory/text-domain mismatch,
+      [#35](https://github.com/kalbac/woodev-base-theme/issues/35).
 - [ ] **`Tags:`** — currently three. Validate against wp.org's *current* allowed list, which
       is versioned and drops tags over time; do not copy them from another theme.
 - [ ] **Escaping/prefix audit** on the whole tree, not on the diff: every echo escaped,
