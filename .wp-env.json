@@ -1,5 +1,6 @@
 {
   "core": null,
   "phpVersion": "8.1",
-  "themes": ["./woodev-base-theme"]
+  "themes": ["./woodev-base-theme"],
+  "testsEnvironment": false
 }

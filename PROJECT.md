@@ -7,6 +7,7 @@
 ## Project identity
 
 - **Product name:** Woodev Base
+- **`Theme Name` in `style.css`:** Woodev Base Theme — longer than the product name on purpose: wp.org derives the slug from this header, and it has to match the directory and the text domain ([ADR-005 amendment](docs/adr/ADR-005-distribution-github-first.md))
 - **Theme slug:** `woodev-base-theme`
 - **Text domain:** `woodev-base-theme`
 - **PHP namespace:** `Woodev\\Theme\\Base`

@@ -1,0 +1,60 @@
+/* src/css/adapter/front.css
+ * Front-page section chrome — the rhythm the mockup's §05 home sits in.
+ *
+ * hero.css and blocks.css ported the COMPONENTS of that page (the hero itself,
+ * the category tiles, the value band, the promo). What they did not port is the
+ * page-level scaffolding those components sit in: the mockup carries it as
+ * `.section-pad`, `.section-head` and `.lede`, which are demo-document chrome
+ * as much as theme chrome, so T4 left them out. Wiring the components to a real
+ * template (front-page.php) is what makes the scaffolding necessary, and this
+ * is it — deliberately small, and only the parts a rendered section needs.
+ */
+
+.wtb-hero__lede {
+  max-width: 46ch;
+  color: var(--muted-foreground);
+  font-size: var(--text-lg);
+}
+
+/*
+ * Vertical rhythm between front-page sections. The hero supplies its own
+ * padding-block (hero.css), so this governs everything after it.
+ */
+.wtb-front-section {
+  padding-block: var(--space-2xl);
+}
+
+.wtb-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.wtb-section-head h2 {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/*
+ * The loop or the static page's content, below the merchandising sections.
+ * Without a top margin it collides with the last section's padding, which is
+ * the one place these two spacing systems meet.
+ */
+.wtb-front-content {
+  padding-block-start: var(--space-xl);
+}
+
+/*
+ * The featured image, when the front page has one, fills the art plate rather
+ * than sitting in it letterboxed: hero.css already gives .wtb-hero__art the
+ * aspect ratio, the rule, the radius and the overflow clip.
+ */
+.wtb-hero__image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

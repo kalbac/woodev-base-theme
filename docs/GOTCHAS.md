@@ -1,6 +1,6 @@
 # Gotchas Index — Woodev Base
 
-> 36 entries. Each gotcha is a separate file in `docs/gotchas/`.
+> 37 entries. Each gotcha is a separate file in `docs/gotchas/`.
 
 | Gotcha | Area | Summary |
 |---|---|---|
@@ -10,6 +10,7 @@
 | [basecoat-tokens-are-un-layered](gotchas/basecoat-tokens-are-un-layered.md) | CSS/Basecoat | `layer(components)` on the Basecoat import won't build (`@custom-variant cannot be nested`) and isn't needed — Basecoat self-layers. Its `:root` tokens are un-layered, so ours must be too, imported after it |
 | [vite-css-entry-is-not-imported-by-the-js-entry](gotchas/vite-css-entry-is-not-imported-by-the-js-entry.md) | Build/Assets | The two Rollup inputs are independent graphs, so dev mode must ask the dev server for the CSS entry by name — and Vite serves it as a JS module (`text/javascript`), so it's a script module, not a stylesheet |
 | [wp-json-file-decode-warns-on-missing-file](gotchas/wp-json-file-decode-warns-on-missing-file.md) | PHP/WP core | It calls `wp_trigger_error()` before returning null — an absent manifest emits a PHP notice on every request. Two holes, so two halves: `is_file() && is_readable()` — core hands the path to `file_get_contents()` unchecked. Returning null is no proof an API stayed quiet |
+| [wp-env-runs-a-tests-environment-nobody-uses](gotchas/wp-env-runs-a-tests-environment-nobody-uses.md) | Tooling/wp-env | `wp-env start` brings up a second WP on `:8889` by default — 3 containers and a whole MySQL nothing connects to. `"testsEnvironment": false` removes them. Do **not** take the opposite route and move integration onto that built-in environment: it works today, and wp-env's own startup output says it is being removed |
 | [wp-env-config-constants-persist](gotchas/wp-env-config-constants-persist.md) | Tooling/wp-env | `config` constants are appended to wp-config.php of **both** environments and never removed — not even by `--update`. Plus: `wp eval` probes self-match wp-env's echo, and `display_errors=stderr` hides notices from the HTML |
 | [wp-test-suite-removes-html5-support](gotchas/wp-test-suite-removes-html5-support.md) | Testing/WP core | `WP_UnitTestCase_Base::tear_down()` unconditionally strips html5 — the only `remove_theme_support` in the suite. Assertions on it pass or fail on test order; re-running `Setup::setup()` per test is `_doing_it_wrong`. Integration assertions must survive `tear_down()` |
 | [qa-gates-cover-less-than-they-claim](gotchas/qa-gates-cover-less-than-they-claim.md) | Tooling/QA | Exit 0 means "the files this gate looked at were clean". PHPCS never linted tests; ESLint flat-config `vendor/**` missed nested vendor (831 errors locally, invisible in CI); CRLF failed all 8 files before any sniff ran. **s15:** a docs note calling `npm run format` "not in the gate battery" was wrong — CI ran it, it was red, and the `e2e` job behind `needs: js-qa` had therefore **never run**; and Prettier 3 reads `.gitignore`, so `--check` on an ignored path prints "All matched files use Prettier code style!" having matched none |

@@ -21,14 +21,14 @@
 @import './header.css';
 @import './footer.css';
 
-/* Page furniture. hero.css and blocks.css are ported but not yet wired to any
- * template — see docs/plans/2026-07-25-visual-identity.md (T4 report). They
- * still cost their bytes — shipped in the bundle, downloaded, parsed, and in
- * the CSSOM regardless of whether any markup matches them — but porting them
- * once, with the rest of their section, beats re-deriving them later from a
- * mockup nobody is reading any more. */
+/* Page furniture. hero.css and blocks.css were ported in T4 ahead of any
+ * template that renders them; front-page.php and template-parts/front/ wire
+ * them now, and front.css adds the page-level scaffolding those components
+ * sit in (section rhythm, section heads, the hero lede) which T4 left behind
+ * with the mockup's demo chrome. */
 @import './hero.css';
 @import './blocks.css';
+@import './front.css';
 
 /* Long-form content: article, blog cards, sidebar widgets, comments. */
 @import './content.css';
