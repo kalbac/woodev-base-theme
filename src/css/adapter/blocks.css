@@ -54,9 +54,17 @@
   opacity: 0.9;
 }
 
+/* A `<span>` per the mockup's markup, so it needs the block context spelled
+ * out: left inline, the heading and the count render on one line glued
+ * together ("KitchenProducts: 4"), which is what the first wired render
+ * showed. The port could not have caught this — nothing rendered the class
+ * until front-page.php did. */
 .wtb-cat-tile .label {
   position: relative;
   z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .wtb-cat-tile h3 {
