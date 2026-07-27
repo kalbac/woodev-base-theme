@@ -45,8 +45,20 @@ That is the whole output. A suite that never ran looks exactly like a suite that
 - **`exit` in shipped code is a landmine for every non-WordPress consumer** — unit suites, static analysers, scripts. The fix is one line in the test bootstrap (`defined( 'ABSPATH' ) || define( 'ABSPATH', … )`), and it is not faking anything: the constant's job is to assert "WordPress is loading this", which is as true of the suite as of a request.
 - The matching guard test reads the file's **executable head** (comments stripped) rather than a fixed character window. The first version used 800 characters and reported a false defect in `woocommerce/content-product.php`, whose perfectly good guard sits behind a 22-line upstream docblock.
 
+## s16 adds two, both of the "success message produced by checking nothing" family
+
+| Gate | What was believed | What was true |
+|---|---|---|
+| **Prettier, on this PR's docs** | `npm run format` printed `All matched files use Prettier code style!` after two `.md` files changed, and it was about to be quoted as evidence the docs were clean. | `*.md` is in `.prettierignore` **by design** — markdown here is hand-written prose that must not drift. The run matched *zero* files, exactly as it did on the git-ignored path in s15. Same message, same meaninglessness, a different exclusion file. |
+| **A mutation that mutated nothing** | A Python one-liner stripped `x-trap` from `navigation.php`; the guard test then passed, which was momentarily read as "the guard is weak". | The pattern had escaped quotes that did not match the file, so `replace()` changed nothing and the test passed **because the code was untouched**. Caught only because the script printed the post-replace state. A mutation you did not verify landed is not a mutation — it is a second baseline run wearing its clothes. |
+
+- **Verify the mutation landed before believing the run.** Print the changed line, or assert the needle is gone; never infer it from the test result you were hoping to see. This is the same class AGENTS.md warns about for shell rewrites, arriving through a different door.
+- **`--ignore-path` is how you find out what Prettier is actually looking at.** The message is emitted for an empty match set and is indistinguishable from a pass. Twice now.
+
 ## Related
 
+- [[make-pot-reports-one-defect-class-of-three]] — the s16 headline instance: a POT generator that reports one defect class of three and is silent on the two that delete the string
+- [[x-trap-focus-move-is-async]] — an e2e precondition that had been asserting nothing since s5, and only a slower machine revealed it
 - [[wp-test-suite-removes-html5-support]] — the same session's other flavour of false confidence: a test that passes for a reason unrelated to what it claims
 - [[codex-cli-dies-silently]] — a tool whose failure modes all exit 0
 - [[wp-env-mounts-the-theme-live]] — another failure whose symptom points at the wrong file

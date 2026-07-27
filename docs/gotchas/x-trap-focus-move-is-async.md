@@ -38,6 +38,29 @@ Bisecting confirmed the ordering (green at the previous commit, red at the next)
 - The fix must not weaken the guard. Verify by mutation: strip `x-trap.noscroll.noreturn="open"` from `template-parts/header/navigation.php` and the test must still go red (it does).
 - The same shape applies to any "focus moved into X" assertion driven by Alpine — poll the precondition, never assume the click settled it.
 
+## s16: the precondition the s5 fix added was a no-op, and only CI was slow enough to show it
+
+The poll above shipped in s5 and the test passed for eleven sessions. It was never waiting for anything.
+
+`x-trap` is bound to the **`<ul id="wtb-primary-menu">`**. The toggle **button** is a sibling of that `<ul>`, both inside `.wtb-nav`. So the instant `toggle.click()` lands, `document.activeElement` is the toggle, and `.wtb-nav.contains(activeElement)` is **already true** — the poll returns on its first evaluation, before the trap has engaged. It passed anyway for as long as the trap happened to win the race against Playwright's first `Tab`.
+
+CI lost that race. The failure looked nothing like s5's: it landed **inside** the tab loop rather than before it, in 315 ms, and the same tree passed 60/60 locally. A platform-dependent verdict on a timing-sensitive assertion is the signature — see [[qa-gates-cover-less-than-they-claim]].
+
+- **Poll the element the behaviour is bound to, not an ancestor that also contains the trigger.** A precondition satisfied by the click target itself proves nothing:
+
+  ```js
+  await expect
+    .poll(async () =>
+      page.evaluate(() =>
+        document.querySelector('#wtb-primary-menu').contains(document.activeElement),
+      ),
+    )
+    .toBe(true);
+  ```
+
+- Assert the **loop** against the same element for the same reason. The toggle is inside `.wtb-nav` but outside the trap, so the looser check would have passed on focus the trap should never have permitted — the fix is also the stricter test.
+- Re-verified by mutation, as the section above demands: stripping `x-trap.noscroll.noreturn="open"` turns it red at the precondition. Worth recording that the **first** attempt at that mutation matched nothing and produced a green run that proved nothing — caught only because the script printed what it had replaced instead of returning an exit code. See [[qa-gates-cover-less-than-they-claim]].
+
 ## Related
 
 - [[playwright-browser-newpage-skips-config]] — the other e2e trap where the test, not the theme, was wrong

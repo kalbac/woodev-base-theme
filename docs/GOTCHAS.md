@@ -1,6 +1,6 @@
 # Gotchas Index — Woodev Base
 
-> 37 entries. Each gotcha is a separate file in `docs/gotchas/`.
+> 39 entries. Each gotcha is a separate file in `docs/gotchas/`.
 
 | Gotcha | Area | Summary |
 |---|---|---|
@@ -10,6 +10,8 @@
 | [basecoat-tokens-are-un-layered](gotchas/basecoat-tokens-are-un-layered.md) | CSS/Basecoat | `layer(components)` on the Basecoat import won't build (`@custom-variant cannot be nested`) and isn't needed — Basecoat self-layers. Its `:root` tokens are un-layered, so ours must be too, imported after it |
 | [vite-css-entry-is-not-imported-by-the-js-entry](gotchas/vite-css-entry-is-not-imported-by-the-js-entry.md) | Build/Assets | The two Rollup inputs are independent graphs, so dev mode must ask the dev server for the CSS entry by name — and Vite serves it as a JS module (`text/javascript`), so it's a script module, not a stylesheet |
 | [wp-json-file-decode-warns-on-missing-file](gotchas/wp-json-file-decode-warns-on-missing-file.md) | PHP/WP core | It calls `wp_trigger_error()` before returning null — an absent manifest emits a PHP notice on every request. Two holes, so two halves: `is_file() && is_readable()` — core hands the path to `file_get_contents()` unchecked. Returning null is no proof an API stayed quiet |
+| [make-pot-reports-one-defect-class-of-three](gotchas/make-pot-reports-one-defect-class-of-three.md) | i18n/Tooling | `wp i18n make-pot` warns about ONE defect class of three. A wrong text domain and a non-literal argument are silent — the string just vanishes from the POT (measured: 101 msgids to 99, no warning). Assert those two over the source; a clean generator run does not cover them |
+| [header-already-opens-the-container](gotchas/header-already-opens-the-container.md) | Templates/CSS | `header.php` ends with `<main class="wtb-container">`, so every template is already inside it. Porting the mockup's `.wrap` verbatim nests a container in a container — doubled page padding that reads as a design choice, not a bug |
 | [wp-env-runs-a-tests-environment-nobody-uses](gotchas/wp-env-runs-a-tests-environment-nobody-uses.md) | Tooling/wp-env | `wp-env start` brings up a second WP on `:8889` by default — 3 containers and a whole MySQL nothing connects to. `"testsEnvironment": false` removes them. Do **not** take the opposite route and move integration onto that built-in environment: it works today, and wp-env's own startup output says it is being removed |
 | [wp-env-config-constants-persist](gotchas/wp-env-config-constants-persist.md) | Tooling/wp-env | `config` constants are appended to wp-config.php of **both** environments and never removed — not even by `--update`. Plus: `wp eval` probes self-match wp-env's echo, and `display_errors=stderr` hides notices from the HTML |
 | [wp-test-suite-removes-html5-support](gotchas/wp-test-suite-removes-html5-support.md) | Testing/WP core | `WP_UnitTestCase_Base::tear_down()` unconditionally strips html5 — the only `remove_theme_support` in the suite. Assertions on it pass or fail on test order; re-running `Setup::setup()` per test is `_doing_it_wrong`. Integration assertions must survive `tear_down()` |

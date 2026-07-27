@@ -1,6 +1,6 @@
 # Current State — Woodev Base
 
-> Updated: 27.07.2026 (s15)
+> Updated: 28.07.2026 (s16)
 
 ## Phase status
 
@@ -15,14 +15,17 @@
 | Identity implementation (T0–T8) | ✅ **Merged s15** | ADR-007 (fonts) + ADR-008 (identity replaces the 8 style packs). Plan: `docs/plans/2026-07-25-visual-identity.md`. All four areas criticked and re-criticked (s12); test debt paid s13. PR [#24](https://github.com/kalbac/woodev-base-theme/pull/24) squashed onto `main` as `f040eaa` |
 | M2a — Woo storefront | ✅ **Merged s15**, in `f040eaa` | Classic storefront on the approved identity. The block cart/checkout gap was M2b |
 | M2b — Woo block cart & checkout | ✅ **Merged s15** | [ADR-009](adr/ADR-009-block-cart-checkout-styling.md) implemented B0–B6, criticked **and** re-criticked. PR [#29](https://github.com/kalbac/woodev-base-theme/pull/29) squashed onto `main` as `1d769ae` |
-| M3 — Public release prep | 🟡 In flight | Plan: `docs/plans/2026-07-26-m3-release-prep.md`. **R1 done and merged** ([ADR-010](adr/ADR-010-theme-json-identity.md), closes #26 + #25). **R4 largely done** — `readme.txt`, direct-access guards, Theme Check run, `comment-reply`, the eight core CSS classes; screenshot deferred to [#36](https://github.com/kalbac/woodev-base-theme/issues/36). **R2 measured and cut down** to a provenance question ([#17](https://github.com/kalbac/woodev-base-theme/issues/17)). **R3 descoped** — translation files are Maksim's, in Poedit |
+| M3 — Public release prep | 🟡 In flight | Plan: `docs/plans/2026-07-26-m3-release-prep.md`. **R1 done and merged** ([ADR-010](adr/ADR-010-theme-json-identity.md), closes #26 + #25). **R4 largely done** — `readme.txt`, direct-access guards, Theme Check run, `comment-reply`, the eight core CSS classes; screenshot deferred to [#36](https://github.com/kalbac/woodev-base-theme/issues/36). **R2 measured and cut down** to a provenance question ([#17](https://github.com/kalbac/woodev-base-theme/issues/17)). **R3 done s16** — audit + a guard test; the `.pot`/`.po`/`.mo` stay Maksim's, in Poedit. Remaining: version bump off `0.1.0`, the `Tags:` list against wp.org's current allowed set, and the screenshot |
+| Front page (#18) | 🟡 First slice merged s16 | `front-page.php` + `template-parts/front/{hero,category-tiles}.php` — the mockup's §05 wired to a template for the first time; T4's hero/blocks CSS stopped being dead weight. Tiles come from WooCommerce product categories, so the biggest block needs no invented copy. **Still open:** value band, promo, a Customizer surface for the hero copy, and the empty hero art plate. No test coverage at all — [#37](https://github.com/kalbac/woodev-base-theme/issues/37) |
 
 ## Known bugs
 
-**None open.** `main` is green on the MERGED commit **`1d769ae`** (M1 identity + M2a + M2b), not per-branch. Merged `main` was verified tree-identical (`git diff --quiet`) to the CI-green PR head, which is what lets CI's result stand as a measurement of `main` rather than of a branch.
+**None open.** `main` is green on the MERGED commit **`50bdbf4`** (M3 tail + the front page's first slice), verified tree-identical (`git diff --quiet`) to the CI-green PR head `77271c0` — which is what lets CI's result stand as a measurement of `main` rather than of a branch.
 
-- **CI on `1d769ae`** (all four jobs) — phpcs 0 · phpstan L8 0 · eslint 0 · prettier 0 · unit 208 · vitest 56 · integration 40 · base e2e 57 · build OK.
-- **Local on the same tree** — e2e:woo 23/23, integration-dev 4/4, e2e-dev 2/2. CI runs none of these three, so they only ever exist as a local measurement.
+- **CI on `50bdbf4`** (all four jobs, `e2e` among them and actually running, 4m09s) — phpcs 0 · phpstan L8 0 · eslint 0 · prettier 0 · `tokens:check` 0 · unit **214** (628 assertions) · vitest **57** · integration **50** · base e2e **60** · build OK.
+- **Local on the same tree** — e2e:woo **23/23**, integration-dev **4/4**, e2e-dev **2/2**. CI runs none of these three, so they only ever exist as a local measurement.
+
+**s16's distribution of defects is the finding worth carrying, not the counts.** Four layers found six real defects and almost none overlapped: the Codex critic found 7 (including a PHP 8 fatal — `get_term_link()`'s `WP_Error` cast to string on the front page); the **re-critic found 1 inside the critic's own fix** (routing the static front page through the full content partial brought the page title back as a second `<h1>`); the **local e2e** found a regression three review passes had read past (`front-page.php` rendered neither the layout wrapper nor the sidebar, so a posts front page silently lost the sidebar it had always shown); and **CI** found a precondition that had been asserting nothing since s5. No layer caught another layer's defect. Treat none of them as the layer.
 
 **Branch `feat/m3-release-prep` (M3: R1 + R4, PR [#32](https://github.com/kalbac/woodev-base-theme/pull/32)) — s15:** phpcs **0** · phpstan L8 **0** · eslint **0** · prettier **0** · `tokens:check` **0** · unit **210** (1 skip) · vitest **57** · integration **50** (1 skip) · integration-dev **4** · base e2e **60** (run split: 49 + 11, the serial suite exceeds a 10-minute foreground) · **e2e:woo 23/23** · build OK.
 
@@ -129,26 +132,27 @@ T0→T1→T2 sequential; T3 parallel with T1/T2; T4–T6 parallelisable once T1�
 
 ## Last session
 
-s15 (26–27.07.2026): merged both open milestones, opened M3, and found three separate gates
-that were reporting success while doing nothing. Full account in `docs/SESSION-LOG.md`.
+s16 (27–28.07.2026): closed M3's tail (R3, #35, #33) and got the front page rendering for the
+first time — PR [#38](https://github.com/kalbac/woodev-base-theme/pull/38), squashed onto `main`
+as `50bdbf4`. Full account in `docs/SESSION-LOG.md`.
 
 **Next session starts here:**
 
-1. **M3 is the only milestone left, and most of it is now questions rather than code.**
-   Read `docs/plans/2026-07-26-m3-release-prep.md` — R1 is done, R4 is largely done, and R2
-   and R3 were cut down by measurement rather than executed.
-2. **Two decisions are Maksim's and both are in Бэклог**, so they are pickable on his word:
-   [#35](https://github.com/kalbac/woodev-base-theme/issues/35) (slug / directory /
-   text-domain do not match — cheap now, expensive after the theme is installed anywhere,
-   and it touches a constant `CLAUDE.md` fixes) and
-   [#34](https://github.com/kalbac/woodev-base-theme/issues/34) (`settings.layout` absent, so
-   the editor's "Wide width" control does nothing; the `var()` route is UNMEASURED for the
-   layout path — core handles it in different code from colour presets).
-3. **R3, translation-readiness, is unclaimed and self-contained.** Audit the 85 i18n call
-   sites for anything un-extractable, confirm the Russian plural rule still holds, and stop.
-   The `.pot`/`.po`/`.mo` are Maksim's, in Poedit, once the strings are final.
-4. **Worth doing early, not late:** [#33](https://github.com/kalbac/woodev-base-theme/issues/33)
-   — four wp-env environments where two would do, three containers running idle. Every
-   session pays for this in Docker contention.
-5. Then the release itself: version bump off `0.1.0`, and the `Update URI` header comes out
-   of `style.css` **only** at wp.org submission — ADR-005 makes it correct for v1.
+1. **The front page is the visible product and it is half-built.** [#18](https://github.com/kalbac/woodev-base-theme/issues/18)
+   carries the remaining list in a comment: the empty hero art plate, the value band, the promo
+   strip, and a Customizer surface for the hero copy (eyebrow, lede, trust badges — they have no
+   source but invention, so they are settings, not hardcoded strings). This is what Maksim
+   notices; infrastructure work is not.
+2. **[#37](https://github.com/kalbac/woodev-base-theme/issues/37) — the front page has no tests.**
+   Four render modes, three of them silent. The duplicate-`<h1>` defect was caught by a critic
+   and the missing sidebar by e2e; nothing was watching either. Worth doing alongside #18 rather
+   than after it.
+3. **[#34](https://github.com/kalbac/woodev-base-theme/issues/34)** is still Maksim's call —
+   `settings.layout` absent, so the editor's "Wide width" control does nothing, and the `var()`
+   route is UNMEASURED for the layout path (core handles it in different code from colour presets).
+4. **Then the release itself:** version bump off `0.1.0`, validate `Tags:` against wp.org's
+   *current* allowed list, the screenshot ([#36](https://github.com/kalbac/woodev-base-theme/issues/36),
+   blocked on #18 having something worth photographing), and the `Update URI` header comes out of
+   `style.css` **only** at submission — ADR-005 makes it correct for v1.
+5. Maksim's own housekeeping, not the repo's: `docker system prune` — 8.2 GB of images and
+   3.86 GB of build cache measured in s15 and never reclaimed.

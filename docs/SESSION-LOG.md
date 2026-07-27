@@ -1,5 +1,58 @@
 # Session Log — Woodev Base
 
+## s16 — 27–28.07.2026 — M3's tail closed, the front page renders at last, and four gates each caught what the others missed
+
+**PR [#38](https://github.com/kalbac/woodev-base-theme/pull/38), squashed onto `main` as `50bdbf4`,
+verified tree-identical to the CI-green head `77271c0`.** Battery: phpcs 0 · phpstan L8 0 · eslint 0
+· prettier 0 · `tokens:check` 0 · unit **214** (628 assertions) · vitest **57** · integration **50** ·
+integration-dev **4** · base e2e **60** · e2e:woo **23/23** · e2e-dev **2** · build. Every count matches
+the s15 baseline except unit, which grew by exactly the four tests added.
+
+**R3 — the i18n audit produced a guard, because the audit's own tool covers a third of the ground.**
+`wp i18n make-pot` extracted 100 strings with zero warnings; mutating a copy of the theme showed that
+verdict covers exactly one defect class of three. A wrong text domain and a non-literal first argument
+are both **silent** — the string simply disappears from the POT (101 msgids → 99, no warning), and an
+absence is not something a generator can report. Those two rules plus the no-`_n()` rule now live in a
+token-level scanner proved against a broken fixture as well as the theme. One real defect found and
+fixed: the read-more link built its accessible name from two msgids, the second starting with a space.
+
+**#35 — the theme is `Woodev Base Theme`,** so the wp.org-derived slug finally matches the directory and
+the text domain. Maksim chose the cheap half; recorded as an amendment to ADR-005, whose "submission
+without rework" promise this was breaking. Theme Check's silence was verified as a measurement — the
+check still fires when handed the old slug.
+
+**#33 — three containers and a MySQL stopped running for nothing** (`testsEnvironment: false`). The
+larger simplification was measured and **rejected**: putting integration on the built-in tests
+environment works — 50/50 and 4/4 — but wp-env prints on every start that the built-in tests
+environment is being removed. A deprecation notice in a tool's own output is a measurement too.
+
+**#18 — the front page renders.** Three sessions had stalled on a real objection: the mockup fills the
+home page with one shop's copy, and shipping product copy inside a generic theme is inventing content.
+The objection is right about the hero and **wrong about the biggest block on the page** — "Кухня · 48
+товаров" is a product category and its count, both of which WooCommerce holds. Every section
+self-suppresses without its data source, so a site with no Woo and no tagline gets what `index.php`
+rendered before. The value band, the promo, the empty hero art plate and a Customizer surface for the
+hero copy remain, listed on #18.
+
+**Maksim pushed back mid-session on priorities, and he was right.** The three tasks offered were all
+infrastructure; #18 — the only visible product work — was in `CURRENT-STATE.md` and never surfaced.
+Recorded because the correction was about what gets *offered*, not about what got built.
+
+**Four gates, six defects, almost no overlap.** Critic: 7, including a PHP 8 fatal (`get_term_link()`'s
+`WP_Error` cast to string). Re-critic: 1 **inside** the critic's own fix — routing the static front page
+through the full content partial restored the page title as a second `<h1>`. Local e2e: the front page
+rendered neither the layout wrapper nor the sidebar, so a posts front page silently lost its sidebar —
+and fixing that surfaced a container nested in a container. CI: a focus-trap precondition that had been
+asserting nothing since s5, because it polled `.wtb-nav` while the toggle it clicks lives inside
+`.wtb-nav`; only a slower machine ever lost that race.
+
+Two "green" results meant nothing and both were caught by reading output rather than exit codes:
+`prettier --check` on `*.md` (ignored by design) matched zero files, and the first `x-trap` mutation
+replaced nothing, so the passing run that followed proved only that the code was untouched.
+
+New cards: [#37](https://github.com/kalbac/woodev-base-theme/issues/37) (the front page has no tests).
+Closed: #35, #33. Four gotchas compiled or extended.
+
 ## s15 — 26–27.07.2026 — both milestones merged, M3 opened, and three gates found doing nothing
 
 **M1 identity + M2a merged as `f040eaa`, M2b as `1d769ae`, both green on the merge commit.**
