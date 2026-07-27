@@ -26,8 +26,17 @@ use Woodev\Theme\Base\Templates\Layout;
 
 get_header();
 
+/*
+ * The mockup's §05 order, and each part decides for itself whether it has
+ * anything to render: the tiles need WooCommerce categories, the value band and
+ * the promo need copy an admin actually wrote. A site that configures none of
+ * them gets the hero and then exactly what index.php rendered before this file
+ * existed.
+ */
 get_template_part( 'template-parts/front/hero' );
+get_template_part( 'template-parts/front/value-band' );
 get_template_part( 'template-parts/front/category-tiles' );
+get_template_part( 'template-parts/front/promo' );
 
 /*
  * The layout wrapper and the sidebar partial are index.php's, reproduced here

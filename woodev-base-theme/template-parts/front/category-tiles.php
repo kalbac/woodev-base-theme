@@ -21,6 +21,8 @@ declare(strict_types=1);
 // prints a path. Fail closed instead.
 defined( 'ABSPATH' ) || exit;
 
+use Woodev\Theme\Base\Templates\Plate;
+
 if ( ! taxonomy_exists( 'product_cat' ) ) {
 	return;
 }
@@ -74,6 +76,25 @@ if ( is_wp_error( $wtb_categories ) || empty( $wtb_categories ) ) {
 						<?php
 						// Core's own markup, already escaped.
 						echo wp_get_attachment_image( $wtb_thumbnail_id, 'medium', false, [ 'alt' => '' ] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_get_attachment_image() output.
+						?>
+					</span>
+				<?php else : ?>
+					<?php
+					/*
+					 * A category with no image is the common case — WooCommerce
+					 * does not ask for one — so the tile that renders without it
+					 * IS the default look, not a degraded one. The plate is the
+					 * mockup's own tile art, picked by term id so a given
+					 * category keeps the same illustration across renders, and
+					 * placed as an object in the lower right rather than as a
+					 * full-bleed background (blocks.css, `.bg--plate`), which is
+					 * what keeps the label readable over it.
+					 */
+					?>
+					<span class="bg bg--plate">
+						<?php
+						// Our own generated SVG, already escaped.
+						echo Plate::render( Plate::tile_variant( $wtb_category->term_id ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Plate's own generated SVG.
 						?>
 					</span>
 				<?php endif; ?>

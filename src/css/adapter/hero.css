@@ -33,11 +33,22 @@
   grid-template-columns: 1fr;
 }
 
+/* The mockup carries this element as `class="hero__eyebrow eyebrow"`: the
+ * first class positions it, the second is a generic typographic utility. Only
+ * the positioning half was ported in T4, so the treatment that makes an
+ * eyebrow legible as one — mono, small, tracked out, muted — is folded in
+ * here rather than shipped as an unprefixed `.eyebrow` utility, which is both
+ * a collision risk in someone else's site and a wp.org review flag. */
 .wtb-hero__eyebrow {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   margin-bottom: var(--space-lg);
+  color: var(--muted-foreground);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
 .wtb-hero__eyebrow .dot {
