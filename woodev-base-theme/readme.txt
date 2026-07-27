@@ -1,4 +1,4 @@
-=== Woodev Base ===
+=== Woodev Base Theme ===
 
 Contributors: woodev
 Requires at least: 6.8
@@ -13,7 +13,7 @@ A universal WordPress theme with an optional WooCommerce layer, one coherent vis
 
 == Description ==
 
-Woodev Base is a hybrid theme: classic PHP templates plus `theme.json`. It ships one visual identity rather than a pile of presets, and exposes the parts worth changing through the Customizer instead of asking you to write CSS.
+This is a hybrid theme: classic PHP templates plus `theme.json`. It ships one visual identity rather than a pile of presets, and exposes the parts worth changing through the Customizer instead of asking you to write CSS.
 
 Everything the theme renders is server-rendered HTML. JavaScript enhances; it never draws the page. The theme works with JavaScript disabled, and no request ever leaves the visitor's browser for a third-party host — no font CDN, no analytics, no phone-home.
 
@@ -58,8 +58,8 @@ If you leave the default at "system", yes. Visitors can also be given a toggle, 
 
 == Copyright ==
 
-Woodev Base WordPress Theme, (C) 2026 Woodev
-Woodev Base is distributed under the terms of the GNU GPL version 2 or later.
+Woodev Base Theme, (C) 2026 Woodev
+Woodev Base Theme is distributed under the terms of the GNU GPL version 2 or later.
 
 This theme bundles the following third-party resources.
 
