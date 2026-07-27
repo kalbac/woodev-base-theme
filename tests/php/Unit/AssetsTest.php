@@ -113,6 +113,13 @@ final class AssetsTest extends TestCase {
 		Functions\expect( 'wp_enqueue_style' )->never();
 		Functions\expect( 'wp_json_file_decode' )->never();
 
+		// enqueue() also asks core whether to ship the threaded-reply script. Not the
+		// subject here, so answer no; CommentReplyScriptTest covers the condition
+		// itself, in a real WordPress where those functions mean something.
+		Functions\when( 'is_singular' )->justReturn( false );
+		Functions\when( 'comments_open' )->justReturn( false );
+		Functions\when( 'get_option' )->justReturn( false );
+
 		( new Assets() )->enqueue();
 
 		self::assertSame(

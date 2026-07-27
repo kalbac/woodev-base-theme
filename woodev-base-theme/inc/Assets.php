@@ -39,6 +39,8 @@ final class Assets {
 	 * Enqueue the built (or dev-server) theme assets.
 	 */
 	public function enqueue(): void {
+		$this->enqueue_comment_reply();
+
 		if ( \defined( 'WOODEV_BASE_DEV' ) && WOODEV_BASE_DEV ) {
 			$this->enqueue_dev();
 			return;
@@ -60,6 +62,23 @@ final class Assets {
 
 		foreach ( self::entry_css( $manifest, self::JS_ENTRY ) as $index => $imported ) {
 			wp_enqueue_style( "woodev-base-app-{$index}", "{$dist_uri}/{$imported}", [], null );
+		}
+	}
+
+	/**
+	 * Core's threaded-reply script, on the three conditions core itself documents.
+	 *
+	 * Without it the Reply link still works — WordPress falls back to
+	 * `?replytocom=N#respond` and pre-fills the form server-side — so this is a
+	 * degradation rather than a break, which is exactly why it goes unnoticed. Theme
+	 * Check flags its absence, and `readme.txt` claims the `threaded-comments` tag.
+	 *
+	 * Enqueued before the dev-mode branch on purpose: it is core's script, not ours, and
+	 * has nothing to do with which of our bundles is being served.
+	 */
+	private function enqueue_comment_reply(): void {
+		if ( is_singular() && comments_open() && (bool) get_option( 'thread_comments' ) ) {
+			wp_enqueue_script( 'comment-reply' );
 		}
 	}
 
