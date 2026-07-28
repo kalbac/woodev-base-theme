@@ -105,8 +105,13 @@ if ( is_wp_error( $wtb_categories ) || empty( $wtb_categories ) ) {
 				/*
 				 * A div, not the mockup's span: a span accepts phrasing content only,
 				 * and an h3 is flow content, so the mockup's markup is invalid HTML
-				 * and gives the accessibility tree something to guess at. The CSS is
-				 * unaffected — blocks.css selects `.label`, not the element.
+				 * and gives the accessibility tree something to guess at.
+				 *
+				 * `wtb-tile-label`, not the mockup's bare `.label`, because Basecoat
+				 * ships `.label` as its FORM LABEL component and the tile was
+				 * inheriting `align-items: center` and `user-select: none` from it.
+				 * blocks.css selects the renamed class; e2e:woo asserts the computed
+				 * alignment, since neither the markup nor phpcs can see this.
 				 */
 				?>
 				<div class="wtb-tile-label">
