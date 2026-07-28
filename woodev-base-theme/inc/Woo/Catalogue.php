@@ -253,6 +253,14 @@ final class Catalogue {
 	 * Null rather than zero on every failure path, so `sale_flash()` can tell
 	 * "no percentage to show" from "zero percent off" without a sentinel.
 	 *
+	 * "Has a price at all" is decided on the RAW strings, not on the floats.
+	 * WooCommerce returns `''` for a price that is unset and `'0'` for one that
+	 * is genuinely zero, and both cast to `0.0` — so a `$sale <= 0.0` guard
+	 * (which is what this method had until the s18 critic pass) silently
+	 * rejected the legitimate case of a product marked down to free. Regular
+	 * 100, sale 0 is `is_on_sale()`, is exactly −100%, and used to fall back to
+	 * WooCommerce's word instead.
+	 *
 	 * @param WC_Product $product The product whose sale is being measured.
 	 */
 	private function discount_percent( WC_Product $product ): ?int {
@@ -260,10 +268,19 @@ final class Catalogue {
 			return null;
 		}
 
-		$regular = (float) $product->get_regular_price();
-		$sale    = (float) $product->get_sale_price();
+		$regular_price = $product->get_regular_price();
+		$sale_price    = $product->get_sale_price();
 
-		if ( $regular <= 0.0 || $sale <= 0.0 || $sale >= $regular ) {
+		// Variable products report '' for both — there is no single regular
+		// price across the range, so there is no single percentage either.
+		if ( '' === $regular_price || '' === $sale_price ) {
+			return null;
+		}
+
+		$regular = (float) $regular_price;
+		$sale    = (float) $sale_price;
+
+		if ( $regular <= 0.0 || $sale < 0.0 || $sale >= $regular ) {
 			return null;
 		}
 

@@ -7,13 +7,12 @@ use Brain\Monkey\Functions;
 use Woodev\Theme\Base\Tests\Unit\TestCase;
 use Woodev\Theme\Base\Woo\Catalogue;
 
-require_once __DIR__ . '/../../Support/wc-product-double.php';
-
 /**
  * `sale_flash()` narrows on `instanceof WC_Product`, a class the unit suite has
- * no source for — tests/php/Support/wc-product-double.php supplies it, and its
- * header explains why that is a hand-written double rather than the WooCommerce
- * stub package.
+ * no source for — tests/php/Support/wc-product-double.php supplies it and the
+ * unit bootstrap loads it, so it is available to every test regardless of
+ * discovery order. Its header explains why it is a hand-written double rather
+ * than the WooCommerce stub package.
  */
 final class CatalogueTest extends TestCase {
 
@@ -71,6 +70,23 @@ final class CatalogueTest extends TestCase {
 
 		// (4590 − 3490) / 4590 = 23.96 %, which rounds to 24.
 		self::assertSame( '<span class="onsale wtb-sale-flash">−24%</span>', $result );
+	}
+
+	/**
+	 * A product marked down to free is on sale, is exactly 100% off, and used
+	 * to fall through to WooCommerce's own wording: the guard tested "is the
+	 * price zero" on the CAST FLOAT, which cannot tell `'0'` (free) from `''`
+	 * (no sale price at all). Raised by the s18 critic pass.
+	 */
+	public function test_sale_flash_handles_a_product_marked_down_to_free(): void {
+		$this->stub_output_functions();
+
+		$product = new \WC_Product();
+		$product->set_test_prices( '100', '0', true );
+
+		$result = ( new Catalogue() )->sale_flash( '<span class="onsale">Sale!</span>', null, $product );
+
+		self::assertSame( '<span class="onsale wtb-sale-flash">−100%</span>', $result );
 	}
 
 	/**
@@ -156,6 +172,15 @@ final class CatalogueTest extends TestCase {
 		self::assertStringContainsString( 'Previous page', $result['prev_text'] );
 		self::assertStringContainsString( 'Next page', $result['next_text'] );
 		self::assertStringContainsString( '<span class="sr-only">', $result['prev_text'] );
+
+		// The ICON, asserted separately from the name. Without this the
+		// stub_output_functions() docblock below was making a promise the test
+		// did not keep: Icons::get() returns '' for a missing file, so deleting
+		// chevron-left.svg would leave both strings above intact and the pager
+		// would ship with an accessible name and no visible glyph. Raised by the
+		// s18 critic pass, against the guard rather than the code.
+		self::assertStringContainsString( '<svg', $result['prev_text'] );
+		self::assertStringContainsString( '<svg', $result['next_text'] );
 		self::assertSame( 4, $result['total'] );
 	}
 

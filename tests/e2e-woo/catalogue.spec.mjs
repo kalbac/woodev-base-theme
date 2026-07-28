@@ -33,6 +33,14 @@ test.describe('sale badge', () => {
     await page.setViewportSize({ width: 1400, height: 900 });
     await page.goto('/shop/');
 
+    // Visibility FIRST, and not as ceremony: a regression that hid the badge
+    // (`display: none`, or a zero-size box) would give it a 0x0 rect, which
+    // satisfies both geometry assertions below — "narrower than half the card"
+    // and "stops well short of its right edge" are both trivially true of
+    // nothing at all. Raised by the s18 critic pass against the guards
+    // themselves.
+    await expect(page.locator('ul.products li.product .onsale').first()).toBeVisible();
+
     const measured = await page.evaluate(() => {
       const badge = document.querySelector('ul.products li.product .onsale');
       if (!badge) {
@@ -172,6 +180,42 @@ test.describe('catalogue chrome', () => {
     expect(Math.abs(aligned.headerRight - aligned.rowRight)).toBeLessThanOrEqual(1);
   });
 
+  test('the archive header keeps its title readable at 320px', async ({ page }) => {
+    // The failure this guards, found by the s18 critic pass and confirmed in
+    // the browser: with the header's two-column grid applied at every width,
+    // the chip track is sized to its max-content — every chip on one line, and
+    // `flex-wrap` does not constrain a track while it is being sized. At 320px
+    // the chips took 249px and the title's track was left at 0px, so the <h1>
+    // wrapped at every character and ran down the left edge one letter per
+    // line. The page did NOT overflow, so a scrollWidth assertion would have
+    // stayed green through all of it.
+    await page.setViewportSize({ width: 320, height: 800 });
+    await page.goto('/product-category/wtb-kitchen/');
+
+    const measured = await page.evaluate(() => {
+      const header = document.querySelector('.woocommerce-products-header');
+      const title = header.querySelector('.woocommerce-products-header__title');
+      const box = title.getBoundingClientRect();
+      const lineHeight = Number.parseFloat(getComputedStyle(title).lineHeight);
+
+      return {
+        titleWidth: Math.round(box.width),
+        headerWidth: Math.round(header.getBoundingClientRect().width),
+        lines: Math.round(box.height / lineHeight),
+        chipCount: header.querySelectorAll('.wtb-subcat').length,
+      };
+    });
+
+    expect(
+      measured.chipCount,
+      'no subcategory chips — the fixture tree is missing',
+    ).toBeGreaterThan(1);
+    // The title owns the full content width, not a sliver of it.
+    expect(measured.titleWidth).toBe(measured.headerWidth);
+    // And it sets on one or two lines, not one line per character.
+    expect(measured.lines).toBeLessThanOrEqual(2);
+  });
+
   test('the breadcrumb separator is quieter than the crumbs either side of it', async ({
     page,
   }) => {
@@ -298,21 +342,33 @@ test.describe('filter rail', () => {
     const reset = page.locator('.wtb-filter-rail__reset');
     await expect(reset).toBeVisible();
 
-    // It must go somewhere that actually clears the filter, not just anywhere.
-    const href = await reset.getAttribute('href');
-    expect(href).not.toContain('filter_wtb-colour');
+    // It must be the quiet ghost button, not the primary one. The failure this
+    // guards produced perfectly correct markup: the class was ported from the
+    // mockup as `btn--ghost btn--sm`, which this theme's attribute-based button
+    // contract ignores entirely, so the link fell through to
+    // `.btn:not([data-variant])` and rendered as a solid primary block above
+    // the filters.
+    //
+    // Asserted as "transparent", not as "different from --primary". The latter
+    // was the first version and it was VACUOUS: `backgroundColor` computes to
+    // an `rgb(…)`/`oklch(…)` string while `--primary` is the raw token text, so
+    // the two can never be equal and a solid primary button would have passed.
+    // Caught by the s18 critic pass reviewing the guards themselves.
+    await expect(reset).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
 
-    // And it must be the quiet ghost button, not the primary one. This is a
-    // computed-style assertion because the failure it guards produced correct
-    // markup: the class was ported from the mockup as `btn--ghost btn--sm`,
-    // which this theme's attribute-based button contract ignores entirely, so
-    // the link fell through to `.btn:not([data-variant])` and rendered as a
-    // solid primary block above the filters.
-    const background = await reset.evaluate((el) => getComputedStyle(el).backgroundColor);
-    const primary = await page.evaluate(() =>
-      getComputedStyle(document.documentElement).getPropertyValue('--primary').trim(),
+    // And it must actually clear the filtering — FOLLOWED, not just inspected.
+    // Asserting the href merely lacks `filter_wtb-colour` would pass for a link
+    // that swapped one active filter for another.
+    await reset.click();
+    const landed = new URL(page.url());
+    const stillFiltering = [...landed.searchParams.keys()].filter(
+      (key) =>
+        key.startsWith('filter_') ||
+        key.startsWith('query_type_') ||
+        ['min_price', 'max_price', 'rating_filter'].includes(key),
     );
-    expect(background).not.toBe(primary);
+    expect(stillFiltering).toEqual([]);
+    await expect(page.locator('.wtb-filter-rail__reset')).toHaveCount(0);
   });
 });
 
@@ -329,6 +385,12 @@ test.describe('pagination', () => {
     // the theme's chevron plus a screen-reader-only name, because an anchor
     // whose only content is an aria-hidden SVG has no accessible name at all.
     await expect(next.locator('svg')).toHaveCount(1);
-    await expect(next.locator('.sr-only')).not.toBeEmpty();
+
+    // The NAME is asserted against the accessibility tree, not against the
+    // presence of a non-empty `.sr-only` element. Those are different claims:
+    // an `.sr-only` span that picked up `display: none`, or `aria-hidden`, is
+    // still non-empty in the DOM and contributes nothing to the name. The
+    // whole point of this markup is the name, so that is what is measured.
+    await expect(next).toHaveAccessibleName(/next page/i);
   });
 });

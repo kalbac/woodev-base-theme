@@ -84,7 +84,7 @@
    * the two are identical anyway. */
   .woocommerce-products-header {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr);
     align-items: end;
     column-gap: var(--space-lg);
     row-gap: var(--space-sm);
@@ -97,10 +97,28 @@
     grid-column: 1;
   }
 
-  .woocommerce-products-header > .wtb-subcats {
-    grid-row: 1;
-    grid-column: 2;
-    justify-self: end;
+  /* The two-column arrangement is a WIDE-viewport treatment only, and that is
+   * a correctness fix rather than a preference (s18 critic, P1, confirmed in
+   * the browser at 320px before it was changed).
+   *
+   * With `grid-template-columns: minmax(0, 1fr) auto` at every width, the chip
+   * track is sized to its MAX-CONTENT — every chip on one line — and
+   * `flex-wrap` does not constrain it while the track is being sized. On a
+   * 320px viewport a category with three children took 249px for the chips and
+   * left `0px` for the title, measured: `gridTemplateColumns: "0px 249px"`.
+   * The page did not overflow (that is what the `minmax(0, …)` prevented) — the
+   * `<h1>` simply wrapped at every character and ran down the left edge one
+   * letter per line. */
+  @media (min-width: 48rem) {
+    .woocommerce-products-header {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .woocommerce-products-header > .wtb-subcats {
+      grid-row: 1;
+      grid-column: 2;
+      justify-self: end;
+    }
   }
 
   /* The chips themselves are the theme's own `.tag` component

@@ -48,9 +48,17 @@ if ( ! is_a( $product, WC_Product::class ) || ! $product->is_visible() ) {
 		// The FIRST term, not a list: the mockup's card shows one short line of
 		// context above the title, and a product filed under four categories
 		// would otherwise push the title down a row and break the grid's
-		// alignment. get_the_terms() returns them in term_id order, so "first"
-		// means "filed earliest", which is arbitrary but stable — a shop that
-		// wants a specific one controls it by how the categories are assigned.
+		// alignment.
+		//
+		// "First" here means first in WordPress's own term ordering —
+		// `get_the_terms()` defers to `wp_get_object_terms()`, which orders by
+		// NAME by default, not by the order an editor assigned them and not by
+		// term id. So on a product in several categories this is alphabetical,
+		// which is arbitrary but deterministic; there is no "primary category"
+		// concept in core to prefer instead (the plugins that add one store it
+		// in their own meta). An earlier version of this comment claimed the
+		// order was term_id and that an editor controlled it by assignment
+		// order — both wrong, and caught by the s18 critic pass.
 		$wtb_card_terms = get_the_terms( $product->get_id(), 'product_cat' );
 
 		if ( is_array( $wtb_card_terms ) && [] !== $wtb_card_terms ) :

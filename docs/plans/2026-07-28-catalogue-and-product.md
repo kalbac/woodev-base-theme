@@ -94,6 +94,49 @@ Same family as [[../gotchas/porting-a-mockup-inherits-its-class-names-and-loses-
 through WooCommerce's class names rather than the mockup's. Both fixes are pinned on **computed
 style** in the Woo e2e, not on markup.
 
+## The critic gate (s18)
+
+Eight chunks plus four re-critics, run the documented way — whole prompt inline on **stdin**,
+NO-TOOLS preamble, foreground, explicit `model_reasoning_effort="high"`
+([`codex-critic-needs-inline-stdin-and-explicit-effort`](../gotchas/codex-critic-needs-inline-stdin-and-explicit-effort.md)).
+Token counts are recorded because a cheap pass is indistinguishable from a real one by its
+verdict alone: chunk 1's first run cost **8.5k** and was re-run at **21.9k**, where it came back
+clean on its own terms.
+
+| Chunk | Verdict | Tokens |
+|---|---|---|
+| `Catalogue.php` + `FilterRail.php` + `Woo.php` | 1 × P2, then CLEAN on re-run | 8.5k → 21.9k |
+| `ProductPage.php` + `Support.php` + `Assets.php` + `meta.php` | CLEAN | 21.9k |
+| templates + Customizer + `woo.js` | 1 × P2 | 23.1k |
+| `woo.css` | **1 × P1** | 26.6k |
+| e2e guards | **4 × P1** | 23.6k |
+| PHP unit tests | 1 × P1 (mechanism disproved) + 1 × P2 | 25.9k |
+| store fixture | **1 × P1** + 1 × P2 | 21.6k |
+| remaining tests | CLEAN | 16.7k |
+| re-critic ×4 (each round's fixes) | all CLEAN | 17.7k / 9.5k / 8.8k / 15.1k |
+
+**The most valuable group was the four P1s against the guards themselves** — the assertions
+meant to prove the work. One had been vacuous since it was written: the reset link's "not the
+primary button" check compared a computed `backgroundColor` (`rgb(…)`) against the raw
+`--primary` token text, two strings that can never be equal, so a solid primary button would
+have passed the test written to catch exactly that. The sale-badge geometry checks passed for a
+`display: none` badge (a 0×0 box is narrower than half a card), and the pagination "accessible
+name" check asserted a non-empty `.sr-only` element rather than an accessible name.
+
+**One finding was rejected on measurement, not on argument.** The critic said `ProductPageTest`
+would fail run alone because it mocks `WC_Product` without loading the shared double. It does
+not — 19/19 alone, and green under `--order-by=reverse`, because PHPUnit includes every test
+file before running any test and Mockery defines a missing class itself. The *coupling* it
+pointed at was real, so the double moved into the unit bootstrap anyway.
+
+**The P1 in `woo.css` is the one no screenshot would have found**, because every screenshot
+taken this session was of the shop page or a product, never a category archive at phone width.
+`grid-template-columns: minmax(0, 1fr) auto` sizes the chip track to its max-content, and
+`flex-wrap` does not constrain a track while it is being sized: at 320px the chips took 249px
+and the title's track was left at **0px** — measured `gridTemplateColumns: "0px 249px"`. The
+page did not overflow, so a `scrollWidth` assertion would have stayed green while the `<h1>`
+wrapped one letter per line down the left edge.
+
 ## Rules carried in from the gotchas
 
 - **Grep the built bundle before porting a class name.** `.tag`, `.chip`, `.stock`, `.body`,

@@ -689,6 +689,14 @@ export default function globalSetup() {
   );
   log(`out-of-stock product wtb-product-oos → id ${oosId}`);
   assignCategories(oosId, [storageCatId]);
+  // The out-of-stock product gets a colour term as well, and that is not
+  // symmetry for its own sake: without it the layered-nav colour filter counts
+  // nine of the ten products, and `sand` has no product at all — so a spec
+  // asserting a count, or one filtering by colour and expecting the
+  // out-of-stock CARD treatment, would be measuring a store that does not
+  // match the invariant three comments in this file state. Raised by the s18
+  // critic pass.
+  assignColourAttribute(oosId, colourAttributeId, colourTaxonomy, colourTermIds.sand);
 
   // ── 4b. Seven more simple products spread across the four categories ────
   //
@@ -783,22 +791,14 @@ export default function globalSetup() {
 
   // ── 6. Export the seeded ids for specs/helpers.mjs ───────────────────────
   //
-  // NOTE ON PAGINATION: the store now holds exactly ten products, but that
-  // does NOT produce a second page of the shop's default loop. WooCommerce's
-  // `loop_shop_per_page` filter falls back to `get_option('posts_per_page')`
-  // when nothing overrides it, and this container's `posts_per_page` reads
-  // 10 (verified with `wp option get posts_per_page`) — ten products exactly
-  // fill page one. Neither `woocommerce_catalog_columns` nor
-  // `woocommerce_catalog_rows` exists as an option in this Woo version
-  // (verified with `wp option get` — both error "does not exist"), so there
-  // is no catalogue-specific per-page lever to turn down instead, and
-  // changing the global `posts_per_page` would also repaginate the blog —
-  // out of scope for this fixture. Pagination coverage needs a smaller
-  // per-page value than 10, supplied however the catalogue template ends up
-  // exposing one (a `?per_page=`-style query var, once that work lands) —
-  // this fixture cannot manufacture a second page on its own without either
-  // guessing at an option this Woo doesn't have or reseeding more than the
-  // ten products this task specifies.
+  // (The pagination question is settled at step 3a-bis above: the theme's own
+  // `product_grid` support is what sets the catalogue's page size, so nine of
+  // these ten products land on page one and the pager is real. An earlier NOTE
+  // here said the opposite — that no catalogue-specific lever existed and this
+  // fixture could not manufacture a second page — which was true of
+  // `posts_per_page` and wrong about `woocommerce_catalog_rows`/`_columns`.
+  // Two contradictory explanations of the same behaviour in one file is worse
+  // than either alone, so the stale one is gone rather than annotated.)
   writeFixtures({
     products: {
       simple: Number(simpleId),

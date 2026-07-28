@@ -23,3 +23,16 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 defined( 'ABSPATH' ) || define( 'ABSPATH', __DIR__ . '/' );
 
 require_once __DIR__ . '/../../woodev-base-theme/inc/autoload.php';
+
+/*
+ * The `WC_Product` stand-in every storefront test needs. Loaded HERE rather
+ * than from the one test file that happened to need it first: `require_once`
+ * in a test file makes every other test's view of `WC_Product` depend on
+ * PHPUnit's file-discovery order. Nothing failed because of it — PHPUnit
+ * includes all test files before running any test, so the double always won
+ * the race against Mockery's own on-the-fly class definition — but the
+ * coupling was invisible and one rename away from mattering. Raised by the
+ * s18 critic pass; the mechanism it predicted did not reproduce, the coupling
+ * it pointed at was real.
+ */
+require_once __DIR__ . '/Support/wc-product-double.php';
