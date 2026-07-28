@@ -18,18 +18,28 @@ final class CustomizerTest extends TestCase {
 	 */
 	public static function expected_settings(): array {
 		return [
-			'color_scheme_default' => [ 'color_scheme_default', 'system' ],
-			'color_scheme_toggle'  => [ 'color_scheme_toggle', true ],
-			'palette'              => [ 'palette', 'warm-clay' ],
-			'accent'               => [ 'accent', '' ],
-			'base_font_size'       => [ 'base_font_size', 16 ],
-			'font'                 => [ 'font', 'identity' ],
-			'container_width'      => [ 'container_width', 1440 ],
-			'radius'               => [ 'radius', 10 ],
-			'sidebar_position'     => [ 'sidebar_position', 'none' ],
-			'header_variant'       => [ 'header_variant', 'inline' ],
-			'footer_variant'       => [ 'footer_variant', 'simple' ],
-			'cta_reveal'           => [ 'cta_reveal', 'hover' ],
+			'color_scheme_default'  => [ 'color_scheme_default', 'system' ],
+			'color_scheme_toggle'   => [ 'color_scheme_toggle', true ],
+			'palette'               => [ 'palette', 'warm-clay' ],
+			'accent'                => [ 'accent', '' ],
+			'base_font_size'        => [ 'base_font_size', 16 ],
+			'font'                  => [ 'font', 'identity' ],
+			'container_width'       => [ 'container_width', 1440 ],
+			'radius'                => [ 'radius', 10 ],
+			'sidebar_position'      => [ 'sidebar_position', 'none' ],
+			'header_variant'        => [ 'header_variant', 'inline' ],
+			'footer_variant'        => [ 'footer_variant', 'simple' ],
+			'cta_reveal'            => [ 'cta_reveal', 'hover' ],
+			'front_hero_eyebrow'    => [ 'front_hero_eyebrow', '' ],
+			'front_hero_lede'       => [ 'front_hero_lede', '' ],
+			'front_hero_trust'      => [ 'front_hero_trust', '' ],
+			'front_hero_art'        => [ 'front_hero_art', 'auto' ],
+			'front_value_items'     => [ 'front_value_items', '' ],
+			'front_promo_title'     => [ 'front_promo_title', '' ],
+			'front_promo_text'      => [ 'front_promo_text', '' ],
+			'front_promo_cta_label' => [ 'front_promo_cta_label', '' ],
+			'front_promo_cta_url'   => [ 'front_promo_cta_url', '' ],
+			'front_promo_image'     => [ 'front_promo_image', 0 ],
 		];
 	}
 
@@ -41,6 +51,16 @@ final class CustomizerTest extends TestCase {
 	private function capture(): array {
 		Functions\when( '__' )->returnArg();
 		Functions\when( 'get_template_directory' )->justReturn( \dirname( __DIR__, 4 ) . '/woodev-base-theme' );
+
+		// Front page (F2) sanitize callbacks call these real WP functions
+		// directly; test_the_sanitize_callbacks_reject_junk() below exercises
+		// every registered callback, including on its own fallback value, so
+		// each one needs a stub here even though this test never asserts on
+		// their behaviour directly (SettingsTest is where that is pinned).
+		Functions\when( 'sanitize_text_field' )->alias( static fn ( $value ): string => \trim( (string) $value ) );
+		Functions\when( 'sanitize_textarea_field' )->alias( static fn ( $value ): string => \trim( (string) $value ) );
+		Functions\when( 'esc_url_raw' )->returnArg();
+		Functions\when( 'absint' )->alias( static fn ( $value ): int => \abs( (int) $value ) );
 
 		$recorded = [
 			'sections'     => [],
@@ -80,7 +100,7 @@ final class CustomizerTest extends TestCase {
 		return $recorded;
 	}
 
-	public function test_it_registers_the_six_v1_sections(): void {
+	public function test_it_registers_the_seven_sections(): void {
 		self::assertSame(
 			[
 				'woodev_base_colors',
@@ -89,6 +109,7 @@ final class CustomizerTest extends TestCase {
 				'woodev_base_header',
 				'woodev_base_footer',
 				'woodev_base_shop',
+				'woodev_base_front',
 			],
 			$this->capture()['sections']
 		);
@@ -122,6 +143,41 @@ final class CustomizerTest extends TestCase {
 			$recorded['controls'],
 			'A setting with no control is invisible to the admin'
 		);
+	}
+
+	/**
+	 * The control TYPE each front-page setting renders as.
+	 *
+	 * Pinned because the sanitizer cannot tell the difference and so cannot
+	 * catch a regression here: sanitize_text_field() collapses newlines, so a
+	 * one-line value stored through a `<textarea>` round-trips identically to
+	 * one stored through an `<input>`. The damage is to the admin — a
+	 * multi-line box for a button label or a URL invites a paragraph, and the
+	 * Enter key inserts a newline the sanitizer then silently eats. The first
+	 * pass registered all six single-line settings as textareas for exactly
+	 * that invisible-in-tests reason.
+	 *
+	 * @var array<string, string>
+	 */
+	private const FRONT_CONTROL_TYPES = [
+		'front_hero_eyebrow'    => 'text',
+		'front_hero_lede'       => 'textarea',
+		'front_hero_trust'      => 'textarea',
+		'front_hero_art'        => 'select',
+		'front_value_items'     => 'textarea',
+		'front_promo_title'     => 'text',
+		'front_promo_text'      => 'textarea',
+		'front_promo_cta_label' => 'text',
+		'front_promo_cta_url'   => 'url',
+	];
+
+	public function test_the_front_page_controls_use_the_right_input_types(): void {
+		$args = $this->capture()['control_args'];
+
+		foreach ( self::FRONT_CONTROL_TYPES as $id => $type ) {
+			self::assertArrayHasKey( $id, $args, "{$id} has no control" );
+			self::assertSame( $type, $args[ $id ]['type'] ?? '', "{$id} renders as the wrong control type" );
+		}
 	}
 
 	/**

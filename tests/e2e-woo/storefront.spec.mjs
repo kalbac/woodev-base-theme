@@ -15,6 +15,8 @@
 // Cards are located by product NAME and single products are reached by CLICKING
 // through from /shop/, so the specs do not depend on the permalink structure
 // (pretty vs plain) of the wp-env install.
+import { execSync } from 'node:child_process';
+
 import { expect, test } from '@playwright/test';
 
 import { SHORTCODE_PAGE_SLUG } from './global-setup.mjs';
@@ -526,4 +528,97 @@ test("Woo's AJAX blocking overlay and loader stop spinning under prefers-reduced
   const stopped = await read();
   expect(stopped.overlay).toBe('none');
   expect(stopped.loader).toBe('none');
+});
+
+/*
+ * The front page's category tiles (#37).
+ *
+ * They live here rather than in the base e2e because they only render with
+ * WooCommerce present: `product_cat` is the source, and :8888 has no store at
+ * all. The base suite pins the OTHER half of the same contract — that a site
+ * without WooCommerce renders no tiles.
+ *
+ * Expected values come from wp-cli rather than from the fixture file: the
+ * tiles are driven by whatever non-empty top-level product categories the
+ * store actually has, and a hardcoded "one tile" would pass for the wrong
+ * reason the moment the seeder grows a second category.
+ */
+test.describe('front-page category tiles', () => {
+  /** Non-empty top-level product categories, straight from the store. */
+  function expectedCategories() {
+    const raw = execSync(
+      `npx wp-env run cli --config=.wp-env.woo.json wp term list product_cat --parent=0 --hide_empty=1 --number=6 --orderby=count --order=DESC --fields=name,count,term_id --format=json`,
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+    );
+
+    // wp-env prefixes its own status lines; the JSON is the one line that
+    // starts with '['. Parsing the whole stdout would throw on the banner.
+    const line = raw.split('\n').find((l) => l.trim().startsWith('['));
+
+    if (undefined === line) {
+      throw new Error(`[e2e-woo] no JSON in wp-cli output: ${JSON.stringify(raw)}`);
+    }
+
+    return JSON.parse(line);
+  }
+
+  test('one tile per non-empty top-level category, each linking to its archive', async ({
+    page,
+  }) => {
+    const categories = expectedCategories();
+    expect(categories.length, 'the seeded store must have at least one category').toBeGreaterThan(
+      0,
+    );
+
+    await page.goto('/');
+
+    const tiles = page.locator('.wtb-cat-tile');
+    await expect(tiles).toHaveCount(categories.length);
+
+    for (const category of categories) {
+      const tile = page.locator('.wtb-cat-tile', { hasText: category.name }).first();
+
+      await expect(tile).toHaveAttribute('href', /\/product-category\/|[?]product_cat=/);
+
+      // toContainText, not toHaveText: the count sits inside a translated
+      // sentence ("Products: 3") whose wording is not this test's business,
+      // and the rendered node carries the template's own indentation.
+      await expect(tile.locator('.count')).toContainText(String(category.count));
+    }
+  });
+
+  /*
+   * `.label` was the mockup's class name for the tile's text block, and
+   * Basecoat ships `.label` as its FORM LABEL component — so the tile's label
+   * inherited `align-items: center` and `user-select: none` from a component
+   * it has nothing to do with. The category name centred itself in the tile
+   * and drifted over the art. Renamed to `wtb-tile-label`; asserted here on
+   * COMPUTED style, because the defect was invisible in the markup and a
+   * class rename is exactly the kind of repair that can be undone by a later
+   * "port fidelity" edit.
+   */
+  test('the tile label is not styled by Basecoat form-label rules', async ({ page }) => {
+    await page.goto('/');
+
+    const label = page.locator('.wtb-cat-tile .wtb-tile-label').first();
+    await expect(label).toHaveCount(1);
+
+    const computed = await label.evaluate((element) => {
+      const style = getComputedStyle(element);
+      const heading = element.querySelector('h3').getBoundingClientRect();
+
+      return {
+        alignItems: style.alignItems,
+        userSelect: style.userSelect,
+        headingLeft: Math.round(heading.left),
+        labelLeft: Math.round(element.getBoundingClientRect().left),
+      };
+    });
+
+    expect(computed.alignItems, 'a centred label drifts onto the tile art').not.toBe('center');
+    expect(computed.userSelect, 'a category name must be selectable').not.toBe('none');
+    expect(computed.headingLeft, 'the category name sits against the label edge').toBe(
+      computed.labelLeft,
+    );
+  });
 });

@@ -56,6 +56,27 @@ for (const [schemeName, isDark] of Object.entries(SCHEMES)) {
       expect(errors).toEqual([]);
     });
 
+    // #37: the posts front page is one of front-page.php's four render modes
+    // and, before this, had no e2e coverage of its own — `/` is served by
+    // front-page.php (it wins over index.php for the front page regardless
+    // of show_on_front), so the assertion above already exercises it
+    // incidentally, but nothing pinned the two things #37 calls out
+    // specifically: exactly one <h1> (not the index.php sr-only heading PLUS
+    // a second one) and, on a site with no WooCommerce (:8888 has none — see
+    // .wp-env.json), zero category tiles rather than a silently empty grid.
+    test('posts front page renders one h1, the loop, and no category tiles', async ({ page }) => {
+      const errors = trackConsoleErrors(page);
+
+      const response = await page.goto('/');
+      expect(response.status()).toBe(200);
+
+      await expect(page.locator('h1')).toHaveCount(1);
+      await expect(page.locator('.wtb-post-grid')).toBeVisible();
+      await expect(page.locator('.wtb-cat-tile')).toHaveCount(0);
+
+      expect(errors).toEqual([]);
+    });
+
     test('single post renders its own template', async ({ page }) => {
       const errors = trackConsoleErrors(page);
 

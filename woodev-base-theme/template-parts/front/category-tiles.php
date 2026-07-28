@@ -21,6 +21,8 @@ declare(strict_types=1);
 // prints a path. Fail closed instead.
 defined( 'ABSPATH' ) || exit;
 
+use Woodev\Theme\Base\Templates\Plate;
+
 if ( ! taxonomy_exists( 'product_cat' ) ) {
 	return;
 }
@@ -76,6 +78,25 @@ if ( is_wp_error( $wtb_categories ) || empty( $wtb_categories ) ) {
 						echo wp_get_attachment_image( $wtb_thumbnail_id, 'medium', false, [ 'alt' => '' ] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_get_attachment_image() output.
 						?>
 					</span>
+				<?php else : ?>
+					<?php
+					/*
+					 * A category with no image is the common case — WooCommerce
+					 * does not ask for one — so the tile that renders without it
+					 * IS the default look, not a degraded one. The plate is the
+					 * mockup's own tile art, picked by term id so a given
+					 * category keeps the same illustration across renders, and
+					 * placed as an object in the lower right rather than as a
+					 * full-bleed background (blocks.css, `.bg--plate`), which is
+					 * what keeps the label readable over it.
+					 */
+					?>
+					<span class="bg bg--plate">
+						<?php
+						// Our own generated SVG, already escaped.
+						echo Plate::render( Plate::tile_variant( $wtb_category->term_id ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Plate's own generated SVG.
+						?>
+					</span>
 				<?php endif; ?>
 
 				<span class="arrow"><?php woodev_base_icon( 'chevron-right', [ 'size' => 16 ] ); ?></span>
@@ -84,11 +105,16 @@ if ( is_wp_error( $wtb_categories ) || empty( $wtb_categories ) ) {
 				/*
 				 * A div, not the mockup's span: a span accepts phrasing content only,
 				 * and an h3 is flow content, so the mockup's markup is invalid HTML
-				 * and gives the accessibility tree something to guess at. The CSS is
-				 * unaffected — blocks.css selects `.label`, not the element.
+				 * and gives the accessibility tree something to guess at.
+				 *
+				 * `wtb-tile-label`, not the mockup's bare `.label`, because Basecoat
+				 * ships `.label` as its FORM LABEL component and the tile was
+				 * inheriting `align-items: center` and `user-select: none` from it.
+				 * blocks.css selects the renamed class; e2e:woo asserts the computed
+				 * alignment, since neither the markup nor phpcs can see this.
 				 */
 				?>
-				<div class="label">
+				<div class="wtb-tile-label">
 					<h3><?php echo esc_html( $wtb_category->name ); ?></h3>
 					<?php
 					/*

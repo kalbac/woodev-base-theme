@@ -1,14 +1,16 @@
 // tests/e2e/theme-mods.spec.mjs
 //
-// THE ONE FILE THAT MUTATES SITE-GLOBAL theme_mods.
+// THE ONE FILE THAT MUTATES SITE-GLOBAL STATE — theme_mods AND, since #37,
+// the options that decide the static front page (show_on_front/page_on_front).
 //
-// Playwright parallelises by FILE, so keeping every theme_mod mutation in a
+// Playwright parallelises by FILE, so keeping every site-global mutation in a
 // single serial file is what guarantees no other spec observes a half-applied
-// setting. Do not add a theme_mod mutation to any other spec — put it here.
-// Each test restores what it touched before the next one runs.
+// setting. Do not add a theme_mod or option mutation to any other spec — put
+// it here. Each test restores what it touched before the next one runs.
 import { expect, test } from '@playwright/test';
 import { formatColor, resolveColor, varsFor } from '../../scripts/lib/build-tokens-lib.mjs';
 import { tokens } from '../../src/tokens/tokens.mjs';
+import { readOption, restoreOption } from './lib/option.mjs';
 import { isInteger, isToggleValue, readThemeMod, restoreThemeMod, wp } from './lib/theme-mod.mjs';
 
 const SCHEMES = ['system', 'light', 'dark'];
@@ -358,6 +360,108 @@ test.describe.serial('site-global theme_mods', () => {
 
       await expect(page.locator('html')).toHaveClass(/light/);
       expect(pageErrors).toEqual([]);
+    });
+  });
+
+  // #37: the static front page is the one front-page.php render mode that
+  // mutates site-global STATE rather than a theme_mod — show_on_front and
+  // page_on_front are OPTIONS, so this lives here per this file's own header
+  // rule, not alongside the posts-front-page test in templates.spec.mjs.
+  test.describe('static front page (#37)', () => {
+    const FRONT_PAGE_OPTIONS = {
+      show_on_front: (value) => 'posts' === value || 'page' === value,
+      page_on_front: isInteger,
+    };
+
+    /**
+     * Prior state per option: `{ exists, value }`, or null when never read.
+     * "Absent" is a state an option can legitimately be in and `wp option
+     * update` cannot express it — see lib/option.mjs.
+     *
+     * @type {Record<string, {exists: boolean, value: string}|null>}
+     */
+    const previousOptions = Object.fromEntries(
+      Object.keys(FRONT_PAGE_OPTIONS).map((name) => [name, null]),
+    );
+
+    /**
+     * ID of the per-test fixture page, so afterEach can clean it up (and its
+     * featured-image attachment) even when the test itself failed partway
+     * through — the same "always restore" discipline TOUCHED/previous apply
+     * to options, extended to the throwaway post/attachment fixtures, which
+     * are not site-global state but would otherwise leak into a later run.
+     */
+    let fixturePageId = null;
+
+    test.beforeAll(() => {
+      for (const [name, isValid] of Object.entries(FRONT_PAGE_OPTIONS)) {
+        previousOptions[name] = readOption(name, isValid);
+      }
+    });
+
+    test.afterEach(() => {
+      for (const name of Object.keys(FRONT_PAGE_OPTIONS)) {
+        restoreOption(name, previousOptions[name]);
+      }
+
+      if (null !== fixturePageId) {
+        const attachmentIds = wp(
+          `post list --post_parent=${fixturePageId} --post_type=attachment --field=ID --format=ids`,
+        )
+          .split(/\s+/)
+          .filter(Boolean);
+
+        for (const id of attachmentIds) {
+          wp(`post delete ${id} --force`);
+        }
+        wp(`post delete ${fixturePageId} --force`);
+        fixturePageId = null;
+      }
+    });
+
+    // A minimal valid 1x1 transparent PNG, base64 — a fixture CONSTANT, not
+    // a database value, so embedding it directly does not run into the
+    // "never interpolate an unvalidated DB value" rule this file's header
+    // states for theme_mods/options.
+    const FIXTURE_PNG_BASE64 =
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+
+    test('a static front page with a featured image renders one h1 and no duplicate entry markup', async ({
+      page,
+    }) => {
+      // This fixture makes ~7 sequential `wp-env run cli` calls before the
+      // first navigation — each one is a real `docker exec`, measured at
+      // 4-8s apiece on this machine (see `wp option get` above) — so the
+      // default 30s test timeout was measured to fail on setup alone, never
+      // reaching the assertions. Not a retry-until-it-passes workaround: the
+      // page snapshot at the 30s mark already showed the correct render.
+      test.setTimeout(120_000);
+
+      fixturePageId = wp(
+        'post create --post_type=page --post_title="E2E Static Front" --post_name=e2e-static-front --post_status=publish --porcelain',
+      );
+
+      // wp media import needs a real file inside the CONTAINER's filesystem
+      // — sideloading over HTTP or reaching for a host path would both add
+      // a network/mount dependency this fixture does not need.
+      wp(
+        `eval "file_put_contents( '/tmp/wtb-e2e-front.png', base64_decode( '${FIXTURE_PNG_BASE64}' ) );"`,
+      );
+      wp(
+        `media import /tmp/wtb-e2e-front.png --post_id=${fixturePageId} --featured_image --title="E2E Featured Image" --porcelain`,
+      );
+
+      wp('option update show_on_front page');
+      wp(`option update page_on_front ${fixturePageId}`);
+
+      await page.goto('/');
+
+      // #37's exact ask: one <h1>, and neither of content.php's own
+      // (hide_entry_head-suppressed) entry-head elements — the featured
+      // image and the page title already render once, inside the hero.
+      await expect(page.locator('h1')).toHaveCount(1);
+      await expect(page.locator('.wtb-entry-thumbnail')).toHaveCount(0);
+      await expect(page.locator('.wtb-entry-title')).toHaveCount(0);
     });
   });
 });

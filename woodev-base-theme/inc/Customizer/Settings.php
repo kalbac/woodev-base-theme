@@ -265,6 +265,374 @@ final class Settings {
 		return self::sanitize_cta_reveal( get_theme_mod( 'cta_reveal', self::CTA_REVEAL_DEFAULT ) );
 	}
 
+	// --- front page (F2, docs/plans/2026-07-28-front-page-completion.md) ---
+
+	public const FRONT_HERO_EYEBROW_DEFAULT = '';
+
+	public const FRONT_HERO_LEDE_DEFAULT = '';
+
+	/**
+	 * Hero trust badges: one `Text | icon` line each, icon optional. Capped
+	 * at the CSS grid's three-badge layout.
+	 */
+	public const FRONT_HERO_TRUST_DEFAULT   = '';
+	public const FRONT_HERO_TRUST_MAX_ITEMS = 3;
+
+	public const FRONT_HERO_ART_AUTO    = 'auto';
+	public const FRONT_HERO_ART_OFF     = 'off';
+	public const FRONT_HERO_ART_DEFAULT = self::FRONT_HERO_ART_AUTO;
+
+	public const FRONT_HERO_ARTS = [ self::FRONT_HERO_ART_AUTO, self::FRONT_HERO_ART_OFF ];
+
+	/**
+	 * Value band items: one `Title | Text | icon` line each. Capped at the
+	 * CSS grid's four-item layout.
+	 */
+	public const FRONT_VALUE_ITEMS_DEFAULT   = '';
+	public const FRONT_VALUE_ITEMS_MAX_ITEMS = 4;
+
+	public const FRONT_PROMO_TITLE_DEFAULT     = '';
+	public const FRONT_PROMO_TEXT_DEFAULT      = '';
+	public const FRONT_PROMO_CTA_LABEL_DEFAULT = '';
+	public const FRONT_PROMO_CTA_URL_DEFAULT   = '';
+	public const FRONT_PROMO_IMAGE_DEFAULT     = 0;
+
+	public const FRONT_ICON_DEFAULT = 'check';
+
+	/**
+	 * The closed set of icon slugs the F0 sprite ships for the front page
+	 * surfaces. A line naming an icon outside this set falls back to
+	 * FRONT_ICON_DEFAULT — never a fatal, never a reference to an SVG the
+	 * theme did not ship.
+	 *
+	 * @var array<int, string>
+	 */
+	public const FRONT_ICONS = [
+		'check',
+		'truck',
+		'shield-check',
+		'refresh-cw',
+		'leaf',
+		'package',
+		'credit-card',
+		'headphones',
+	];
+
+	/**
+	 * Customizer sanitize callback for `front_hero_eyebrow`.
+	 *
+	 * @param mixed $value Raw value.
+	 */
+	public static function sanitize_front_hero_eyebrow( mixed $value ): string {
+		return \is_string( $value ) ? \sanitize_text_field( $value ) : self::FRONT_HERO_EYEBROW_DEFAULT;
+	}
+
+	/**
+	 * One line shown above the hero headline; empty hides it.
+	 */
+	public static function front_hero_eyebrow(): string {
+		return self::sanitize_front_hero_eyebrow( get_theme_mod( 'front_hero_eyebrow', self::FRONT_HERO_EYEBROW_DEFAULT ) );
+	}
+
+	/**
+	 * Customizer sanitize callback for `front_hero_lede`.
+	 *
+	 * @param mixed $value Raw value.
+	 */
+	public static function sanitize_front_hero_lede( mixed $value ): string {
+		return \is_string( $value ) ? \sanitize_text_field( $value ) : self::FRONT_HERO_LEDE_DEFAULT;
+	}
+
+	/**
+	 * Hero subtitle; empty falls back to the site tagline.
+	 */
+	public static function front_hero_lede(): string {
+		return self::sanitize_front_hero_lede( get_theme_mod( 'front_hero_lede', self::FRONT_HERO_LEDE_DEFAULT ) );
+	}
+
+	/**
+	 * Customizer sanitize callback for `front_hero_trust`.
+	 *
+	 * Input is the raw textarea: one `Text | icon` line per badge.
+	 * Non-string input falls back to the default; blank lines and lines with
+	 * an empty label are dropped; the icon is optional and validated against
+	 * FRONT_ICONS. The result is capped to FRONT_HERO_TRUST_MAX_ITEMS lines
+	 * and re-encoded to the same canonical `Text | icon` shape, so
+	 * sanitising an already-sanitized value is a no-op.
+	 *
+	 * @param mixed $value Raw value.
+	 */
+	public static function sanitize_front_hero_trust( mixed $value ): string {
+		if ( ! \is_string( $value ) ) {
+			return self::FRONT_HERO_TRUST_DEFAULT;
+		}
+
+		return self::encode_lines(
+			\array_map(
+				static fn( array $item ): string => "{$item['label']} | {$item['icon']}",
+				self::parse_trust_items( $value )
+			)
+		);
+	}
+
+	/**
+	 * Hero trust badges, parsed and validated.
+	 *
+	 * @return array<int, array{label: string, icon: string}>
+	 */
+	public static function front_hero_trust(): array {
+		$raw = get_theme_mod( 'front_hero_trust', self::FRONT_HERO_TRUST_DEFAULT );
+
+		return self::parse_trust_items( self::sanitize_front_hero_trust( $raw ) );
+	}
+
+	/**
+	 * Customizer sanitize callback for `front_hero_art`.
+	 *
+	 * @param mixed $value Raw value.
+	 */
+	public static function sanitize_front_hero_art( mixed $value ): string {
+		return self::closed_set( $value, self::FRONT_HERO_ARTS, self::FRONT_HERO_ART_DEFAULT );
+	}
+
+	/**
+	 * The hero art column mode: FRONT_HERO_ART_AUTO (the front page's
+	 * featured image, or a themed plate when there isn't one) or
+	 * FRONT_HERO_ART_OFF (no art column; the hero renders single-column).
+	 */
+	public static function front_hero_art(): string {
+		return self::sanitize_front_hero_art( get_theme_mod( 'front_hero_art', self::FRONT_HERO_ART_DEFAULT ) );
+	}
+
+	/**
+	 * Customizer sanitize callback for `front_value_items`.
+	 *
+	 * Same shape as sanitize_front_hero_trust(), one field wider: a
+	 * `Title | Text | icon` line per item, capped to
+	 * FRONT_VALUE_ITEMS_MAX_ITEMS, an empty title drops the whole line, an
+	 * empty or unrecognised icon falls back to FRONT_ICON_DEFAULT.
+	 *
+	 * @param mixed $value Raw value.
+	 */
+	public static function sanitize_front_value_items( mixed $value ): string {
+		if ( ! \is_string( $value ) ) {
+			return self::FRONT_VALUE_ITEMS_DEFAULT;
+		}
+
+		return self::encode_lines(
+			\array_map(
+				static fn( array $item ): string => "{$item['title']} | {$item['text']} | {$item['icon']}",
+				self::parse_value_items( $value )
+			)
+		);
+	}
+
+	/**
+	 * Value band items, parsed and validated.
+	 *
+	 * @return array<int, array{title: string, text: string, icon: string}>
+	 */
+	public static function front_value_items(): array {
+		$raw = get_theme_mod( 'front_value_items', self::FRONT_VALUE_ITEMS_DEFAULT );
+
+		return self::parse_value_items( self::sanitize_front_value_items( $raw ) );
+	}
+
+	/**
+	 * Customizer sanitize callback for `front_promo_title`.
+	 *
+	 * @param mixed $value Raw value.
+	 */
+	public static function sanitize_front_promo_title( mixed $value ): string {
+		return \is_string( $value ) ? \sanitize_text_field( $value ) : self::FRONT_PROMO_TITLE_DEFAULT;
+	}
+
+	/**
+	 * Promo section heading; empty suppresses the whole section.
+	 */
+	public static function front_promo_title(): string {
+		return self::sanitize_front_promo_title( get_theme_mod( 'front_promo_title', self::FRONT_PROMO_TITLE_DEFAULT ) );
+	}
+
+	/**
+	 * Customizer sanitize callback for `front_promo_text`.
+	 *
+	 * Uses sanitize_textarea_field(), not sanitize_text_field(): the promo
+	 * body is a short paragraph, not a one-line field, so its line breaks
+	 * must survive. Still plain text — no wp_kses_post(), no markup allowed.
+	 *
+	 * @param mixed $value Raw value.
+	 */
+	public static function sanitize_front_promo_text( mixed $value ): string {
+		return \is_string( $value ) ? \sanitize_textarea_field( $value ) : self::FRONT_PROMO_TEXT_DEFAULT;
+	}
+
+	/**
+	 * Promo section body copy, plain text.
+	 */
+	public static function front_promo_text(): string {
+		return self::sanitize_front_promo_text( get_theme_mod( 'front_promo_text', self::FRONT_PROMO_TEXT_DEFAULT ) );
+	}
+
+	/**
+	 * Customizer sanitize callback for `front_promo_cta_label`.
+	 *
+	 * @param mixed $value Raw value.
+	 */
+	public static function sanitize_front_promo_cta_label( mixed $value ): string {
+		return \is_string( $value ) ? \sanitize_text_field( $value ) : self::FRONT_PROMO_CTA_LABEL_DEFAULT;
+	}
+
+	/**
+	 * Promo call-to-action button label; the button only renders with both a
+	 * label and a URL.
+	 */
+	public static function front_promo_cta_label(): string {
+		return self::sanitize_front_promo_cta_label( get_theme_mod( 'front_promo_cta_label', self::FRONT_PROMO_CTA_LABEL_DEFAULT ) );
+	}
+
+	/**
+	 * Customizer sanitize callback for `front_promo_cta_url`.
+	 *
+	 * The esc_url_raw() call already refuses a `javascript:` (or any other
+	 * disallowed) scheme and returns ''; pinned by a dedicated test because
+	 * this is the one setting here that lands directly in an href.
+	 *
+	 * @param mixed $value Raw value.
+	 */
+	public static function sanitize_front_promo_cta_url( mixed $value ): string {
+		return \is_string( $value ) ? \esc_url_raw( $value ) : self::FRONT_PROMO_CTA_URL_DEFAULT;
+	}
+
+	/**
+	 * Promo call-to-action URL.
+	 */
+	public static function front_promo_cta_url(): string {
+		return self::sanitize_front_promo_cta_url( get_theme_mod( 'front_promo_cta_url', self::FRONT_PROMO_CTA_URL_DEFAULT ) );
+	}
+
+	/**
+	 * Customizer sanitize callback for `front_promo_image`.
+	 *
+	 * Non-numeric input (array, object, bool, a non-numeric string) falls
+	 * back rather than casting, for the same reason clamp() does: an
+	 * uncontrolled (int) cast on an array or object is not the fail-closed
+	 * behaviour this class promises everywhere else.
+	 *
+	 * @param mixed $value Raw value.
+	 */
+	public static function sanitize_front_promo_image( mixed $value ): int {
+		return \is_numeric( $value ) ? \absint( $value ) : self::FRONT_PROMO_IMAGE_DEFAULT;
+	}
+
+	/**
+	 * Promo image attachment ID; 0 means none was chosen. The caller is
+	 * responsible for verifying the ID still resolves to a real attachment at
+	 * render time (a stored id can be valid Customizer state and a deleted
+	 * attachment at once).
+	 */
+	public static function front_promo_image(): int {
+		return self::sanitize_front_promo_image( get_theme_mod( 'front_promo_image', self::FRONT_PROMO_IMAGE_DEFAULT ) );
+	}
+
+	/**
+	 * Shared shape for validating an icon slug against the closed F0 set.
+	 *
+	 * @param string $value Raw icon slug, already trimmed.
+	 */
+	private static function sanitize_icon( string $value ): string {
+		return \in_array( $value, self::FRONT_ICONS, true ) ? $value : self::FRONT_ICON_DEFAULT;
+	}
+
+	/**
+	 * Split raw textarea input into trimmed, non-empty lines, capped to
+	 * $cap. The cap applies here, to the raw line count, BEFORE any
+	 * per-field validation drops individual items — matching the documented
+	 * parsing order (split, trim, drop empty lines, cap, then validate
+	 * fields).
+	 *
+	 * @param string $raw Raw textarea value.
+	 * @param int    $cap Maximum number of lines to keep.
+	 *
+	 * @return array<int, string>
+	 */
+	private static function split_lines( string $raw, int $cap ): array {
+		$lines = \preg_split( '/\r\n|\r|\n/', $raw );
+
+		if ( false === $lines ) {
+			return [];
+		}
+
+		$lines = \array_map( 'trim', $lines );
+		$lines = \array_values( \array_filter( $lines, static fn( string $line ): bool => '' !== $line ) );
+
+		return \array_slice( $lines, 0, $cap );
+	}
+
+	/**
+	 * Re-join canonical lines with newlines; an empty list yields ''.
+	 *
+	 * @param array<int, string> $lines Canonical lines.
+	 */
+	private static function encode_lines( array $lines ): string {
+		return \implode( "\n", $lines );
+	}
+
+	/**
+	 * Parse and validate `front_hero_trust` lines.
+	 *
+	 * @param string $raw Raw (already sanitized) `Text | icon` lines, newline-separated.
+	 *
+	 * @return array<int, array{label: string, icon: string}>
+	 */
+	private static function parse_trust_items( string $raw ): array {
+		$items = [];
+
+		foreach ( self::split_lines( $raw, self::FRONT_HERO_TRUST_MAX_ITEMS ) as $line ) {
+			$fields = \array_pad( \array_map( 'trim', \explode( '|', $line, 2 ) ), 2, '' );
+			$label  = \sanitize_text_field( $fields[0] );
+
+			if ( '' === $label ) {
+				continue;
+			}
+
+			$items[] = [
+				'label' => $label,
+				'icon'  => self::sanitize_icon( $fields[1] ),
+			];
+		}
+
+		return $items;
+	}
+
+	/**
+	 * Parse and validate `front_value_items` lines.
+	 *
+	 * @param string $raw Raw (already sanitized) `Title | Text | icon` lines, newline-separated.
+	 *
+	 * @return array<int, array{title: string, text: string, icon: string}>
+	 */
+	private static function parse_value_items( string $raw ): array {
+		$items = [];
+
+		foreach ( self::split_lines( $raw, self::FRONT_VALUE_ITEMS_MAX_ITEMS ) as $line ) {
+			$fields = \array_pad( \array_map( 'trim', \explode( '|', $line, 3 ) ), 3, '' );
+			$title  = \sanitize_text_field( $fields[0] );
+
+			if ( '' === $title ) {
+				continue;
+			}
+
+			$items[] = [
+				'title' => $title,
+				'text'  => \sanitize_text_field( $fields[1] ),
+				'icon'  => self::sanitize_icon( $fields[2] ),
+			];
+		}
+
+		return $items;
+	}
+
 	/**
 	 * Shared shape for a setting whose valid values are a closed set of
 	 * strings: a non-string, or a string outside the set, both fall back.

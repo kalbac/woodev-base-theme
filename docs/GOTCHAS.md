@@ -1,6 +1,6 @@
 # Gotchas Index — Woodev Base
 
-> 39 entries. Each gotcha is a separate file in `docs/gotchas/`.
+> 40 entries. Each gotcha is a separate file in `docs/gotchas/`.
 
 | Gotcha | Area | Summary |
 |---|---|---|
@@ -43,3 +43,4 @@
 | [wp-env-mounts-the-theme-live](gotchas/wp-env-mounts-the-theme-live.md) | Tooling/wp-env | The theme dir is bind-mounted, so a worker's half-written PHP file is a fatal on the running store and kills an e2e run mid-seed. Separate theme edits from suite runs in TIME, not by file. The stack trace points at the seeding code, not the cause |
 | [wp-unittestcase-does-not-reset-wp-styles](gotchas/wp-unittestcase-does-not-reset-wp-styles.md) | Testing/WP core | The DB is rolled back; `$wp_styles` is not. An "asset is absent" test passes alone and fails in-suite because earlier tests registered the handle. `unset( $GLOBALS['wp_styles'] )` in `set_up()`, then mutation-verify so the reset has not made it vacuous |
 | [a-killed-e2e-run-leaves-theme-mods-dirty](gotchas/a-killed-e2e-run-leaves-theme-mods-dirty.md) | Testing/e2e | `theme-mods.spec.mjs` restores every mod it sets — unless the run is KILLED, and then the residue fails a **different spec file** in a way that reads as a product defect. Twice in s15: a leftover `sidebar_position` failed the post-grid breakpoints, a leftover `base_font_size` failed "an untouched site emits no inline style". Read `wp option get theme_mods_*` before diagnosing; clear with `wp theme mod remove`, never by guessing the default back. Both times the spec's own precondition assertion is what turned a confusing red into a one-line diagnosis |
+| [wp-env-cli-fails-under-load-and-poisons-state](gotchas/wp-env-cli-fails-under-load-and-poisons-state.md) | Tooling/wp-env | `wp-env run cli` fails intermittently while a suite runs — three times in one session on healthy containers, twice inside a TEARDOWN. A failed restore reports the wrong test as failed AND leaves the site on a static front page pointing at a fixture the same teardown deletes, so every later run starts on a page that does not exist. `wp()` retries once; read `error-context.md` for `Command failed: npx wp-env run cli` before believing a red test found something |

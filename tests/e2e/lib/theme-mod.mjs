@@ -10,12 +10,39 @@
 //     set (or an integer pattern) before it can reach execSync.
 import { execSync } from 'node:child_process';
 
-/** Run a wp-cli command in the cli container, return trimmed stdout. */
+/**
+ * Run a wp-cli command in the cli container, return trimmed stdout.
+ *
+ * Retried ONCE, and only once, because `npx wp-env run cli` fails
+ * transiently on this project's Windows/Docker setup — three times in one
+ * s17 session, including twice inside a RESTORE. That last case is why the
+ * retry is here rather than left to the caller: a failed restore both fails
+ * the test and leaves the site switched to a static front page pointing at a
+ * fixture the same teardown then deletes, so the NEXT run starts against a
+ * front page that no longer exists. One flaky container call poisons the
+ * environment for every session after it.
+ *
+ * The retry does not weaken the "never swallow a read error" rule this file
+ * exists to enforce: a second failure rethrows the original error untouched,
+ * so a real problem still fails loud and the caller still refuses to
+ * round-trip a value it could not read.
+ */
 export function wp(command) {
-  return execSync(`npx wp-env run cli wp ${command}`, {
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
-  }).trim();
+  const run = () =>
+    execSync(`npx wp-env run cli wp ${command}`, {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    }).trim();
+
+  try {
+    return run();
+  } catch (first) {
+    try {
+      return run();
+    } catch {
+      throw first;
+    }
+  }
 }
 
 /**

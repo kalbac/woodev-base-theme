@@ -58,8 +58,17 @@
  * out: left inline, the heading and the count render on one line glued
  * together ("KitchenProducts: 4"), which is what the first wired render
  * showed. The port could not have caught this — nothing rendered the class
- * until front-page.php did. */
-.wtb-cat-tile .label {
+ * until front-page.php did.
+ *
+ * Renamed off the mockup's bare `.label`, which COLLIDES: Basecoat ships
+ * `.label` as its form-label component (`.field>label,…,.label`), so the tile's
+ * label was inheriting `align-items: center` — the category name centred itself
+ * in the tile instead of sitting against the left padding, and drifted onto the
+ * plate — plus `user-select: none`, which makes a category name unselectable.
+ * A mockup is a standalone document and can own a name like `.label`; a theme
+ * that ships Basecoat cannot. Measured in the browser: `align-items` computed
+ * `center` where nothing in this file says so. */
+.wtb-cat-tile .wtb-tile-label {
   position: relative;
   z-index: 1;
   display: flex;
@@ -125,7 +134,12 @@
   height: 20px;
 }
 
-.wtb-value h4 {
+/* `.wtb-value__title` is the element the template actually renders: the band
+ * has no heading of its own, so the mockup's <h4> would skip from the hero's
+ * <h1> to level four. The <h4> stays in the selector because the port is what
+ * the design approved and a child theme may still emit one. */
+.wtb-value h4,
+.wtb-value__title {
   margin-bottom: 2px;
   font-size: var(--text-base);
   font-weight: 600;
@@ -152,10 +166,93 @@
   background-color: var(--card);
 }
 
+/* The mockup carries these three as inline styles on the promo's own markup
+ * (a demo document can; a theme cannot). Sizes and spacing copied from it
+ * verbatim, minus the top margin — that one separated the heading from an
+ * eyebrow this section does not render. */
+.wtb-promo h2 {
+  margin-bottom: var(--space-md);
+  font-size: var(--text-2xl);
+  letter-spacing: -0.03em;
+}
+
+.wtb-promo__lede {
+  color: var(--muted-foreground);
+  font-size: var(--text-md);
+  line-height: var(--lh-body);
+}
+
+.wtb-promo__cta {
+  margin-top: var(--space-lg);
+}
+
 .wtb-promo__art {
   position: relative;
   min-height: 280px;
   background-color: var(--surface-2);
+}
+
+/* The admin's promo image fills the art column the same way the featured
+ * image fills the hero's plate (front.css), rather than sitting in it at its
+ * own aspect ratio: the column's height is set by the text beside it. */
+.wtb-promo__image {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ================================================================== *
+ * `.wtb-plate` — the Templates\Plate SVG art recipe (inc/Templates/Plate.php).
+ * Same five custom properties ProductPlaceholder's `.plate` declares in
+ * woo.css, sourced from the identity tokens rather than that recipe's own
+ * (that block stays owned by woo.css and unrelated to this one — see this
+ * file's own header on why this port has no content source to invent).
+ *
+ * The five values are the mockup's own `.plate` recipe, copied rather than
+ * re-derived (docs/design/v2-mockup/woodev-base-identity.html, the `.plate`
+ * rule): the objects carry the ACCENT, the .14 circle behind them is a
+ * neutral wash and the .92 detail is a light card face. A first pass mapped
+ * them by feel — objects muted, both accents `--primary` — which reads as a
+ * different picture: the highlight block turned into a solid slab of accent
+ * and the wash lost its neutrality. The artwork is approved (ADR-008); its
+ * colour recipe is part of what was approved.
+ * ================================================================== */
+.wtb-plate {
+  --c-bg: var(--surface-3);
+  --c-obj: var(--primary);
+  --c-obj2: var(--foreground);
+  --c-obj3: var(--card);
+  --c-ln: var(--foreground);
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* A tile with no category thumbnail gets a plate instead of a photo, and the
+ * two want opposite treatments: a photo fills the tile (`.bg` above), while
+ * the mockup's tile art sits as an object in the lower-right, backdrop
+ * dropped (`.plate--bare`) and faded, so the label stays readable over the
+ * tile's own surface. The offsets are the mockup's, which carries them as an
+ * inline style on the tile's `.bg` span. */
+.wtb-cat-tile .bg--plate {
+  inset: auto -8% -12% 34%;
+  opacity: 0.6;
+}
+
+.wtb-cat-tile .bg--plate .wtb-plate {
+  --c-bg: transparent;
+}
+
+/* Mirrors the mockup's `.hero__art .plate,.promo__art .plate` rule: the art
+ * column already has the aspect ratio, radius and clip (hero.css/blocks.css);
+ * the plate only needs to fill it. */
+.wtb-hero__art .wtb-plate,
+.wtb-promo__art .wtb-plate {
+  position: absolute;
+  inset: 0;
 }
 
 @media (max-width: 53.75rem) {
