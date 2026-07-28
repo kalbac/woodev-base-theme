@@ -58,8 +58,17 @@
  * out: left inline, the heading and the count render on one line glued
  * together ("KitchenProducts: 4"), which is what the first wired render
  * showed. The port could not have caught this — nothing rendered the class
- * until front-page.php did. */
-.wtb-cat-tile .label {
+ * until front-page.php did.
+ *
+ * Renamed off the mockup's bare `.label`, which COLLIDES: Basecoat ships
+ * `.label` as its form-label component (`.field>label,…,.label`), so the tile's
+ * label was inheriting `align-items: center` — the category name centred itself
+ * in the tile instead of sitting against the left padding, and drifted onto the
+ * plate — plus `user-select: none`, which makes a category name unselectable.
+ * A mockup is a standalone document and can own a name like `.label`; a theme
+ * that ships Basecoat cannot. Measured in the browser: `align-items` computed
+ * `center` where nothing in this file says so. */
+.wtb-cat-tile .wtb-tile-label {
   position: relative;
   z-index: 1;
   display: flex;

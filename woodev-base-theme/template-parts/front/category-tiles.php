@@ -109,7 +109,7 @@ if ( is_wp_error( $wtb_categories ) || empty( $wtb_categories ) ) {
 				 * unaffected — blocks.css selects `.label`, not the element.
 				 */
 				?>
-				<div class="label">
+				<div class="wtb-tile-label">
 					<h3><?php echo esc_html( $wtb_category->name ); ?></h3>
 					<?php
 					/*

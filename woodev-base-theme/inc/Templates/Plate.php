@@ -48,11 +48,12 @@ final class Plate {
 	 * Per-variant viewBox size and inlined shapes (background `<rect>`
 	 * excluded — `render()` prepends it once, identically, for every variant).
 	 *
-	 * @var array<string, array{width: int, height: int, shapes: string}>
+	 * @var array<string, array{width: int, height: int, cover?: bool, shapes: string}>
 	 */
 	private const VARIANTS = [
 		'hero'  => [
 			'width'  => 480,
+			'cover'  => true,
 			'height' => 400,
 			'shapes' => '<circle fill="var(--c-obj2)" opacity=".14" cx="246" cy="192" r="156"/>'
 				. '<rect fill="var(--c-obj3)" opacity=".92" x="252" y="168" width="112" height="180" rx="16"/>'
@@ -62,6 +63,7 @@ final class Plate {
 		],
 		'promo' => [
 			'width'  => 480,
+			'cover'  => true,
 			'height' => 400,
 			'shapes' => '<circle fill="var(--c-obj2)" opacity=".14" cx="150" cy="210" r="132"/>'
 				. '<path fill="var(--c-obj)" opacity=".86" d="M268 132h132v152a24 24 0 0 1-24 24H268z"/>'
@@ -118,14 +120,6 @@ final class Plate {
 		],
 	];
 
-	/**
-	 * Renders one self-contained `<svg class="wtb-plate wtb-plate--{variant}">`
-	 * with its shapes inlined. An unknown or empty variant fails closed to
-	 * `''` rather than a fatal — nothing that calls this belongs in a
-	 * position where a bad variant string can break the page.
-	 *
-	 * @param string $variant One of the keys in self::VARIANTS.
-	 */
 	public static function render( string $variant ): string {
 		if ( ! isset( self::VARIANTS[ $variant ] ) ) {
 			return '';
@@ -133,13 +127,33 @@ final class Plate {
 
 		$definition = self::VARIANTS[ $variant ];
 
+		/*
+		 * The two panel plates COVER their box; the tile plates do not.
+		 *
+		 * This attribute is not part of the `<symbol>` the shapes were ported
+		 * from — a symbol carries no preserveAspectRatio, the USE site does,
+		 * and the mockup's hero and promo both write
+		 * `preserveAspectRatio="xMidYMid slice"` there while its tile plates
+		 * (`plate plate--bare`) leave the default. Porting the symbols alone
+		 * silently dropped it, and the default (`meet`) letterboxes: the promo
+		 * column measured 623x280 against a 480x400 viewBox, so the artwork
+		 * drew 336px wide and centred, leaving the plate's own background rect
+		 * short of the column's edges — a lighter rectangle inside a darker
+		 * one, which is exactly the "reads as a broken image" the plate exists
+		 * to prevent. Measured in the browser, not reasoned about.
+		 */
+		$aspect = ( $definition['cover'] ?? false )
+			? ' preserveAspectRatio="xMidYMid slice"'
+			: '';
+
 		return \sprintf(
-			'<svg class="wtb-plate wtb-plate--%1$s" viewBox="0 0 %2$d %3$d" aria-hidden="true" focusable="false">'
+			'<svg class="wtb-plate wtb-plate--%1$s" viewBox="0 0 %2$d %3$d"%5$s aria-hidden="true" focusable="false">'
 				. '<rect fill="var(--c-bg)" width="%2$d" height="%3$d"/>%4$s</svg>',
 			$variant,
 			$definition['width'],
 			$definition['height'],
-			$definition['shapes']
+			$definition['shapes'],
+			$aspect
 		);
 	}
 

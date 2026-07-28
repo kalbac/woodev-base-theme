@@ -65,6 +65,36 @@ final class PlateTest extends TestCase {
 		self::assertStringNotContainsString( '<symbol', $svg, "Sprite definition leaked into '{$variant}'" );
 	}
 
+	/**
+	 * The two panel plates must COVER their box; the tile plates must not.
+	 *
+	 * This is the one attribute that does NOT come from the `<symbol>` the
+	 * shapes were ported from — a symbol carries no preserveAspectRatio, the
+	 * use site does — so porting the symbols alone dropped it silently, and
+	 * the default (`meet`) letterboxed the promo plate inside a 623x280
+	 * column: the artwork drew 336px wide and centred, and the plate's own
+	 * background rect stopped short of the column edges. That is a visual
+	 * defect no markup assertion in this file would have noticed, which is
+	 * why it is pinned by name rather than left to a browser check.
+	 */
+	public function test_only_the_panel_plates_cover_their_box(): void {
+		foreach ( [ 'hero', 'promo' ] as $variant ) {
+			self::assertStringContainsString(
+				'preserveAspectRatio="xMidYMid slice"',
+				Plate::render( $variant ),
+				"{$variant} must cover its box — the mockup's own use site says slice."
+			);
+		}
+
+		foreach ( [ 'mug', 'lamp', 'box', 'plaid', 'vase', 'towel' ] as $variant ) {
+			self::assertStringNotContainsString(
+				'preserveAspectRatio',
+				Plate::render( $variant ),
+				"{$variant} is a tile object plate — the mockup leaves it at the default."
+			);
+		}
+	}
+
 	public function test_an_unknown_variant_returns_empty_string_not_a_fatal(): void {
 		self::assertSame( '', Plate::render( 'does-not-exist' ) );
 	}
