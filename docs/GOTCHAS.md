@@ -1,10 +1,11 @@
 # Gotchas Index — Woodev Base
 
-> 41 entries. Each gotcha is a separate file in `docs/gotchas/`.
+> 42 entries. Each gotcha is a separate file in `docs/gotchas/`.
 
 | Gotcha | Area | Summary |
 |---|---|---|
 | [tailwind-v4-layer-precedence](gotchas/tailwind-v4-layer-precedence.md) | CSS | `@layer components` loses to utilities; un-layered CSS beats all layers — plan overrides accordingly |
+| [source-order-only-wins-the-properties-you-redeclare](gotchas/source-order-only-wins-the-properties-you-redeclare.md) | CSS/WooCommerce | Tying specificity and winning on source order wins **per declaration**, not per rule: every property the losing rule sets and yours omits survives. Woo's `right: 0` turned the sale badge into a full-width bar; Basecoat's `.tabs` (WooCommerce reuses that exact class name) set `flex-direction: column` and stacked the product tabs. Both shipped, both invisible to every suite, both found by reading computed style |
 | [basecoat-style-packs-standalone](gotchas/basecoat-style-packs-standalone.md) | CSS/Basecoat | Style packs can't be combined — one standalone bundle per pack, enqueue only the chosen one. **All 8 share one palette and differ only in component shape**, so a pack switch is invisible without Basecoat classes on the page and tests must assert geometry, never colour; dark mode is `.dark`; version pinned exact |
 | [basecoat-js-entry-is-a-subpath-export](gotchas/basecoat-js-entry-is-a-subpath-export.md) | JS/Basecoat | `import 'basecoat-css'` silently imports CSS, not JS; `/basecoat` registers 0 components — only `/all` auto-inits. npm CSS is source, needs Tailwind |
 | [basecoat-tokens-are-un-layered](gotchas/basecoat-tokens-are-un-layered.md) | CSS/Basecoat | `layer(components)` on the Basecoat import won't build (`@custom-variant cannot be nested`) and isn't needed — Basecoat self-layers. Its `:root` tokens are un-layered, so ours must be too, imported after it |

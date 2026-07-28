@@ -359,6 +359,94 @@ final class SettingsTest extends TestCase {
 		self::assertSame( 'off', Settings::front_hero_art() );
 	}
 
+	// ------------------------------------------------------- product trust badges
+
+	public function test_product_trust_badge_one_resolver_parses_a_valid_line(): void {
+		$this->stub_theme_mod( 'Завтра, если заказать до 18:00 | truck' );
+
+		self::assertSame(
+			[
+				'label' => 'Завтра, если заказать до 18:00',
+				'icon'  => 'truck',
+			],
+			Settings::product_trust_badge_one()
+		);
+	}
+
+	public function test_product_trust_badge_one_resolver_returns_null_when_unset(): void {
+		$this->stub_theme_mod( '' );
+		self::assertNull( Settings::product_trust_badge_one() );
+	}
+
+	public function test_product_trust_badge_one_resolver_returns_null_for_a_line_with_an_empty_label(): void {
+		$this->stub_theme_mod( ' | truck' );
+		self::assertNull( Settings::product_trust_badge_one() );
+	}
+
+	public function test_product_trust_badge_one_sanitizer_rejects_non_string_input(): void {
+		self::assertSame( '', Settings::sanitize_product_trust_badge_one( [ 'x' ] ) );
+		self::assertSame( '', Settings::sanitize_product_trust_badge_one( new \stdClass() ) );
+		self::assertSame( '', Settings::sanitize_product_trust_badge_one( 42 ) );
+	}
+
+	public function test_product_trust_badge_one_defaults_the_icon_when_missing_or_unrecognised(): void {
+		$this->stub_theme_mod( 'No icon badge |' );
+		self::assertSame(
+			[
+				'label' => 'No icon badge',
+				'icon'  => 'check',
+			],
+			Settings::product_trust_badge_one()
+		);
+
+		$this->stub_theme_mod( 'Unknown icon badge | not-a-real-icon' );
+		self::assertSame(
+			[
+				'label' => 'Unknown icon badge',
+				'icon'  => 'check',
+			],
+			Settings::product_trust_badge_one()
+		);
+	}
+
+	/**
+	 * This is a plain text control, not a textarea — a stray second line
+	 * (however it got there) is not a second badge, so only the first is
+	 * ever read.
+	 */
+	public function test_product_trust_badge_one_ignores_a_second_line(): void {
+		$this->stub_theme_mod( "First badge | truck\nSecond line | leaf" );
+		self::assertSame(
+			[
+				'label' => 'First badge',
+				'icon'  => 'truck',
+			],
+			Settings::product_trust_badge_one()
+		);
+	}
+
+	public function test_product_trust_badge_two_resolver_parses_a_valid_line(): void {
+		$this->stub_theme_mod( 'Гарантия 2 года | shield-check' );
+
+		self::assertSame(
+			[
+				'label' => 'Гарантия 2 года',
+				'icon'  => 'shield-check',
+			],
+			Settings::product_trust_badge_two()
+		);
+	}
+
+	public function test_product_trust_badge_two_resolver_returns_null_when_unset(): void {
+		$this->stub_theme_mod( '' );
+		self::assertNull( Settings::product_trust_badge_two() );
+	}
+
+	public function test_product_trust_badge_two_sanitizer_rejects_non_string_input(): void {
+		self::assertSame( '', Settings::sanitize_product_trust_badge_two( [ 'x' ] ) );
+		self::assertSame( '', Settings::sanitize_product_trust_badge_two( new \stdClass() ) );
+	}
+
 	public function test_front_value_items_resolver_parses_valid_lines_into_structured_items(): void {
 		$this->stub_theme_mod( "Fast delivery | Same-day dispatch | truck\nEco packaging | Recycled materials | leaf" );
 

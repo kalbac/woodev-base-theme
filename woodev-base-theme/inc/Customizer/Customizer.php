@@ -203,6 +203,36 @@ final class Customizer {
 			__( 'Whether the add-to-cart button on a product card appears only on hover/focus, or is always shown.', 'woodev-base-theme' )
 		);
 
+		// --- Product page (B9, docs/plans/2026-07-28-catalogue-and-product.md) ---
+
+		$this->add_text(
+			$wp_customize,
+			'product_trust_badge_one',
+			'woodev_base_shop',
+			__( 'Product page trust badge 1', 'woodev-base-theme' ),
+			Settings::PRODUCT_TRUST_BADGE_ONE_DEFAULT,
+			Settings::sanitize_product_trust_badge_one( ... ),
+			sprintf(
+				/* translators: %s: comma-separated list of allowed icon slugs. */
+				__( 'Shown on every product page. Formatted as "Text | icon" — the icon is optional and must be one of: %s. Leave empty to hide this badge.', 'woodev-base-theme' ),
+				implode( ', ', Settings::FRONT_ICONS )
+			)
+		);
+
+		$this->add_text(
+			$wp_customize,
+			'product_trust_badge_two',
+			'woodev_base_shop',
+			__( 'Product page trust badge 2', 'woodev-base-theme' ),
+			Settings::PRODUCT_TRUST_BADGE_TWO_DEFAULT,
+			Settings::sanitize_product_trust_badge_two( ... ),
+			sprintf(
+				/* translators: %s: comma-separated list of allowed icon slugs. */
+				__( 'A second badge next to the first (e.g. a warranty line). Same "Text | icon" format. Leave empty to hide this badge.', 'woodev-base-theme' ),
+				implode( ', ', Settings::FRONT_ICONS )
+			)
+		);
+
 		// --- Front page (F2, docs/plans/2026-07-28-front-page-completion.md) ---
 
 		$this->add_section( $wp_customize, 'woodev_base_front', __( 'Front page', 'woodev-base-theme' ), 45 );

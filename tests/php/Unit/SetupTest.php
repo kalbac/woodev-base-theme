@@ -71,4 +71,43 @@ final class SetupTest extends TestCase {
 		// No feature was registered twice and silently overwritten above.
 		self::assertSame( $calls, \count( $supports ) );
 	}
+
+	/**
+	 * There was no unit coverage of register_widget_areas() at all before
+	 * sidebar-shop was added — captures every register_sidebar() call, keyed
+	 * by id, so the existing areas stay pinned and the new one is proven
+	 * present with the exact before_widget/after_widget/before_title/
+	 * after_title strings Woo\FilterRail's CSS depends on ( `.wtb-filter-group`
+	 * + `<h4>` per widget, not `.wtb-widget` + `<h2>` like the blog sidebar
+	 * and footer columns get ).
+	 */
+	public function test_register_widget_areas_registers_the_expected_sidebars(): void {
+		$registered = [];
+		Functions\when( 'register_sidebar' )->alias(
+			static function ( array $args ) use ( &$registered ): void {
+				$registered[ $args['id'] ] = $args;
+			}
+		);
+		Functions\when( '__' )->returnArg();
+
+		( new Setup() )->register_widget_areas();
+
+		self::assertSame(
+			[ 'sidebar-1', 'footer-1', 'footer-2', 'footer-3', 'sidebar-shop' ],
+			\array_keys( $registered )
+		);
+
+		self::assertSame(
+			[
+				'id'            => 'sidebar-shop',
+				'name'          => 'Shop filters',
+				'description'   => 'Shown as the filter rail on the shop page and product category/tag archives when it has widgets.',
+				'before_widget' => '<div id="%1$s" class="wtb-filter-group %2$s">',
+				'after_widget'  => '</div>',
+				'before_title'  => '<h4>',
+				'after_title'   => '</h4>',
+			],
+			$registered['sidebar-shop']
+		);
+	}
 }

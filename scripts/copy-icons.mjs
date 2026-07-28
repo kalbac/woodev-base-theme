@@ -31,6 +31,9 @@ const ICONS = [
   'package', // front-page value band / hero trust badges: packaging perk (s17 #18)
   'credit-card', // front-page value band / hero trust badges: payment perk (s17 #18)
   'headphones', // front-page value band / hero trust badges: support perk (s17 #18)
+  'sliders-horizontal', // catalogue filter rail head, and its mobile disclosure (s18 #41)
+  'minus', // single-product quantity stepper, decrement (s18 #41)
+  'plus', // single-product quantity stepper, increment (s18 #41)
 ];
 
 await mkdir(DEST, { recursive: true });

@@ -25,6 +25,9 @@ final class Woo {
 		( new Support() )->register();
 		( new Assets() )->register();
 		( new BlockAssets() )->register();
+		( new Catalogue() )->register();
+		( new FilterRail() )->register();
+		( new ProductPage() )->register();
 		( new CardActionsWrapper() )->register();
 		( new CtaAttribute() )->register();
 		( new ProductPlaceholder() )->register();

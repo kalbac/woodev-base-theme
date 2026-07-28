@@ -41,6 +41,25 @@ if ( ! is_a( $product, WC_Product::class ) || ! $product->is_visible() ) {
 	<?php endif; ?>
 	<div class="wtb-product-card__body">
 		<?php
+		// Category eyebrow above the title (mockup `span.cat`, line 1989). Woo
+		// prints no category anywhere in the loop, so there is no hook to filter
+		// — it is emitted here, in the one loop template this theme owns.
+		//
+		// The FIRST term, not a list: the mockup's card shows one short line of
+		// context above the title, and a product filed under four categories
+		// would otherwise push the title down a row and break the grid's
+		// alignment. get_the_terms() returns them in term_id order, so "first"
+		// means "filed earliest", which is arbitrary but stable — a shop that
+		// wants a specific one controls it by how the categories are assigned.
+		$wtb_card_terms = get_the_terms( $product->get_id(), 'product_cat' );
+
+		if ( is_array( $wtb_card_terms ) && [] !== $wtb_card_terms ) :
+			$wtb_card_term = reset( $wtb_card_terms );
+			?>
+			<span class="wtb-product-card__cat"><?php echo esc_html( $wtb_card_term->name ); ?></span>
+			<?php
+		endif;
+
 		// Title, rating and price — still inside the anchor opened above.
 		do_action( 'woocommerce_shop_loop_item_title' );
 		do_action( 'woocommerce_after_shop_loop_item_title' );

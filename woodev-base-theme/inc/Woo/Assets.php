@@ -25,11 +25,15 @@ final class Assets {
 	/** Vite manifest key for the storefront bundle (the Rollup input's source path). */
 	private const WOO_ENTRY = 'src/css/woo.css';
 
+	/** Vite manifest key for the quantity-stepper script (B8). */
+	private const WOO_JS_ENTRY = 'src/js/woo.js';
+
 	/**
 	 * Hook the storefront enqueue into WordPress.
 	 */
 	public function register(): void {
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue' ] );
+		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_storefront_behaviour' ] );
 	}
 
 	/**
@@ -63,6 +67,40 @@ final class Assets {
 
 		if ( null !== $css ) {
 			wp_enqueue_style( 'woodev-base-woo', "{$dist_uri}/{$css}", [], null );
+		}
+	}
+
+
+	/**
+	 * Enqueue the storefront behaviour module on the pages that have something
+	 * for it to enhance.
+	 *
+	 * Two surfaces, and the condition below is the union of them rather than
+	 * `is_product()` alone — which is what it was when the module only drove the
+	 * quantity stepper, and which silently made the second surface a no-op:
+	 *
+	 * - the single product page's quantity stepper (B8);
+	 * - the catalogue's filter rail, which the module collapses on narrow
+	 *   viewports (A14). That rail only ever renders on a product ARCHIVE, so
+	 *   an `is_product()` gate excluded exactly the pages it runs on: the rail
+	 *   stayed expanded above the grid on mobile, looking like a CSS bug.
+	 *
+	 * Not unconditional, unlike the CSS bundle next to it: that one is inert on
+	 * a page without Woo markup because every rule is scoped, whereas a script
+	 * is a network request whether or not it finds anything to do.
+	 */
+	public function enqueue_storefront_behaviour(): void {
+		if ( ! is_product() && ! is_shop() && ! is_product_taxonomy() ) {
+			return;
+		}
+
+		$dist     = get_template_directory() . '/assets/dist';
+		$dist_uri = get_template_directory_uri() . '/assets/dist';
+		$manifest = BaseAssets::read_manifest( $dist . '/.vite/manifest.json' );
+		$js       = BaseAssets::entry_file( $manifest, self::WOO_JS_ENTRY );
+
+		if ( null !== $js ) {
+			wp_enqueue_script_module( 'woodev-base-woo-js', "{$dist_uri}/{$js}", [], null );
 		}
 	}
 }

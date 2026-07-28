@@ -61,6 +61,28 @@ final class SetupTest extends WP_UnitTestCase {
 		self::assertArrayHasKey( 'footer-3', $wp_registered_sidebars );
 	}
 
+	/**
+	 * Registered regardless of whether WooCommerce is active in this
+	 * environment (it is not — see Woo\BootstrapTest's docblock) since Setup
+	 * runs unconditionally; Woo\FilterRail is what only ever renders it.
+	 * The before/after strings are asserted here, not just the key's
+	 * presence: they are the `.wtb-filter-group` + `<h4>` shape
+	 * Woo\FilterRail's CSS is written against, for every widget dropped into
+	 * this area regardless of which one it is.
+	 */
+	public function test_shop_filter_widget_area_is_registered_with_the_filter_group_shape(): void {
+		global $wp_registered_sidebars;
+
+		self::assertArrayHasKey( 'sidebar-shop', $wp_registered_sidebars );
+
+		$sidebar = $wp_registered_sidebars['sidebar-shop'];
+
+		self::assertSame( '<div id="%1$s" class="wtb-filter-group %2$s">', $sidebar['before_widget'] );
+		self::assertSame( '</div>', $sidebar['after_widget'] );
+		self::assertSame( '<h4>', $sidebar['before_title'] );
+		self::assertSame( '</h4>', $sidebar['after_title'] );
+	}
+
 	public function test_both_nav_menus_are_registered(): void {
 		$menus = get_registered_nav_menus();
 
