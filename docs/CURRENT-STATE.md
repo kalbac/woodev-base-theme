@@ -1,6 +1,6 @@
 # Current State — Woodev Base
 
-> Updated: 28.07.2026 (s16)
+> Updated: 28.07.2026 (s17)
 
 ## Phase status
 
@@ -16,11 +16,23 @@
 | M2a — Woo storefront | ✅ **Merged s15**, in `f040eaa` | Classic storefront on the approved identity. The block cart/checkout gap was M2b |
 | M2b — Woo block cart & checkout | ✅ **Merged s15** | [ADR-009](adr/ADR-009-block-cart-checkout-styling.md) implemented B0–B6, criticked **and** re-criticked. PR [#29](https://github.com/kalbac/woodev-base-theme/pull/29) squashed onto `main` as `1d769ae` |
 | M3 — Public release prep | 🟡 In flight | Plan: `docs/plans/2026-07-26-m3-release-prep.md`. **R1 done and merged** ([ADR-010](adr/ADR-010-theme-json-identity.md), closes #26 + #25). **R4 largely done** — `readme.txt`, direct-access guards, Theme Check run, `comment-reply`, the eight core CSS classes; screenshot deferred to [#36](https://github.com/kalbac/woodev-base-theme/issues/36). **R2 measured and cut down** to a provenance question ([#17](https://github.com/kalbac/woodev-base-theme/issues/17)). **R3 done s16** — audit + a guard test; the `.pot`/`.po`/`.mo` stay Maksim's, in Poedit. Remaining: version bump off `0.1.0`, the `Tags:` list against wp.org's current allowed set, and the screenshot |
-| Front page (#18) | 🟡 First slice merged s16 | `front-page.php` + `template-parts/front/{hero,category-tiles}.php` — the mockup's §05 wired to a template for the first time; T4's hero/blocks CSS stopped being dead weight. Tiles come from WooCommerce product categories, so the biggest block needs no invented copy. **Still open:** value band, promo, a Customizer surface for the hero copy, and the empty hero art plate. No test coverage at all — [#37](https://github.com/kalbac/woodev-base-theme/issues/37) |
-
+| Front page (#18) | ✅ **Done s17**, merged `b4c592c` | Hero (eyebrow, lede, trust badges, art column), value band, promo, category tiles with plate art. Ten Customizer settings defaulting to EMPTY, every section self-suppressing. `Templates\Plate` ports the mockup's eight plates byte-identically. Coverage (#37) in the same PR [#39](https://github.com/kalbac/woodev-base-theme/pull/39). **Three mockup sections remain and are NOT part of #18** — «Выбор недели», «Журнал», «Письмо раз в месяц» → [#40](https://github.com/kalbac/woodev-base-theme/issues/40) |
+| **Pages vs the approved mockup** | 🔴 **The gap, and the session's finding** | Operator verdict s17: **4/10, still a skeleton.** The theme ships ONE WooCommerce template (`content-product.php`); catalogue, product, cart, checkout and account are Woo's default markup with `woo.css` painted over. Painting gave colour and type, not the catalogue's filter column, the product page's gallery/tabs/related, or the account screens. Every one of them is designed in detail in `docs/design/v2-mockup/`. → [#41](https://github.com/kalbac/woodev-base-theme/issues/41), [#42](https://github.com/kalbac/woodev-base-theme/issues/42), [#43](https://github.com/kalbac/woodev-base-theme/issues/43) |
 ## Known bugs
 
-**None open.** `main` is green on the MERGED commit **`50bdbf4`** (M3 tail + the front page's first slice), verified tree-identical (`git diff --quiet`) to the CI-green PR head `77271c0` — which is what lets CI's result stand as a measurement of `main` rather than of a branch.
+**None open.** `main` is green on the MERGED commit **`b4c592c`** (the front page and its coverage), verified
+tree-identical (`git diff --quiet`) to the CI-green PR head `f0ac112` — which is what lets CI's result stand as
+a measurement of `main` rather than of a branch.
+
+- **CI on `b4c592c`** (all four jobs, `e2e` among them and actually running) — phpcs 0 · phpstan L8 0 · eslint 0
+  · prettier 0 · `tokens:check` 0 · unit **313** (1061 assertions) · integration **68** (230 assertions, 1 skip)
+  · base e2e **63 passed** · build OK.
+- **Local on the same tree** — e2e:woo **25/25**. CI does not run it, so it exists only as a local measurement.
+
+**s17's finding is not a defect count, it is a scope verdict.** See the phase table's "Pages vs the approved
+mockup" row: the operator scored the theme **4/10** and the inventory agrees. What exists is infrastructure and
+chrome; what is missing is most of the designed product surface, all of it already specified in the approved
+mockup.
 
 - **CI on `50bdbf4`** (all four jobs, `e2e` among them and actually running, 4m09s) — phpcs 0 · phpstan L8 0 · eslint 0 · prettier 0 · `tokens:check` 0 · unit **214** (628 assertions) · vitest **57** · integration **50** · base e2e **60** · build OK.
 - **Local on the same tree** — e2e:woo **23/23**, integration-dev **4/4**, e2e-dev **2/2**. CI runs none of these three, so they only ever exist as a local measurement.
@@ -132,27 +144,31 @@ T0→T1→T2 sequential; T3 parallel with T1/T2; T4–T6 parallelisable once T1�
 
 ## Last session
 
-s16 (27–28.07.2026): closed M3's tail (R3, #35, #33) and got the front page rendering for the
-first time — PR [#38](https://github.com/kalbac/woodev-base-theme/pull/38), squashed onto `main`
-as `50bdbf4`. Full account in `docs/SESSION-LOG.md`.
+s17 (28.07.2026): the front page finished and merged as `b4c592c` (PR
+[#39](https://github.com/kalbac/woodev-base-theme/pull/39)), closing #18 and #37. Full account in
+`docs/SESSION-LOG.md`. **Maksim scored the theme 4/10 — the pages are still a skeleton, and the inventory
+agrees.**
 
-**Next session starts here:**
+**Next session starts here, and the order is not a menu:**
 
-1. **The front page is the visible product and it is half-built.** [#18](https://github.com/kalbac/woodev-base-theme/issues/18)
-   carries the remaining list in a comment: the empty hero art plate, the value band, the promo
-   strip, and a Customizer surface for the hero copy (eyebrow, lede, trust badges — they have no
-   source but invention, so they are settings, not hardcoded strings). This is what Maksim
-   notices; infrastructure work is not.
-2. **[#37](https://github.com/kalbac/woodev-base-theme/issues/37) — the front page has no tests.**
-   Four render modes, three of them silent. The duplicate-`<h1>` defect was caught by a critic
-   and the missing sidebar by e2e; nothing was watching either. Worth doing alongside #18 rather
-   than after it.
-3. **[#34](https://github.com/kalbac/woodev-base-theme/issues/34)** is still Maksim's call —
-   `settings.layout` absent, so the editor's "Wide width" control does nothing, and the `var()`
-   route is UNMEASURED for the layout path (core handles it in different code from colour presets).
-4. **Then the release itself:** version bump off `0.1.0`, validate `Tags:` against wp.org's
-   *current* allowed list, the screenshot ([#36](https://github.com/kalbac/woodev-base-theme/issues/36),
-   blocked on #18 having something worth photographing), and the `Update URI` header comes out of
-   `style.css` **only** at submission — ADR-005 makes it correct for v1.
-5. Maksim's own housekeeping, not the repo's: `docker system prune` — 8.2 GB of images and
-   3.86 GB of build cache measured in s15 and never reclaimed.
+1. **Implement the mockup. It is approved, detailed, and largely unbuilt.** Do not open the session by
+   offering infrastructure options — that mistake was made in s16 and again, in effect, in s17, where a week
+   of work produced gates and guards around a skeleton. The design document is
+   `docs/design/v2-mockup/woodev-base-identity.html`; the gap list is #40–#43.
+2. **[#41](https://github.com/kalbac/woodev-base-theme/issues/41) — catalogue and product page.** This is the
+   largest gap and the most visible one: the theme ships exactly ONE WooCommerce template. Start by walking
+   the mockup's `id="s-shop"` and `id="s-product"` node by node and writing down what the default Woo markup
+   does not give, BEFORE touching code. Read the installed WooCommerce source before any override.
+3. **[#42](https://github.com/kalbac/woodev-base-theme/issues/42) — cart, checkout, account, receipt.** Same
+   method. Remember ADR-009's limits on the block cart/checkout.
+4. **[#40](https://github.com/kalbac/woodev-base-theme/issues/40) — the front page's last three sections.**
+   Two have real data sources; the newsletter needs a decision (a shortcode setting, not our own handler).
+5. **[#43](https://github.com/kalbac/woodev-base-theme/issues/43) — blog and text pages**, built in M1 before
+   the identity was approved and never compared with the mockup since.
+6. **Then release mechanics**, and not before: version off `0.1.0`, `Tags:` against wp.org's current list,
+   `Update URI` out of `style.css` only at submission. **The screenshot ([#36](https://github.com/kalbac/woodev-base-theme/issues/36))
+   is NOT next and is not to be raised again** — Maksim's call, s17: it happens when the theme is actually
+   ready to be published, not when the front page renders.
+7. Maksim's own housekeeping, not the repo's: `docker system prune` — 14.68 GB of images (7.7 GB
+   reclaimable) and 3.86 GB of build cache measured in s17. This is also the likely cause of the wp-env cli
+   flakiness that cost s17 several hours.

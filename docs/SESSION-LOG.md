@@ -1,5 +1,46 @@
 # Session Log — Woodev Base
 
+## s17 — 28.07.2026 — the front page finished, and the operator's verdict on the theme: 4/10, still a skeleton
+
+**PR [#39](https://github.com/kalbac/woodev-base-theme/pull/39) squashed onto `main` as `b4c592c`**, verified
+tree-identical to the CI-green head `f0ac112`. CI green on the merge commit itself, by counts rather than
+exit codes: unit **313** (1061 assertions) · integration **68** (230, 1 skip) · base e2e **63 passed** ·
+phpcs/phpstan L8/eslint/prettier/`tokens:check` 0. Locally also e2e:woo **25/25**. Closes #18 and #37.
+
+**What shipped.** The three front-page sections whose copy has no source in the site — the hero's eyebrow,
+lede and trust badges, the value band, the promo — became ten Customizer settings defaulting to empty, each
+section self-suppressing, so an unconfigured site renders exactly what it did before. `Templates\Plate` ports
+the mockup's eight `<symbol>` plates as self-contained inline SVG (verified byte-identical, no `<use>`), which
+kills the hero's empty grey rectangle and gives a thumbnail-less category tile real art. #37's coverage landed
+in the same branch: four render modes plus every section pinned twice, ten guards mutation-verified.
+
+**Two defects the browser found and no gate had.** `preserveAspectRatio` lives at the USE site, not in a
+`<symbol>`, so porting the symbols dropped it and the promo's artwork letterboxed inside its column. And the
+tile's `.label` — the mockup's own class name — collides with Basecoat's form-label component, so the category
+name inherited `align-items: center` and `user-select: none`; it centred itself and drifted onto the art.
+Both measured in the browser, neither visible to any suite that had already passed.
+
+**The critic found one real thing:** `theme-mods.spec.mjs` mutates site-global state while Playwright
+parallelises by FILE, and this branch's front-page switch made that race consequential. Fixed with two
+projects and a dependency rather than `workers: 1`. Re-critic clean; its caveat about parallel CI jobs checked
+against `ci.yml` rather than assumed.
+
+**`wp-env run cli` failed six times on this machine**, always under load, twice inside a TEARDOWN — which left
+the site on a static front page pointing at a fixture the same teardown then deleted. Restarting the
+environment fixes it; the degradation returns after ~8 minutes. Gotcha compiled, one-shot retry added, and the
+option read/restore path rewritten: it could not tell "the option is absent" from "the call failed" (both exit
+1), so once an option really was gone the suite went red forever. CI on Linux never saw any of it.
+
+**The session's real finding is Maksim's verdict, not the code: 4/10.** A week on this theme and the pages are
+still a skeleton — and the inventory backs him up. Of the mockup's designed surfaces, the theme has the
+header/footer, four front-page sections, and the M1 blog templates. It has exactly **one** WooCommerce
+template (`content-product.php`): the catalogue, product page, cart, checkout and account render WooCommerce's
+default markup with `woo.css` painted over it. Painting gave colour and type; it did not give the catalogue
+its filter column, the product page its gallery/tabs/related, or the account its screens. The front page is
+also missing three of the mockup's sections. All of it is designed, in detail, in an approved document — the
+work is implementation, and it was not being done. Filed as #40–#43 so the next session starts from the gap
+list rather than from a choice of tasks.
+
 ## s16 — 27–28.07.2026 — M3's tail closed, the front page renders at last, and four gates each caught what the others missed
 
 **PR [#38](https://github.com/kalbac/woodev-base-theme/pull/38), squashed onto `main` as `50bdbf4`,

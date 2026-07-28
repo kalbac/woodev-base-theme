@@ -1,6 +1,6 @@
 # Gotchas Index — Woodev Base
 
-> 40 entries. Each gotcha is a separate file in `docs/gotchas/`.
+> 41 entries. Each gotcha is a separate file in `docs/gotchas/`.
 
 | Gotcha | Area | Summary |
 |---|---|---|
@@ -44,3 +44,4 @@
 | [wp-unittestcase-does-not-reset-wp-styles](gotchas/wp-unittestcase-does-not-reset-wp-styles.md) | Testing/WP core | The DB is rolled back; `$wp_styles` is not. An "asset is absent" test passes alone and fails in-suite because earlier tests registered the handle. `unset( $GLOBALS['wp_styles'] )` in `set_up()`, then mutation-verify so the reset has not made it vacuous |
 | [a-killed-e2e-run-leaves-theme-mods-dirty](gotchas/a-killed-e2e-run-leaves-theme-mods-dirty.md) | Testing/e2e | `theme-mods.spec.mjs` restores every mod it sets — unless the run is KILLED, and then the residue fails a **different spec file** in a way that reads as a product defect. Twice in s15: a leftover `sidebar_position` failed the post-grid breakpoints, a leftover `base_font_size` failed "an untouched site emits no inline style". Read `wp option get theme_mods_*` before diagnosing; clear with `wp theme mod remove`, never by guessing the default back. Both times the spec's own precondition assertion is what turned a confusing red into a one-line diagnosis |
 | [wp-env-cli-fails-under-load-and-poisons-state](gotchas/wp-env-cli-fails-under-load-and-poisons-state.md) | Tooling/wp-env | `wp-env run cli` fails intermittently while a suite runs — three times in one session on healthy containers, twice inside a TEARDOWN. A failed restore reports the wrong test as failed AND leaves the site on a static front page pointing at a fixture the same teardown deletes, so every later run starts on a page that does not exist. `wp()` retries once; read `error-context.md` for `Command failed: npx wp-env run cli` before believing a red test found something |
+| [porting-a-mockup-inherits-its-class-names-and-loses-its-use-site](gotchas/porting-a-mockup-inherits-its-class-names-and-loses-its-use-site.md) | CSS/Design port | A mockup is a standalone document: its `.label` collides with Basecoat's form-label component (centred the category name, made it unselectable), and `preserveAspectRatio` lives at the `<use>` SITE, not in the `<symbol>` — so a byte-identical shape port still letterboxed. Both invisible to every gate; both found in the first browser screenshot. Grep the BUILT bundle for a class name before porting it; diff the use site as well as the symbol |
