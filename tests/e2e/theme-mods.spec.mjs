@@ -373,7 +373,13 @@ test.describe.serial('site-global theme_mods', () => {
       page_on_front: isInteger,
     };
 
-    /** @type {Record<string, string|null>} */
+    /**
+     * Prior state per option: `{ exists, value }`, or null when never read.
+     * "Absent" is a state an option can legitimately be in and `wp option
+     * update` cannot express it — see lib/option.mjs.
+     *
+     * @type {Record<string, {exists: boolean, value: string}|null>}
+     */
     const previousOptions = Object.fromEntries(
       Object.keys(FRONT_PAGE_OPTIONS).map((name) => [name, null]),
     );
