@@ -1,5 +1,89 @@
 # Session Log — Woodev Base
 
+## s18 — 28.07.2026 — the catalogue and the product page, three defects that had already shipped, and four guards that measured nothing
+
+**PR [#44](https://github.com/kalbac/woodev-base-theme/pull/44) squashed onto `main` as `042c1a1`**, closing
+[#41](https://github.com/kalbac/woodev-base-theme/issues/41). CI green on all four jobs, checked by COUNTS
+rather than by the tick: `e2e` **63 passed** in 4m44s (it ran — it is the job behind `needs: js-qa` that has
+silently skipped before) · `php-integration` **69** (235 assertions, 1 skip) · `php-qa` unit **396** (1256
+assertions) · `js-qa`. Locally also **e2e:woo 37/37** against a store reseeded end to end by the edited
+fixture, `tokens:check` 0, prettier 0.
+
+**What shipped — the mockup's structure, not more paint.** The catalogue gets a filter rail: a `sidebar-shop`
+widget area holding WooCommerce's OWN filter widgets, because the theme supplies the rail and the styling and
+builds no filtering of its own. The two-column layout appears only when that area has widgets, so every other
+Woo view keeps the shell it had. Around it: the sale flash reads as `−24%`, the breadcrumb delimiter becomes an
+element the stylesheet can reach, the archive header gains a subcategory chip row, pagination gains the theme's
+chevrons with real accessible names, the loop card gains a category eyebrow. The product page gets the
+breadcrumb and sale badge relocated into the buy box, the SKU beside the rating, a savings badge, a quantity
+stepper on the two hooks WooCommerce already fires from `global/quantity-input.php`, two default-empty
+Customizer trust badges, the `<dl>` product meta, and the gallery's thumbnails as a 64px column. Two template
+overrides only, each carrying its upstream `@version`.
+
+**Three defects were already live on `main`, and all three were found by reading computed style.**
+
+- WooCommerce names its product tab list `class="tabs wc-tabs"`, and `.tabs` is **also Basecoat's tabs
+  component**, which set `flex-direction: column`. `woo.css` re-declared `display: flex` — changing nothing,
+  and masking the collision — and never touched the direction. Every product page rendered its tabs as a
+  vertical stack of full-width rows.
+- Woo's `.woocommerce ul.products li.product .onsale` sets `right: 0` at our own specificity. Ours won on
+  source order for the three properties it re-declared; `right` was not one, and a box with both insets set and
+  `width: auto` stretches between them. The sale badge was a full-width red bar across every catalogue card.
+- The rail's reset link was ported from the mockup as `btn--ghost btn--sm`. This theme keys button variants off
+  `data-variant`, so the class did nothing and the link fell through to `.btn:not([data-variant])` — a solid
+  primary block where a quiet ghost belonged.
+
+New gotcha: [`source-order-only-wins-the-properties-you-redeclare`](gotchas/source-order-only-wins-the-properties-you-redeclare.md).
+The cascade resolves per DECLARATION: tying specificity and winning on source order wins only the properties
+you actually re-declare, and a rule you have decided you beat is a rule you stop reading. Index 41 → 42.
+
+**The critic pass produced ten findings across eight chunks, and the valuable ones were against the TESTS.**
+Four P1s in one pass, every one an assertion weaker than its claim. The worst had been vacuous since it was
+written: the reset link's "not the primary button" check compared a computed `backgroundColor` (`rgb(…)`)
+against the raw `--primary` token text — two strings that can never be equal — so it would have passed the
+exact defect it existed to catch. The sale-badge geometry checks passed for a `display: none` badge (a 0×0 box
+is narrower than half a card). The pagination "accessible name" check asserted a non-empty `.sr-only` element,
+which is not a name in the accessibility tree. All four are in
+[`qa-gates-cover-less-than-they-claim`](gotchas/qa-gates-cover-less-than-they-claim.md) now, with the rule that
+came out of them: **compare a measurement against another measurement, never against a source value.**
+
+**One critic finding was rejected on measurement rather than on argument.** It claimed `ProductPageTest` would
+fail run alone without the shared `WC_Product` double. It does not — 19/19 alone and under `--order-by=reverse`,
+because PHPUnit includes every test file before running any test and Mockery defines a missing class itself.
+The coupling it pointed at was real, so the double moved to the bootstrap anyway.
+
+**Thirteen integration tests were deleted, and the reason is structural.** The rail arrived with 9 integration
+tests that skip unless `class_exists( 'WooCommerce' )` — false in this harness by construction, because
+`tests/integration/bootstrap.php` boots the WordPress test suite itself and loads no plugins. Adding Woo to
+`.wp-env.test.json` was tried and measured: 10 skips before, 10 after, the same 235 assertions. One had already
+gone stale against markup it never saw. Everything they claimed is covered by 14 unit tests and 5 Playwright
+tests against a live store. → [#47](https://github.com/kalbac/woodev-base-theme/issues/47).
+
+**The filter rail was designed three times, and the second design failed in a way worth keeping.** A JS-free
+`<details>` disclosure cannot work here: closed, it renders nothing, and `display: contents` does not undo that
+— measured, with the children laying out at real geometry (248×349) while `innerText` was empty and the
+screenshot blank. Serving it `open` and closing it from JavaScript then left the grid row sized for the OPEN
+panel: a 790px-tall rail around a 45px control, reproducing only on a cold load, with the element's own height
+reading 68px on one run and 166px on the next — the signature of a layout that depends on when the script ran.
+The shipped answer is a plain head plus a `[hidden]` panel, with the toggle button created by JS: no script,
+panel open; script, panel collapses on narrow viewports and re-syncs across the breakpoint.
+
+**A pre-existing e2e flake was diagnosed and fixed.** `front-page category tiles` failed twice in full runs with
+`net::ERR_ABORTED` and passed every time it ran alone. Cause: a synchronous `execSync` of a `wp-env run cli`
+call inside the test body, blocking Node's event loop for 10–15s between the `{ page }` fixture creating a page
+and its first navigation. Hoisted to `beforeAll`; the Woo suite went 36→37 tests and a minute faster.
+
+**Also worth carrying:** the catalogue's page size is `woocommerce_catalog_rows` × `woocommerce_catalog_columns`,
+NOT `posts_per_page` — measured both ways. `Support::setup()` now declares `product_grid` (3×3), which is what
+puts WooCommerce's own "Products per row"/"Rows per page" controls into the Customizer and what
+`wc_reset_product_grid_settings()` writes on theme activation.
+
+Backlog opened: [#45](https://github.com/kalbac/woodev-base-theme/issues/45) price-filter slider unstyled ·
+[#46](https://github.com/kalbac/woodev-base-theme/issues/46) `reset_url()` sanitizes the key it removes ·
+[#47](https://github.com/kalbac/woodev-base-theme/issues/47) integration harness loads no plugins ·
+[#48](https://github.com/kalbac/woodev-base-theme/issues/48) `e2e:woo` not in CI ·
+[#49](https://github.com/kalbac/woodev-base-theme/issues/49) the declared WP 6.8 floor is untested.
+
 ## s17 — 28.07.2026 — the front page finished, and the operator's verdict on the theme: 4/10, still a skeleton
 
 **PR [#39](https://github.com/kalbac/woodev-base-theme/pull/39) squashed onto `main` as `b4c592c`**, verified
