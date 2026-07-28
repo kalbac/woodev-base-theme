@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Woodev\Theme\Base\Tests\Unit\Woo;
 
+use Brain\Monkey\Actions;
 use Brain\Monkey\Functions;
 use Woodev\Theme\Base\Tests\Unit\TestCase;
 use Woodev\Theme\Base\Woo\Support;
@@ -38,12 +39,30 @@ final class SupportTest extends TestCase {
 		// is not part of the contract.
 		ksort( $supports );
 
+		// The `product_grid` values are asserted in full, not just its
+		// presence: `default_columns`/`default_rows` are what
+		// wc_reset_product_grid_settings() writes into
+		// `woocommerce_catalog_columns`/`_rows` on theme activation, and those
+		// two options ARE the catalogue's page size (measured on the live
+		// store: 2 rows x 3 columns turned one page of ten products into six
+		// plus a pager). Changing a number here changes what every shop page
+		// shows, so it is a contract, not configuration.
 		self::assertSame(
 			[
 				'wc-product-gallery-lightbox' => [],
 				'wc-product-gallery-slider'   => [],
 				'wc-product-gallery-zoom'     => [],
-				'woocommerce'                 => [],
+				'woocommerce'                 => [
+					[
+						'product_grid' => [
+							'default_rows'    => 3,
+							'min_rows'        => 1,
+							'default_columns' => 3,
+							'min_columns'     => 1,
+							'max_columns'     => 6,
+						],
+					],
+				],
 			],
 			$supports
 		);
@@ -66,7 +85,16 @@ final class SupportTest extends TestCase {
 		self::assertNotFalse( \has_action( 'woocommerce_after_main_content', [ $support, 'close_wrapper' ] ) );
 	}
 
-	public function test_open_wrapper_emits_the_theme_layout_shell(): void {
+	/**
+	 * The full-width shell is still the default: FilterRail::is_active() is
+	 * false whenever we are not on a product archive at all, regardless of
+	 * whether sidebar-shop has widgets.
+	 */
+	public function test_open_wrapper_emits_the_theme_layout_shell_when_the_rail_is_not_active(): void {
+		Functions\when( 'is_shop' )->justReturn( false );
+		Functions\when( 'is_product_taxonomy' )->justReturn( false );
+		Functions\when( 'is_active_sidebar' )->justReturn( true );
+
 		$support = new Support();
 
 		ob_start();
@@ -74,6 +102,55 @@ final class SupportTest extends TestCase {
 		$output = ob_get_clean();
 
 		self::assertSame( '<div class="wtb-layout"><div class="wtb-layout__content">', $output );
+	}
+
+	/**
+	 * A product archive with an empty sidebar-shop must ALSO get the
+	 * full-width shell — an inactive rail must never leave a
+	 * `.wtb-shop-layout` grid with only one real column.
+	 */
+	public function test_open_wrapper_stays_full_width_when_the_shop_sidebar_has_no_widgets(): void {
+		Functions\when( 'is_shop' )->justReturn( true );
+		Functions\when( 'is_product_taxonomy' )->justReturn( false );
+		Functions\when( 'is_active_sidebar' )->justReturn( false );
+
+		$support = new Support();
+
+		ob_start();
+		$support->open_wrapper();
+		$output = ob_get_clean();
+
+		self::assertSame( '<div class="wtb-layout"><div class="wtb-layout__content">', $output );
+	}
+
+	/**
+	 * On a product archive with a filled sidebar-shop, open_wrapper() switches
+	 * to the two-column grid AND fires `woodev_base_shop_rail` between the
+	 * grid's opening tag and the results column — the exact position
+	 * FilterRail::render() needs to land the `<aside>` as a grid sibling of
+	 * `.wtb-shop-layout__content`, not nested inside it.
+	 *
+	 * `Actions\expectDone()` (Brain\Monkey's own tool for asserting a hook
+	 * fired) is used rather than a fake add_action() listener that echoes a
+	 * marker: this test is about WHERE and WHETHER Support fires the hook,
+	 * not about what a listener does with it — that belongs to FilterRailTest.
+	 */
+	public function test_open_wrapper_emits_the_shop_layout_grid_and_fires_the_rail_hook_when_active(): void {
+		Functions\when( 'is_shop' )->justReturn( true );
+		Functions\when( 'is_product_taxonomy' )->justReturn( false );
+		Functions\when( 'is_active_sidebar' )->justReturn( true );
+		Actions\expectDone( 'woodev_base_shop_rail' )->once();
+
+		$support = new Support();
+
+		ob_start();
+		$support->open_wrapper();
+		$output = ob_get_clean();
+
+		self::assertSame(
+			'<div class="wtb-shop-layout"><div class="wtb-shop-layout__content">',
+			$output
+		);
 	}
 
 	public function test_close_wrapper_emits_the_closing_markup(): void {

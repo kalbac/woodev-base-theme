@@ -48,6 +48,39 @@ const THEME_SLUG = 'woodev-base-theme';
 /** Plugin slug — WooCommerce. */
 const WOO_SLUG = 'woocommerce';
 
+/**
+ * Product category slugs seeded for the catalogue e2e specs (filter rail,
+ * subcategory chips, active-filter chips, grid, pagination). `kettles`,
+ * `tableware` and `storage` are children of `kitchen`; `textile` is a
+ * SIBLING top-level category with no parent — the subcategory chip row
+ * needs at least one category the "WTB Kitchen" chip set does not include,
+ * to prove the chips scope to the current parent rather than just listing
+ * every category on the site.
+ */
+export const CATEGORY_SLUGS = Object.freeze({
+  kitchen: 'wtb-kitchen',
+  kettles: 'wtb-kettles',
+  tableware: 'wtb-tableware',
+  storage: 'wtb-storage',
+  textile: 'wtb-textile',
+});
+
+/**
+ * Global attribute slug passed to `wc product_attribute create`. WooCommerce
+ * stores the resulting taxonomy as `pa_${ATTRIBUTE_SLUG_COLOUR}` — see
+ * reseedAttribute()'s docblock for where this was confirmed.
+ */
+export const ATTRIBUTE_SLUG_COLOUR = 'wtb-colour';
+
+/** Colour attribute term slugs, created in this order. */
+export const COLOUR_TERM_SLUGS = Object.freeze([
+  'graphite',
+  'forest',
+  'terracotta',
+  'sand',
+  'blue',
+]);
+
 // Known credentials for a seeded customer account. Some `.form-row select`
 // legibility assertions (storefront.spec.mjs) need a page that only exists
 // for a logged-in shopper — WooCommerce's country/state `<select>` lives on
@@ -99,6 +132,141 @@ function reseedProduct(slug, args) {
     }
   }
   return wp(`wc product create --user=admin --slug=${slug} --porcelain ${args}`);
+}
+
+/**
+ * Delete every product category with this slug, then create a fresh one —
+ * same delete-then-create discipline as reseedProduct(), for the same
+ * reason: nothing here has been proven to expose a `--field=id` shortcut on
+ * this Woo, so this reads the existing match back via `--format=json` too
+ * rather than assume the schema behaves like a different WC-CLI namespace.
+ *
+ * @param {string} slug
+ * @param {string} name
+ * @param {number} [parentId] Parent category id; 0 (the default) is top-level.
+ * @returns {number} the new category id.
+ */
+function reseedCategory(slug, name, parentId = 0) {
+  const listJson = wpTry(`wc product_cat list --user=admin --slug=${slug} --format=json`);
+  if (listJson) {
+    for (const { id } of JSON.parse(listJson)) {
+      wp(`wc product_cat delete ${id} --user=admin --force=true`);
+    }
+  }
+  return Number(
+    wp(
+      `wc product_cat create --user=admin --slug=${slug} --name="${name}" --parent=${parentId} --porcelain`,
+    ),
+  );
+}
+
+/**
+ * Delete the global attribute with this slug, then create it fresh together
+ * with all of its terms. Deleting the attribute leaves nothing on the term
+ * side to clean up separately — a freshly created attribute id starts with
+ * zero terms regardless of what the previous attribute (a different id) had.
+ *
+ * WHY MATCH ON `pa_${slug}`, NOT THE RAW SLUG: WooCommerce prefixes the slug
+ * it stores internally with `pa_` — confirmed against this container by
+ * creating a throwaway attribute with `--slug=wtb-colour-test` and reading
+ * it back via `wc product_attribute list --format=json`, which reported
+ * `"slug":"pa_wtb-colour-test"`. Matching on the raw slug would never find
+ * the attribute created by a previous run, and every run would pile up a new
+ * duplicate "WTB Colour" attribute instead of reseeding cleanly — the exact
+ * failure mode reseedProduct()'s own docblock describes for a different
+ * field-name mismatch.
+ *
+ * @param {string} name e.g. "WTB Colour".
+ * @param {string} slug e.g. "wtb-colour" (unprefixed).
+ * @param {readonly string[]} termSlugs Term slugs to create; each is
+ *   Title-Cased for the term's own --name (e.g. "graphite" → "Graphite").
+ * @returns {{ attributeId: number, taxonomy: string, termIds: Record<string, number> }}
+ */
+function reseedAttribute(name, slug, termSlugs) {
+  const taxonomy = `pa_${slug}`;
+  const listJson = wpTry('wc product_attribute list --user=admin --format=json');
+  if (listJson) {
+    for (const attr of JSON.parse(listJson)) {
+      if (attr.slug === taxonomy) {
+        wp(`wc product_attribute delete ${attr.id} --user=admin --force=true`);
+      }
+    }
+  }
+  const attributeId = Number(
+    wp(
+      `wc product_attribute create --user=admin --name="${name}" --slug=${slug} --type=select ` +
+        '--has_archives=true --porcelain',
+    ),
+  );
+
+  const termIds = {};
+  for (const termSlug of termSlugs) {
+    const termName = termSlug.charAt(0).toUpperCase() + termSlug.slice(1);
+    termIds[termSlug] = Number(
+      wp(
+        `wc product_attribute_term create ${attributeId} --user=admin --name="${termName}" ` +
+          `--slug=${termSlug} --porcelain`,
+      ),
+    );
+  }
+  return { attributeId, taxonomy, termIds };
+}
+
+/**
+ * Replace a product's product_cat terms with the given category ids.
+ *
+ * `wp post term set` is core wp-cli, not wc-cli — but product_cat is a plain
+ * taxonomy registered on the `product` post type, so no Woo-specific command
+ * is needed. `--by=id` takes bare numeric ids with no delimiter the shell
+ * could mangle, so this carries none of the quoting risk the file's other
+ * helpers work around.
+ *
+ * @param {number} productId
+ * @param {number[]} categoryIds
+ */
+function assignCategories(productId, categoryIds) {
+  wp(`post term set ${productId} product_cat ${categoryIds.join(' ')} --by=id`);
+}
+
+/**
+ * Attach the global "WTB Colour" attribute to a product with one term value,
+ * marked visible on the product page and NOT used for variations — this
+ * store seeds no variable products, but a real product's `_product_attributes`
+ * entry always carries an explicit variation flag rather than leaving one to
+ * an implicit default, so the layered-nav filter rail has a normal attribute
+ * to count against.
+ *
+ * WHY `wp eval` INSTEAD OF `wc product update --attributes=<json>`: the
+ * --attributes value the WC REST schema expects is a JSON array of objects
+ * (id, options, visible, variation) — both double quotes and spaces, exactly
+ * the combination seedShortcodePage()'s and seedGalleryImages()'s docblocks
+ * already document as unsafe once wp-env re-splits the command string a
+ * second time inside the container. A short single-line PHP snippet through
+ * `wp eval` — the same technique seedGalleryImages() uses — sidesteps the
+ * problem entirely: it builds one WC_Product_Attribute object in-process and
+ * calls WC_Product::save(), which is also what performs the
+ * wp_set_object_terms() call that links the pa_wtb-colour term to the
+ * product. No separate `wp post term set` call is needed for the attribute
+ * itself, unlike assignCategories() above.
+ *
+ * @param {number} productId
+ * @param {number} attributeId Numeric id from reseedAttribute().
+ * @param {string} taxonomy    e.g. "pa_wtb-colour", from reseedAttribute().
+ * @param {number} termId      Numeric term id from reseedAttribute().
+ */
+function assignColourAttribute(productId, attributeId, taxonomy, termId) {
+  const php = [
+    `$product = wc_get_product(${productId});`,
+    '$attr = new WC_Product_Attribute();',
+    `$attr->set_id(${attributeId});`,
+    `$attr->set_name('${taxonomy}');`,
+    `$attr->set_options([${termId}]);`,
+    '$attr->set_visible(true);',
+    '$attr->set_variation(false);',
+    '$product->set_attributes([$attr]);',
+    '$product->save();',
+  ].join(' ');
+  wp(`eval "${php}"`);
 }
 
 /**
@@ -291,6 +459,70 @@ function seedCustomer() {
   }
 }
 
+/**
+ * Widget area the theme renders as the catalogue filter rail
+ * (woodev-base-theme/inc/Woo/FilterRail.php — `FilterRail::SIDEBAR_ID`).
+ */
+export const SHOP_SIDEBAR_ID = 'sidebar-shop';
+
+/**
+ * The WooCommerce filter widgets seeded into that area, in render order.
+ *
+ * All four are WooCommerce's OWN widgets — the theme builds no filtering of
+ * its own, it only supplies the rail and the styling (#41 rows A5–A9). Two of
+ * them deliberately render nothing until the request warrants it, and that is
+ * the point of seeding them: `woocommerce_layered_nav` needs the colour
+ * attribute this file also seeds, and `woocommerce_layered_nav_filters` (the
+ * active-filter chips) only prints once a filter is in the URL — so a spec can
+ * assert the chips appear on `/shop/?filter_wtb-colour=forest` and not on
+ * `/shop/`.
+ */
+const SHOP_FILTER_WIDGETS = [
+  'woocommerce_product_categories',
+  'woocommerce_layered_nav',
+  'woocommerce_price_filter',
+  'woocommerce_layered_nav_filters',
+];
+
+/**
+ * Put WooCommerce's filter widgets into the theme's shop widget area.
+ *
+ * Idempotent by delete-then-add, same discipline as `reseedProduct()`: the Woo
+ * container persists across restarts, and `wp widget add` appends rather than
+ * replacing, so without the delete every run would stack another four copies
+ * of the rail onto the previous run's.
+ *
+ * Worth stating plainly, because it is the difference between a real
+ * assertion and a vacuous one: with this area EMPTY, `FilterRail::is_active()`
+ * is false, `Support::open_wrapper()` emits the plain full-width shell, and no
+ * `.wtb-filter-rail` exists anywhere in the document. A rail spec written
+ * against an unseeded store would therefore be asserting on `null` — passing
+ * or failing for reasons unrelated to the rail.
+ */
+function seedShopFilterWidgets() {
+  const listed = wpTry(`widget list ${SHOP_SIDEBAR_ID} --format=json`);
+
+  if (listed) {
+    for (const { id } of JSON.parse(listed)) {
+      wp(`widget delete ${id}`);
+    }
+  }
+
+  for (const widget of SHOP_FILTER_WIDGETS) {
+    wp(`widget add ${widget} ${SHOP_SIDEBAR_ID}`);
+  }
+
+  const seeded = JSON.parse(wp(`widget list ${SHOP_SIDEBAR_ID} --format=json`));
+
+  if (seeded.length !== SHOP_FILTER_WIDGETS.length) {
+    throw new Error(
+      `[e2e-woo:setup] expected ${SHOP_FILTER_WIDGETS.length} widgets in "${SHOP_SIDEBAR_ID}", ` +
+        `got ${seeded.length} — the theme's widget area may not be registered, in which case ` +
+        '`wp widget add` reports success and the widget lands nowhere.',
+    );
+  }
+}
+
 export default function globalSetup() {
   const log = (...a) => console.log('[e2e-woo:setup]', ...a);
 
@@ -338,6 +570,29 @@ export default function globalSetup() {
       'carry the expected block markup.',
   );
 
+  // ── 3a-bis. Catalogue page size comes from the THEME, not from here ─────
+  //
+  // Nothing is set here on purpose, and the absence is load-bearing enough to
+  // write down. `inc/Woo/Support.php` declares `product_grid` with 3 rows and
+  // 3 columns, and `wc_reset_product_grid_settings()` writes those into
+  // `woocommerce_catalog_rows`/`_columns` on `after_switch_theme` — which the
+  // `wp theme activate` above fires on every run. Nine per page against ten
+  // seeded products is what gives the catalogue a second page for the
+  // pagination assertions (#41 row A13) while keeping all three fixed-slug
+  // products on page one, where the existing storefront specs click through to
+  // them from `/shop/`.
+  //
+  // Two measurements behind that, both made on this container rather than
+  // reasoned about: `posts_per_page` is NOT the lever (setting it to 6 changed
+  // nothing — `WC_Query::product_query()` reaches `apply_filters(
+  // 'loop_shop_per_page', … )` with no `posts_per_page` on the query and
+  // overrides the Reading setting), and forcing 2 rows x 3 columns here DID
+  // paginate but pushed those three products onto page two, timing out six
+  // specs that had been green for sessions.
+
+  // ── 3a-ter. Populate the shop filter rail ────────────────────────────────
+  seedShopFilterWidgets();
+
   // ── 3b. Enable my-account registration ────────────────────────────────────
   //
   // Off by default. The register form's `.col2-set` split (login left,
@@ -353,6 +608,34 @@ export default function globalSetup() {
   // ── 3c. Seed a customer account for login-gated assertions ───────────────
   seedCustomer();
   log(`seeded customer account: ${CUSTOMER_USERNAME}`);
+
+  // ── 3d. Seed the category tree and the colour attribute ──────────────────
+  //
+  // Parent-then-children order matters here: each child category is created
+  // WITH the freshly (re)created parent's id, so a run never leaves a child
+  // pointed at a parent id from a previous run that reseedCategory() just
+  // deleted.
+  const kitchenCatId = reseedCategory(CATEGORY_SLUGS.kitchen, 'WTB Kitchen');
+  const kettlesCatId = reseedCategory(CATEGORY_SLUGS.kettles, 'WTB Kettles', kitchenCatId);
+  const tablewareCatId = reseedCategory(CATEGORY_SLUGS.tableware, 'WTB Tableware', kitchenCatId);
+  const storageCatId = reseedCategory(CATEGORY_SLUGS.storage, 'WTB Storage', kitchenCatId);
+  const textileCatId = reseedCategory(CATEGORY_SLUGS.textile, 'WTB Textile');
+  log(
+    `category tree: kitchen=${kitchenCatId} (kettles=${kettlesCatId}, ` +
+      `tableware=${tablewareCatId}, storage=${storageCatId}), textile=${textileCatId}`,
+  );
+
+  const {
+    attributeId: colourAttributeId,
+    taxonomy: colourTaxonomy,
+    termIds: colourTermIds,
+  } = reseedAttribute('WTB Colour', ATTRIBUTE_SLUG_COLOUR, COLOUR_TERM_SLUGS);
+  log(
+    `colour attribute ${ATTRIBUTE_SLUG_COLOUR} → id ${colourAttributeId}, terms: ` +
+      Object.entries(colourTermIds)
+        .map(([termSlug, id]) => `${termSlug}=${id}`)
+        .join(', '),
+  );
 
   // ── 4. Seed three simple products, idempotently ──────────────────────────
   //
@@ -370,6 +653,8 @@ export default function globalSetup() {
     ].join(' '),
   );
   log(`simple product wtb-product-simple → id ${simpleId}`);
+  assignCategories(simpleId, [kettlesCatId]);
+  assignColourAttribute(simpleId, colourAttributeId, colourTaxonomy, colourTermIds.graphite);
 
   const galleryImageCount = seedGalleryImages(simpleId, 5);
   log(
@@ -388,6 +673,8 @@ export default function globalSetup() {
     ].join(' '),
   );
   log(`sale product wtb-product-sale → id ${saleId}`);
+  assignCategories(saleId, [tablewareCatId]);
+  assignColourAttribute(saleId, colourAttributeId, colourTaxonomy, colourTermIds.forest);
 
   const oosId = reseedProduct(
     'wtb-product-oos',
@@ -401,17 +688,137 @@ export default function globalSetup() {
     ].join(' '),
   );
   log(`out-of-stock product wtb-product-oos → id ${oosId}`);
+  assignCategories(oosId, [storageCatId]);
+  // The out-of-stock product gets a colour term as well, and that is not
+  // symmetry for its own sake: without it the layered-nav colour filter counts
+  // nine of the ten products, and `sand` has no product at all — so a spec
+  // asserting a count, or one filtering by colour and expecting the
+  // out-of-stock CARD treatment, would be measuring a store that does not
+  // match the invariant three comments in this file state. Raised by the s18
+  // critic pass.
+  assignColourAttribute(oosId, colourAttributeId, colourTaxonomy, colourTermIds.sand);
+
+  // ── 4b. Seven more simple products spread across the four categories ────
+  //
+  // Prices span 6.90-49.90 — this store's currency uses two decimal places,
+  // so these are plain numbers, not cents — to give the price-range side of
+  // the filter rail something to bracket. Two of these are on sale and one
+  // is out of stock, on top of wtb-product-sale and wtb-product-oos above:
+  // three products on sale and two out of stock, store-wide. Every entry
+  // carries a colour term so the layered-nav filter has something to count
+  // for all ten products, not just the three fixed-slug ones.
+  const CATALOGUE_PRODUCTS = [
+    {
+      slug: 'wtb-alder-kettle',
+      name: 'WTB Alder Kettle 1.7 L',
+      regularPrice: '34.90',
+      categoryId: kettlesCatId,
+      colourTermSlug: 'graphite',
+    },
+    {
+      slug: 'wtb-birch-whistling-kettle',
+      name: 'WTB Birch Whistling Kettle',
+      regularPrice: '24.90',
+      salePrice: '19.90',
+      categoryId: kettlesCatId,
+      colourTermSlug: 'blue',
+    },
+    {
+      slug: 'wtb-cedar-teapot-set',
+      name: 'WTB Cedar Teapot Set',
+      regularPrice: '29.90',
+      categoryId: tablewareCatId,
+      colourTermSlug: 'terracotta',
+    },
+    {
+      slug: 'wtb-linen-napkin-set',
+      name: 'WTB Linen Napkin Set',
+      regularPrice: '12.90',
+      categoryId: tablewareCatId,
+      colourTermSlug: 'sand',
+      inStock: false,
+    },
+    {
+      slug: 'wtb-oak-pantry-jar',
+      name: 'WTB Oak Pantry Storage Jar',
+      regularPrice: '6.90',
+      categoryId: storageCatId,
+      colourTermSlug: 'forest',
+    },
+    {
+      slug: 'wtb-maple-utensil-crock',
+      name: 'WTB Maple Utensil Crock',
+      regularPrice: '44.90',
+      salePrice: '34.90',
+      categoryId: storageCatId,
+      colourTermSlug: 'graphite',
+    },
+    {
+      slug: 'wtb-woven-table-runner',
+      name: 'WTB Woven Table Runner',
+      regularPrice: '49.90',
+      categoryId: textileCatId,
+      colourTermSlug: 'terracotta',
+    },
+  ];
+
+  const catalogueProductIds = {};
+  for (const p of CATALOGUE_PRODUCTS) {
+    const args = [
+      '--type=simple',
+      `--name="${p.name}"`,
+      `--regular_price=${p.regularPrice}`,
+      `--description="${p.name}, seeded by the Woo e2e global-setup for catalogue coverage."`,
+      `--short_description="${p.name} for e2e."`,
+    ];
+    if (p.salePrice) {
+      args.push(`--sale_price=${p.salePrice}`);
+    }
+    if (p.inStock === false) {
+      args.push('--in_stock=false');
+    }
+
+    const id = reseedProduct(p.slug, args.join(' '));
+    assignCategories(id, [p.categoryId]);
+    assignColourAttribute(id, colourAttributeId, colourTaxonomy, colourTermIds[p.colourTermSlug]);
+    catalogueProductIds[p.slug] = Number(id);
+    log(`catalogue product ${p.slug} → id ${id}`);
+  }
 
   // ── 5. Seed a NON-Woo page that renders a Woo product loop ───────────────
   const shortcodePageId = seedShortcodePage();
   log(`[products] shortcode page ${SHORTCODE_PAGE_SLUG} → id ${shortcodePageId}`);
 
-  // ── 6. Export the seeded product ids for specs/helpers.mjs ──────────────
+  // ── 6. Export the seeded ids for specs/helpers.mjs ───────────────────────
+  //
+  // (The pagination question is settled at step 3a-bis above: the theme's own
+  // `product_grid` support is what sets the catalogue's page size, so nine of
+  // these ten products land on page one and the pager is real. An earlier NOTE
+  // here said the opposite — that no catalogue-specific lever existed and this
+  // fixture could not manufacture a second page — which was true of
+  // `posts_per_page` and wrong about `woocommerce_catalog_rows`/`_columns`.
+  // Two contradictory explanations of the same behaviour in one file is worse
+  // than either alone, so the stale one is gone rather than annotated.)
   writeFixtures({
     products: {
       simple: Number(simpleId),
       sale: Number(saleId),
       oos: Number(oosId),
+      catalogue: catalogueProductIds,
+    },
+    categories: {
+      kitchen: kitchenCatId,
+      kettles: kettlesCatId,
+      tableware: tablewareCatId,
+      storage: storageCatId,
+      textile: textileCatId,
+    },
+    attributes: {
+      colour: {
+        id: colourAttributeId,
+        taxonomy: colourTaxonomy,
+        terms: colourTermIds,
+      },
     },
   });
   log(`wrote fixture ids to ${FIXTURES_PATH}`);

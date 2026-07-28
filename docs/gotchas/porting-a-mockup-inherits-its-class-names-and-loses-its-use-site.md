@@ -72,8 +72,23 @@ faithful to its fragment can still be wrong about the document it lands in. Look
 browser before believing a port is done — in s17 both were found in the first screenshot taken, after the
 suites were already green.
 
+## s18: the collision does not only come from the mockup
+
+The theme shares its class namespace with Basecoat — and, on storefront pages, with **WooCommerce**,
+whose markup this theme does not write and cannot rename. Woo's product tab list is
+`class="tabs wc-tabs"`, and `.tabs` is Basecoat's tabs component: it set `flex-direction: column` on
+every product page's tab list, which therefore rendered as a vertical stack. Nothing in this theme
+declared that property, so nothing in this theme could be blamed by reading its own CSS.
+
+The check is the same one that caught `.label` — grep the built bundle for the name — but the
+*trigger* is broader than "before porting a class name from the mockup". It is: **before assuming a
+rule of ours governs an element, list every stylesheet on the page that matches it.** Full write-up,
+with the second s18 defect of the same family:
+[[source-order-only-wins-the-properties-you-redeclare]].
+
 ## Related
 
+- [[source-order-only-wins-the-properties-you-redeclare]] — the s18 generalisation: a rule wins on source order only for the properties it re-declares, and the colliding name can come from a dependency rather than the mockup
 - [[qa-gates-cover-less-than-they-claim]] — the parent pattern: green results that measured something other than what was claimed
 - [[svg-use-shadow-boundary-needs-custom-props]] — the other reason this project stopped using `<use>` at all
 - [[tailwind-v4-layer-precedence]] — the other way an outside declaration wins over ours

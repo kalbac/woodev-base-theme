@@ -66,8 +66,305 @@
  * Shop header + result/ordering toolbar
  * ================================================================== */
 .woocommerce {
+  /* Archive header — the mockup's title block on the left with the
+   * subcategory chip row against the right edge (mockup line 1911).
+   *
+   * A grid rather than the mockup's flex row, because the mockup wraps its
+   * title and lede in a `<div>` and WooCommerce does not: `loop/header.php`
+   * emits the `<h1>` and whatever `woocommerce_archive_description` prints as
+   * SIBLINGS. As flex items those two would sit side by side. Every child is
+   * therefore pinned to column 1 and only the chip row moves to column 2.
+   *
+   * Deviation from the mockup, stated rather than hidden: the chips align with
+   * the bottom of the TITLE (row 1), not with the bottom of the description.
+   * Getting the latter would mean wrapping the title and description in a
+   * container, and the only way to do that is a pair of callbacks straddling
+   * `woocommerce_archive_description`'s priority 10 — the same priority-window
+   * trap inc/Woo/CardActionsWrapper.php exists to avoid. With no description
+   * the two are identical anyway. */
   .woocommerce-products-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: end;
+    column-gap: var(--space-lg);
+    row-gap: var(--space-sm);
     margin-bottom: var(--space-lg);
+    padding-bottom: var(--space-lg);
+    border-bottom: var(--rule);
+  }
+
+  .woocommerce-products-header > * {
+    grid-column: 1;
+  }
+
+  /* The two-column arrangement is a WIDE-viewport treatment only, and that is
+   * a correctness fix rather than a preference (s18 critic, P1, confirmed in
+   * the browser at 320px before it was changed).
+   *
+   * With `grid-template-columns: minmax(0, 1fr) auto` at every width, the chip
+   * track is sized to its MAX-CONTENT — every chip on one line — and
+   * `flex-wrap` does not constrain it while the track is being sized. On a
+   * 320px viewport a category with three children took 249px for the chips and
+   * left `0px` for the title, measured: `gridTemplateColumns: "0px 249px"`.
+   * The page did not overflow (that is what the `minmax(0, …)` prevented) — the
+   * `<h1>` simply wrapped at every character and ran down the left edge one
+   * letter per line. */
+  @media (min-width: 48rem) {
+    .woocommerce-products-header {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .woocommerce-products-header > .wtb-subcats {
+      grid-row: 1;
+      grid-column: 2;
+      justify-self: end;
+    }
+  }
+
+  /* The chips themselves are the theme's own `.tag` component
+   * (adapter/feedback.css); only the row that holds them lives here. */
+  .wtb-subcats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .wtb-subcats li {
+    margin: 0;
+    padding: 0;
+  }
+
+  /* ================================================================== *
+   * Shop layout + filter rail (mockup §11, lines 612–637)
+   *
+   * The rail is chrome, not a filter engine: WooCommerce's own widgets and
+   * blocks (Product Categories, Filter by Price, Filter by Attribute, Filter
+   * by Stock, Rating Filter, Active Filters) are what actually filter, and
+   * `Setup::register_widget_areas()` wraps EVERY one of them in
+   * `.wtb-filter-group` + `<h4>` through the `sidebar-shop` before/after
+   * strings. That is the whole contract these rules target — which widget
+   * landed in the area is deliberately none of their business.
+   *
+   * Both wrappers only ever exist on a product archive whose widget area has
+   * widgets (Woo\FilterRail::is_active()); every other Woo view keeps the
+   * full-width `.wtb-layout` shell it had before the rail existed.
+   * ================================================================== */
+  .wtb-shop-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-lg);
+    align-items: start;
+  }
+
+  .wtb-shop-layout__content {
+    min-width: 0;
+  }
+
+  .wtb-filter-rail {
+    min-width: 0;
+  }
+
+  /* The head: title (or, once src/js/woo.js has run, the toggle BUTTON it is
+   * replaced by) on the left, Reset against the right edge. */
+  .wtb-filter-rail__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .wtb-filter-rail__title,
+  .wtb-filter-rail__toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font: inherit;
+    font-weight: 600;
+    color: var(--foreground);
+  }
+
+  .wtb-filter-rail__title svg,
+  .wtb-filter-rail__toggle svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* Stacked layout (A14): the toggle is a real button and looks like one.
+   * It only exists once JavaScript has created it — with no script the head
+   * keeps its plain `<span>` title and the panel below stays open, which is
+   * the whole no-JS story. */
+  .wtb-filter-rail__toggle {
+    min-height: 44px;
+    padding: 0.6rem 0.9rem;
+    border: 1px solid var(--input);
+    border-radius: var(--radius-md);
+    background-color: var(--card);
+    cursor: pointer;
+  }
+
+  .wtb-filter-rail__toggle:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  .wtb-filter-rail__panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+    margin-top: var(--space-md);
+  }
+
+  /* `[hidden]` is an author-overridable UA rule and `display: flex` above would
+   * beat it. Declared explicitly, because this one line is the entire collapse
+   * — and unlike the `<details>` this replaced, a `display: none` panel
+   * contributes nothing to the grid row, so the rail cannot leave a
+   * screen-height gap behind when it closes. */
+  .wtb-filter-rail__panel[hidden] {
+    display: none;
+  }
+
+  .wtb-filter-group {
+    padding-bottom: var(--space-lg);
+    border-bottom: var(--rule);
+  }
+
+  /* Last group in the rail: no rule under it — the rail already ends there. */
+  .wtb-filter-group:last-child {
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+
+  .wtb-filter-group h4 {
+    margin: 0 0 var(--space-sm);
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+  }
+
+  .wtb-filter-group ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* The ROW is the `li`, not the link inside it. Woo's layered-nav widget
+   * prints the product count as a SIBLING of the anchor, not a child of it:
+   *
+   *   <li class="wc-layered-nav-term"><a …>Forest</a> <span class="count">(1)</span></li>
+   *
+   * so laying out only the anchor leaves the count on its own line under the
+   * term — which is exactly what it did until this was measured on the live
+   * widget. Making the `li` the flex row puts them back on one line for every
+   * widget, whether the count is inside the link (product categories) or
+   * beside it (layered nav). */
+  .wtb-filter-group li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 0.35rem;
+    padding: 0;
+  }
+
+  /* The product-categories widget nests a whole `<ul class="children">` inside
+   * its `li`. As a flex item that would sit BESIDE the parent term; `flex:
+   * 1 0 100%` sends it to its own row, indented, which is what a subcategory
+   * list is supposed to look like. */
+  .wtb-filter-group li > ul {
+    flex: 1 0 100%;
+    padding-left: var(--space-md);
+  }
+
+  /* Every filter widget Woo ships renders its options as links or labels; the
+   * tap-target floor (mockup §18b) applies to all of them regardless of which. */
+  .wtb-filter-group li > a,
+  .wtb-filter-group li > label {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 44px;
+    font-size: var(--text-sm);
+    color: var(--foreground);
+    text-decoration: none;
+  }
+
+  .wtb-filter-group li > a:hover {
+    color: var(--primary);
+  }
+
+  /* Woo prints the per-term product count as `<span class="count">` — the
+   * mockup's `.n`, against the far edge of the row. */
+  .wtb-filter-group .count {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--muted-foreground);
+  }
+
+  /* Active filters (A8): Woo's own "Active Filters" widget/block, styled as
+   * the mockup's removable chips. Its markup is a list whose links ARE the
+   * remove control, so the chip and its × are one element rather than the
+   * mockup's span-plus-button — same affordance, one less node, and no
+   * interactive element nested inside another. */
+  .wtb-filter-group.widget_layered_nav_filters ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .wtb-filter-group.widget_layered_nav_filters li {
+    margin: 0;
+  }
+
+  .wtb-filter-group.widget_layered_nav_filters li > a {
+    min-height: 32px;
+    padding: 0.3rem 0.7rem;
+    border-radius: var(--radius-full);
+    background-color: var(--accent);
+    color: var(--accent-foreground);
+  }
+
+  .wtb-filter-rail__reset {
+    align-self: start;
+  }
+
+  @media (min-width: 64rem) {
+    .wtb-shop-layout {
+      grid-template-columns: 248px minmax(0, 1fr);
+      gap: var(--space-xl);
+    }
+
+    .wtb-filter-rail {
+      position: sticky;
+      top: 88px;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-lg);
+    }
+
+    /* On the wide layout the toggle is a heading again, not a button: the
+     * panel is always expanded there (JS sets `aria-expanded="true"` and
+     * unhides it on every breakpoint crossing), so a control that cannot
+     * usefully be pressed should not look pressable. */
+    .wtb-filter-rail__toggle {
+      min-height: 0;
+      padding: 0;
+      border: 0;
+      background: none;
+      cursor: default;
+    }
+
+    .wtb-filter-rail__panel {
+      display: flex;
+      margin-top: 0;
+    }
   }
 
   .woocommerce-products-header__title.page-title {
@@ -143,6 +440,12 @@
   /* ================================================================== *
    * Breadcrumb
    * ================================================================== */
+  /* The trailing crumb — the page you are on — is a BARE TEXT NODE in
+   * `global/breadcrumb.php`, not an element, so it cannot be selected. The
+   * mockup wants it darker than the links (`.breadcrumb [aria-current]`,
+   * mockup line 420), which inverts into: the nav carries the strong colour
+   * and the anchors override it back to muted. Same rendering, no template
+   * override, and nothing to re-audit when WooCommerce touches that file. */
   .woocommerce-breadcrumb {
     display: flex;
     flex-wrap: wrap;
@@ -150,12 +453,18 @@
     gap: 0.4rem;
     margin-bottom: var(--space-md);
     font-size: var(--text-sm);
-    color: var(--muted-foreground);
+    color: var(--foreground);
   }
 
   .woocommerce-breadcrumb a {
     color: var(--muted-foreground);
     text-decoration: none;
+  }
+
+  /* inc/Woo/Catalogue.php replaces Woo's bare `&nbsp;/&nbsp;` delimiter with
+   * this span so the separator can be quieter than either side of it. */
+  .wtb-breadcrumb__sep {
+    color: var(--border-strong);
   }
 
   .woocommerce-breadcrumb a:hover {
@@ -316,6 +625,18 @@
     padding: 0 var(--space-md) var(--space-md);
   }
 
+  /* Category eyebrow above the card title (mockup `span.cat`, line 1989),
+   * printed by woocommerce/content-product.php. Quiet and small: it is
+   * orientation, not a heading, and it must not compete with the product
+   * name directly under it. */
+  .wtb-product-card__cat {
+    font-size: var(--text-xs);
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+  }
+
   .wtb-product-card__body .woocommerce-loop-product__title {
     margin: 0;
     padding: 0;
@@ -414,21 +735,45 @@
 
   /* ================================================================== *
    * Sale flash & out-of-stock badge — pills over the media.
-   * `.onsale` is Woo's own class (no `.badge` in real markup: adding it
-   * would need a `woocommerce_sale_flash` filter for a purely cosmetic DRY
-   * win, which is not "genuinely required" — CSS-only mirroring, matching
-   * this file's own standing philosophy, is simpler and lower-risk). Values
-   * below match T5's `.badge` recipe (adapter/feedback.css) so the two read
-   * as the same pill language despite not sharing a class.
+   * `.onsale` is Woo's own class. Its TEXT is ours from s18
+   * (inc/Woo/Catalogue.php filters `woocommerce_sale_flash` into the
+   * mockup's `−24%`, falling back to Woo's word when no single percentage
+   * exists); its SHAPE is mirrored here rather than by adding `.badge` to
+   * the markup, because the un-layered/layered split means an adapter-layer
+   * `.badge` would lose to Woo's own un-layered rules anyway. Values match
+   * T5's `.badge` recipe (adapter/feedback.css) so the two read as the same
+   * pill language despite not sharing a class.
    * `.wtb-stock-badge` DOES carry `badge[data-variant="secondary"]` from the
    * content-product.php override, so only its POSITION is set here — the
    * pill shape/colour is T5's, un-layered position wins regardless.
+   *
+   * EVERY inset and size property below is declared on purpose, including
+   * the three that look like no-ops. Woo ships TWO rules for this element:
+   *
+   *   .woocommerce span.onsale                    { min-width: 3.236em;
+   *                                                 text-align: center; … }
+   *   .woocommerce ul.products li.product .onsale { top: 0; right: 0;
+   *                                                 left: auto; margin: … }
+   *
+   * The second has the SAME specificity as this rule and loses on source
+   * order — but only for the properties this rule actually re-declares.
+   * Until s18 it declared `top` and `left` and not `right`, so Woo's
+   * `right: 0` survived; an absolutely positioned box with both `left` and
+   * `right` set and `width: auto` stretches between them, and the sale badge
+   * rendered as a full-width red bar across the top of every card in the
+   * catalogue. It looked like a deliberate ribbon, which is why three review
+   * passes and four suites read past it. Same family as the `.tabs`
+   * collision above: the property nobody declared is the one that decides
+   * the layout. `min-width` and `text-align` come from the first rule and
+   * are reset for the same reason.
    * ================================================================== */
   ul.products li.product .onsale {
     position: absolute;
     top: 0.75rem;
+    right: auto;
     left: 0.75rem;
     z-index: 3;
+    min-width: 0;
     min-height: 0;
     margin: 0;
     padding: 0.2rem 0.55rem;
@@ -439,6 +784,7 @@
     font-weight: 600;
     letter-spacing: 0.01em;
     line-height: 1.4;
+    text-align: left;
   }
 
   .wtb-product-card .wtb-stock-badge {
@@ -541,6 +887,53 @@
     flex: none;
   }
 
+  /* Wide viewports: the mockup's 64px thumbnail COLUMN to the LEFT of the main
+   * image (mockup line 643), instead of Woo's rail underneath it. Below this
+   * breakpoint the rail stays under the image, which is what the mockup's own
+   * mobile gallery draws (line 2313) and what the rules above already do.
+   *
+   * Guarded on `:has(.flex-control-thumbs)` because that rail does not exist in
+   * the server-rendered markup at all — flexslider builds it at runtime from
+   * the gallery images. A product with ONE image never gets one, and neither
+   * does a visitor with JavaScript off. An unconditional two-column grid would
+   * put the only image in the 64px track in both of those cases: a page that is
+   * fine today becoming a 64px-wide photo the moment a script fails to load is
+   * exactly the progressive-enhancement failure AGENTS.md rules out.
+   *
+   * The frame moves with the layout. In one column the border/radius/plate
+   * belong to the gallery box; in two they belong to the main image alone, or
+   * the border would draw a box around the thumbnail column as well. */
+  @media (min-width: 48rem) {
+    div.product .woocommerce-product-gallery:has(.flex-control-thumbs) {
+      display: grid;
+      grid-template-columns: 64px minmax(0, 1fr);
+      align-items: start;
+      gap: var(--space-md);
+      border: 0;
+      border-radius: 0;
+      background: none;
+      overflow: visible;
+    }
+
+    div.product .woocommerce-product-gallery:has(.flex-control-thumbs) .flex-viewport {
+      grid-row: 1;
+      grid-column: 2;
+      border: var(--rule);
+      border-radius: var(--radius-lg);
+      background-color: var(--surface-2);
+      overflow: hidden;
+    }
+
+    div.product div.images:has(.flex-control-thumbs) .flex-control-thumbs {
+      grid-row: 1;
+      grid-column: 1;
+      flex-direction: column;
+      flex-wrap: nowrap;
+      margin: 0;
+      padding: 0;
+    }
+  }
+
   div.product .flex-control-thumbs img {
     display: block;
     width: 100%;
@@ -559,12 +952,25 @@
     border-color: var(--primary);
   }
 
-  /* Sale flash on the gallery — same pill as the loop. */
+  /* Sale flash — same pill as the loop, but STATIC here, not absolutely
+   * positioned. Since s18 inc/Woo/ProductPage.php moves
+   * `woocommerce_show_product_sale_flash` off
+   * `woocommerce_before_single_product_summary`@10 (over the gallery) onto
+   * `woocommerce_single_product_summary`@2, so the badge now sits in the buy
+   * box between the breadcrumb and the title, exactly where the mockup draws
+   * it (line 2193).
+   *
+   * The `position: absolute` this rule used to carry did not follow it there:
+   * `.summary` is not a positioned ancestor, so the badge escaped its column
+   * entirely and resolved against the initial containing block — landing at
+   * the page's top-left corner, which happens to sit over the gallery and
+   * therefore looked like it was still working. `min-width`/`text-align` are
+   * reset for the same reason as in the loop rule above: Woo's `.woocommerce
+   * span.onsale` sets both, and this rule wins only what it re-declares. */
   div.product .onsale {
-    position: absolute;
-    top: 0.75rem;
-    left: 0.75rem;
-    z-index: 2;
+    position: static;
+    align-self: start;
+    min-width: 0;
     min-height: 0;
     margin: 0;
     padding: 0.2rem 0.55rem;
@@ -575,6 +981,7 @@
     font-weight: 600;
     letter-spacing: 0.01em;
     line-height: 1.4;
+    text-align: left;
   }
 
   div.product .summary.entry-summary {
@@ -664,11 +1071,20 @@
     color: var(--muted-foreground);
   }
 
-  /* Add-to-cart row: Woo's native `.quantity .qty` number input beside the
-   * primary button. No decorative +/- stepper buttons: Woo's markup does not
-   * emit them (only a bare number input) and adding a working pair needs
-   * Alpine wiring, which is out of this task's CSS/hook scope — see the task
-   * report. */
+  /* Add-to-cart row: Woo's native `.quantity .qty` number input, now flanked
+   * by the mockup's −/+ stepper (mockup line 369). The buttons are printed by
+   * inc/Woo/ProductPage.php on `woocommerce_before_quantity_input_field` /
+   * `woocommerce_after_quantity_input_field` — two hooks WooCommerce fires
+   * from inside `templates/global/quantity-input.php` itself, so no template
+   * override was needed for them.
+   *
+   * They ship `hidden` from PHP and src/js/woo.js un-hides them: with no
+   * JavaScript the buttons would be inert, and a visible dead control is worse
+   * than none at all beside an input that already types and steps natively.
+   * That is also why the border below moves to the WRAPPER rather than staying
+   * on the input — with the buttons hidden the wrapper collapses to exactly the
+   * input's box, so the no-JS rendering is the same bordered field it was
+   * before the stepper existed. */
   div.product form.cart {
     display: flex;
     flex-wrap: wrap;
@@ -678,21 +1094,63 @@
   }
 
   div.product form.cart .quantity {
-    display: flex;
+    display: inline-flex;
+    align-items: stretch;
+    border: 1px solid var(--input);
+    border-radius: var(--radius-md);
+    background-color: var(--card);
+  }
+
+  div.product form.cart .wtb-qty-step {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    min-height: 44px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--foreground);
+    cursor: pointer;
+  }
+
+  div.product form.cart .wtb-qty-step svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  div.product form.cart .wtb-qty-step:hover {
+    background-color: var(--accent);
+  }
+
+  div.product form.cart .wtb-qty-step:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: -2px;
+  }
+
+  /* `[hidden]` is an author-overridable UA rule, and `display: grid` above
+   * would beat it — the no-JS state depends on this staying declared. */
+  div.product form.cart .wtb-qty-step[hidden] {
+    display: none;
   }
 
   div.product form.cart .quantity .qty {
-    width: 4.5rem;
+    width: 3.25rem;
     min-height: 44px;
     padding: 0 0.5rem;
     color: var(--foreground);
-    background-color: var(--card);
-    border: 1px solid var(--input);
-    border-radius: var(--radius-md);
+    background: none;
+    border: 0;
+    border-radius: 0;
     text-align: center;
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
     -moz-appearance: textfield;
+  }
+
+  /* Only between the buttons — a rule against the wrapper's own border would
+   * double it. `:has()` keeps the no-JS rendering borderless inside. */
+  div.product form.cart .quantity:has(.wtb-qty-step:not([hidden])) .qty {
+    border-inline: 1px solid var(--border);
   }
 
   div.product form.cart .quantity .qty::-webkit-outer-spin-button,
@@ -716,13 +1174,100 @@
     min-height: 44px;
   }
 
-  /* Product meta (SKU / category / tags) — quiet, ruled off from the buy box. */
+  /* SKU beside the rating (mockup line 2198). Woo prints the rating block and
+   * nothing else on that line, so inc/Woo/ProductPage.php adds the SKU as a
+   * SIBLING of `.woocommerce-product-rating` and this pulls the two onto one
+   * row. `.summary` is a flex column, so `order` is not needed — the PHP
+   * priorities already put them adjacent — but the row itself has to be
+   * reconstructed, which is what the negative margin does: it cancels the
+   * column's own gap between the two, without either element knowing about
+   * the other's existence. */
+  div.product .summary .wtb-product-sku {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: calc(var(--space-md) * -1);
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    color: var(--muted-foreground);
+  }
+
+  div.product .summary .wtb-product-sku__sep {
+    color: var(--border-strong);
+  }
+
+  /* Savings badge under the price (mockup line 2202). */
+  div.product .summary .wtb-product-save {
+    margin: 0;
+  }
+
+  /* Stock line — the mockup's coloured pip before the text (mockup line 663).
+   * Woo prints this INSIDE the add-to-cart form and only when the product
+   * manages stock, so it is styled where it lands rather than relocated. */
+  div.product .stock {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    font-size: var(--text-sm);
+    font-weight: 500;
+  }
+
+  div.product .stock::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: currentcolor;
+  }
+
+  div.product .stock.in-stock {
+    color: var(--success);
+  }
+
+  div.product .stock.out-of-stock,
+  div.product .stock.available-on-backorder {
+    color: var(--muted-foreground);
+  }
+
+  /* Trust badges (B9) — two Customizer strings, both empty by default, so on
+   * an unconfigured store this selector matches nothing at all. */
+  div.product .wtb-product-trust {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  /* Product meta (SKU / category / tags) — quiet, ruled off from the buy box.
+   * `.product_meta` is kept on the element by woocommerce/single-product/
+   * meta.php's override alongside `.wtb-product-meta`, because Woo's own CSS
+   * and third-party plugins both key off it; the `<dl>` shape is ours. */
   div.product .product_meta {
     margin-top: 0.5rem;
     padding-top: var(--space-lg);
     border-top: var(--rule);
     font-size: var(--text-sm);
     color: var(--muted-foreground);
+  }
+
+  div.product .wtb-product-meta {
+    display: grid;
+    gap: 0.4rem;
+  }
+
+  div.product .wtb-product-meta > div {
+    display: flex;
+    gap: 0.6rem;
+  }
+
+  div.product .wtb-product-meta dt {
+    min-width: 88px;
+    color: var(--muted-foreground);
+  }
+
+  div.product .wtb-product-meta dd {
+    margin: 0;
+    color: var(--foreground);
   }
 
   div.product .product_meta a {
@@ -746,8 +1291,27 @@
     margin-top: var(--space-2xl);
   }
 
+  /* `flex-direction` is NOT redundant here, and leaving it out was a real,
+   * shipped defect (found s18 by reading computed style on the live page, after
+   * three review passes and four suites had read past it). WooCommerce names
+   * its tab list `class="tabs wc-tabs"`, and `.tabs` is ALSO Basecoat's tabs
+   * component, which contributes exactly two declarations to this element:
+   *
+   *   .tabs { display: flex }
+   *   :is(.tabs:has(> [role="tablist"][aria-orientation="horizontal"]),
+   *       .tabs:not(:has(> [role="tablist"][aria-orientation="vertical"])))
+   *     { flex-direction: column }
+   *
+   * Woo's `<ul>` has no `[aria-orientation]` child, so it matches that
+   * `:not()` branch and inherits `column` — and the rule below re-declared
+   * `display: flex` (which changed nothing) while never touching the direction,
+   * so the product tabs rendered as a vertical stack of full-width rows. Same
+   * shape as the s17 `.label` collision, arriving from WooCommerce's class
+   * names rather than the mockup's. Pinned on computed style in
+   * tests/e2e-woo/storefront.spec.mjs, not on markup. */
   div.product .woocommerce-tabs ul.tabs {
     display: flex;
+    flex-direction: row;
     flex-wrap: wrap;
     gap: 2px;
     margin: 0 0 var(--space-lg);

@@ -28,6 +28,14 @@ export default [
         fetch: 'readonly',
         process: 'readonly',
         getComputedStyle: 'readonly',
+        // Added for src/js/woo.js's quantity stepper (B8,
+        // docs/plans/2026-07-28-catalogue-and-product.md): it dispatches a
+        // synthetic `change` event (`new Event(...)`) and narrows
+        // `event.target`/the resolved quantity field with `instanceof`
+        // before touching them.
+        Event: 'readonly',
+        Element: 'readonly',
+        HTMLInputElement: 'readonly',
         localStorage: 'readonly',
         // Added s14 for tests/e2e-woo/helpers.mjs, which parses `page.url()`
         // to prove /checkout/ did not 302 to /cart/. `URL` is a global in

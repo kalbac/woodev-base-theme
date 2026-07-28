@@ -55,6 +55,31 @@ That is the whole output. A suite that never ran looks exactly like a suite that
 - **Verify the mutation landed before believing the run.** Print the changed line, or assert the needle is gone; never infer it from the test result you were hoping to see. This is the same class AGENTS.md warns about for shell rewrites, arriving through a different door.
 - **`--ignore-path` is how you find out what Prettier is actually looking at.** The message is emitted for an empty match set and is indistinguishable from a pass. Twice now.
 
+## s18 adds a whole round of them, and they were found by pointing the critic at the GUARDS
+
+Every previous entry here is a gate that measured less than it claimed. s18 ran the Codex critic
+over `tests/`, not just over the product code, and got four P1s in one pass — all of the same
+shape, all in assertions written that same session to prove defects had been fixed.
+
+| Assertion | What it was believed to prove | What it actually did |
+|---|---|---|
+| `expect(background).not.toBe(primary)` on the filter rail's reset link | "the link is the quiet ghost button, not the primary one" — guarding a defect where a mockup class name did nothing and the link fell through to the primary variant | Compared `getComputedStyle(el).backgroundColor`, which resolves to `rgb(…)`/`oklch(…)`, against `getPropertyValue('--primary')`, which is the **raw token text**. The two can never be equal, so it passed for every possible input — including the exact defect it was written to catch. **Vacuous from the moment it was written.** |
+| `badgeWidth < cardWidth / 2` plus a right-edge gap on the sale badge | "the badge is a pill, not a full-width bar" | A hidden badge has a 0×0 box, which satisfies both. A regression that removed the badge entirely would read as a pass. Fixed by asserting visibility *first*. |
+| `expect(next.locator('.sr-only')).not.toBeEmpty()` | "the pagination arrow has an accessible name" | A non-empty element in the DOM is not a name in the accessibility tree — `display: none` or a stray `aria-hidden` on that span leaves the anchor unnamed and the assertion green. Fixed with `toHaveAccessibleName()`. |
+| `expect(href).not.toContain('filter_wtb-colour')` | "reset actually clears the filtering" | Passes for a link that swaps one active filter for another. Fixed by following the link and asserting no filter query var survives. |
+
+Two lessons worth more than the individual fixes:
+
+- **Compare a measurement against another measurement, never against a source value.** A computed
+  style is a resolved value; a custom property, a token file and a design doc are all source text.
+  Assertions that cross that boundary tend to be trivially true. If you need "not the primary
+  colour", read the primary colour off a rendered element too — or assert the concrete resolved
+  value (`rgba(0, 0, 0, 0)` for a transparent ghost button).
+- **Review the tests as adversarially as the code.** The four above passed code review, passed
+  their own runs, and were about to be quoted as evidence. They were found in the pass that fed
+  the *guards* to the critic instead of the implementation — which is now part of the routine, not
+  an afterthought.
+
 ## Related
 
 - [[make-pot-reports-one-defect-class-of-three]] — the s16 headline instance: a POT generator that reports one defect class of three and is silent on the two that delete the string

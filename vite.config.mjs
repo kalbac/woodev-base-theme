@@ -19,6 +19,10 @@ export default defineConfig({
         // loop renders our product markup on any page. See that class's
         // docblock; this comment claimed the opposite until s14.
         woo: 'src/css/woo.css',
+        // Product-page quantity stepper (B8); Woo\Assets.php enqueues it only
+        // when is_product() is true, unlike the css entry above — see that
+        // method's docblock.
+        wooJs: 'src/js/woo.js',
         // Block Cart/Checkout bundle; Woo\BlockAssets.php enqueues it only
         // when the page actually contains one of the two blocks.
         wooBlocks: 'src/css/woo-blocks.css',

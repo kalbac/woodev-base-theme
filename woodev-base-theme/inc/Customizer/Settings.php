@@ -404,6 +404,106 @@ final class Settings {
 		return self::sanitize_front_hero_art( get_theme_mod( 'front_hero_art', self::FRONT_HERO_ART_DEFAULT ) );
 	}
 
+
+	/**
+	 * Product page trust badges (B9, docs/plans/2026-07-28-catalogue-and-product.md):
+	 * one `Text | icon` line each, icon optional. Two independently named
+	 * settings rather than front_hero_trust()'s repeater — the mockup shows
+	 * exactly two fixed-purpose badges (a delivery cutoff, a warranty), not
+	 * an admin-sized list.
+	 */
+	public const PRODUCT_TRUST_BADGE_ONE_DEFAULT = '';
+	public const PRODUCT_TRUST_BADGE_TWO_DEFAULT = '';
+
+	/**
+	 * Customizer sanitize callback for `product_trust_badge_one`.
+	 *
+	 * @param mixed $value Raw value.
+	 */
+	public static function sanitize_product_trust_badge_one( mixed $value ): string {
+		return self::sanitize_product_trust_badge( $value );
+	}
+
+	/**
+	 * Product page trust badge #1 (e.g. a delivery-cutoff line), parsed and
+	 * validated; null when unset.
+	 *
+	 * @return array{label: string, icon: string}|null
+	 */
+	public static function product_trust_badge_one(): ?array {
+		$raw = get_theme_mod( 'product_trust_badge_one', self::PRODUCT_TRUST_BADGE_ONE_DEFAULT );
+
+		return self::parse_product_trust_badge( self::sanitize_product_trust_badge_one( $raw ) );
+	}
+
+	/**
+	 * Customizer sanitize callback for `product_trust_badge_two`. See
+	 * sanitize_product_trust_badge_one() — identical shape, second badge slot.
+	 *
+	 * @param mixed $value Raw value.
+	 */
+	public static function sanitize_product_trust_badge_two( mixed $value ): string {
+		return self::sanitize_product_trust_badge( $value );
+	}
+
+	/**
+	 * Product page trust badge #2 (e.g. a warranty line), parsed and
+	 * validated; null when unset.
+	 *
+	 * @return array{label: string, icon: string}|null
+	 */
+	public static function product_trust_badge_two(): ?array {
+		$raw = get_theme_mod( 'product_trust_badge_two', self::PRODUCT_TRUST_BADGE_TWO_DEFAULT );
+
+		return self::parse_product_trust_badge( self::sanitize_product_trust_badge_two( $raw ) );
+	}
+
+	/**
+	 * Shared sanitizer for a single `Text | icon` badge setting. Non-string
+	 * input, a blank value, or a value whose label is empty all sanitize to
+	 * '' — the same "unset" state as the default.
+	 *
+	 * @param mixed $value Raw value.
+	 */
+	private static function sanitize_product_trust_badge( mixed $value ): string {
+		if ( ! \is_string( $value ) ) {
+			return '';
+		}
+
+		$item = self::parse_product_trust_badge( $value );
+
+		return null === $item ? '' : "{$item['label']} | {$item['icon']}";
+	}
+
+	/**
+	 * Parse an already-sanitized-or-raw `Text | icon` value into a validated
+	 * badge item. Only the FIRST line is considered: this is a plain text
+	 * control, not a textarea, so a stray newline (however it got there) is
+	 * not a second badge.
+	 *
+	 * @param string $raw Raw or already-canonical `Text | icon` value.
+	 * @return array{label: string, icon: string}|null
+	 */
+	private static function parse_product_trust_badge( string $raw ): ?array {
+		$lines = self::split_lines( $raw, 1 );
+
+		if ( [] === $lines ) {
+			return null;
+		}
+
+		$fields = \array_pad( \array_map( 'trim', \explode( '|', $lines[0], 2 ) ), 2, '' );
+		$label  = \sanitize_text_field( $fields[0] );
+
+		if ( '' === $label ) {
+			return null;
+		}
+
+		return [
+			'label' => $label,
+			'icon'  => self::sanitize_icon( $fields[1] ),
+		];
+	}
+
 	/**
 	 * Customizer sanitize callback for `front_value_items`.
 	 *

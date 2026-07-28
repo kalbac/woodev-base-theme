@@ -50,7 +50,7 @@ final class Setup {
 	}
 
 	/**
-	 * Register the sidebar and footer widget areas.
+	 * Register the sidebar, footer and shop-filter widget areas.
 	 */
 	public function register_widget_areas(): void {
 		register_sidebar(
@@ -78,6 +78,30 @@ final class Setup {
 				]
 			);
 		}
+
+		/*
+		 * Registered unconditionally, same as the areas above, even though
+		 * only a WooCommerce-active site ever renders it: this class runs
+		 * whether or not Woo is active (the theme's WooCommerce layer is
+		 * optional), and a widget area nobody renders is harmless, while
+		 * gating it on class_exists( 'WooCommerce' ) here would make the
+		 * Widgets admin screen show or hide a whole widget area depending on
+		 * plugin state — more surprising than leaving an inert one in place.
+		 * `before_widget`/`after_widget`/`before_title`/`after_title` produce
+		 * the `.wtb-filter-group` + `<h4>` shape Woo\FilterRail's CSS targets
+		 * for every widget the admin drops in, regardless of which one it is.
+		 */
+		register_sidebar(
+			[
+				'id'            => 'sidebar-shop',
+				'name'          => __( 'Shop filters', 'woodev-base-theme' ),
+				'description'   => __( 'Shown as the filter rail on the shop page and product category/tag archives when it has widgets.', 'woodev-base-theme' ),
+				'before_widget' => '<div id="%1$s" class="wtb-filter-group %2$s">',
+				'after_widget'  => '</div>',
+				'before_title'  => '<h4>',
+				'after_title'   => '</h4>',
+			]
+		);
 	}
 
 	/**
