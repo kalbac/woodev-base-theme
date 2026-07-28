@@ -120,6 +120,15 @@ final class Plate {
 		],
 	];
 
+	/**
+	 * One self-contained `<svg>` for the named plate, or '' for a variant
+	 * this class does not ship.
+	 *
+	 * Fails closed rather than throwing: a plate is decoration on a page the
+	 * visitor came for, so an unknown name costs the artwork and nothing else.
+	 *
+	 * @param string $variant Plate name — a key of self::VARIANTS.
+	 */
 	public static function render( string $variant ): string {
 		if ( ! isset( self::VARIANTS[ $variant ] ) ) {
 			return '';
