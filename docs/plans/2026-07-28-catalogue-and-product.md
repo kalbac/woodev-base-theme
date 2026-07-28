@@ -137,6 +137,32 @@ and the title's track was left at **0px** — measured `gridTemplateColumns: "0p
 page did not overflow, so a `scrollWidth` assertion would have stayed green while the `<h1>`
 wrapped one letter per line down the left edge.
 
+## Thirteen integration tests deleted, and why
+
+The filter rail arrived with 9 integration tests (plus a disposable test widget) that
+`markTestSkipped()` unless `class_exists( 'WooCommerce' )`. They had never run, and the reason is
+structural rather than a missing plugin: `tests/integration/bootstrap.php` boots the WordPress
+test suite itself and **loads no plugins at all**, so that guard is false in this harness no
+matter what `.wp-env.test.json` installs. Adding WooCommerce to that config was tried and changed
+nothing — 10 skips before, 10 skips after, and the same 235 assertions.
+
+They were deleted rather than kept, because a suite that skips reads as coverage and is none —
+and one of them had already gone stale against markup it never got to see (it asserted the rail's
+`<details>` disclosure, which no longer exists). What they asserted is covered elsewhere, more
+strongly:
+
+| The integration test's claim | Where it actually runs |
+|---|---|
+| `is_active()` true/false across shop, taxonomy, empty sidebar | 14 unit tests, `tests/php/Unit/Woo/FilterRailTest.php` |
+| `loop_shop_columns` yields 3 while the rail is active | same file |
+| `reset_url()` strips the filter query vars | same file |
+| the rail's markup, the reset link, the two-column wrapper | 5 Playwright tests against a **live** store with real WooCommerce widgets |
+
+The alternative — a third PHPUnit config with its own bootstrap that loads WooCommerce, mirroring
+the existing dev-mode split — is buildable and was rejected for this branch: it is a layer of
+tooling around behaviour that two other suites already measure, which is precisely the trade this
+project was scored 4/10 for last session.
+
 ## Rules carried in from the gotchas
 
 - **Grep the built bundle before porting a class name.** `.tag`, `.chip`, `.stock`, `.body`,

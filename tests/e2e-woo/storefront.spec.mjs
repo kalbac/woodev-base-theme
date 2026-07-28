@@ -544,8 +544,23 @@ test("Woo's AJAX blocking overlay and loader stop spinning under prefers-reduced
  * reason the moment the seeder grows a second category.
  */
 test.describe('front-page category tiles', () => {
-  /** Non-empty top-level product categories, straight from the store. */
-  function expectedCategories() {
+  /**
+   * Non-empty top-level product categories, straight from the store — read
+   * ONCE, in beforeAll, and cached.
+   *
+   * The read itself is a synchronous `execSync` of a `wp-env run cli` call,
+   * which blocks Node's event loop for 10-15 seconds on this machine. Called
+   * from inside a test body, that block sits between the `{ page }` fixture
+   * creating a page and the first `page.goto()`, and the browser connection
+   * does not survive it under suite load: the navigation came back
+   * `net::ERR_ABORTED; maybe frame was detached?` intermittently — green when
+   * the test ran alone, red inside a full run, which is the signature this
+   * project has a gotcha for. Hoisting the call to `beforeAll` runs it before
+   * any page exists, so there is nothing live to starve.
+   */
+  let cachedCategories = null;
+
+  function readCategories() {
     const raw = execSync(
       `npx wp-env run cli --config=.wp-env.woo.json wp term list product_cat --parent=0 --hide_empty=1 --number=6 --orderby=count --order=DESC --fields=name,count,term_id --format=json`,
       { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
@@ -562,10 +577,14 @@ test.describe('front-page category tiles', () => {
     return JSON.parse(line);
   }
 
+  test.beforeAll(() => {
+    cachedCategories = readCategories();
+  });
+
   test('one tile per non-empty top-level category, each linking to its archive', async ({
     page,
   }) => {
-    const categories = expectedCategories();
+    const categories = cachedCategories;
     expect(categories.length, 'the seeded store must have at least one category').toBeGreaterThan(
       0,
     );
