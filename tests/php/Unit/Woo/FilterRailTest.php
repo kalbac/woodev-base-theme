@@ -152,19 +152,40 @@ final class FilterRailTest extends TestCase {
 	}
 
 	/**
-	 * Every $_GET key is run through sanitize_key() before being tested or
-	 * handed to remove_query_arg() — proven by making the stub transform the
-	 * key rather than pass it through, and asserting the TRANSFORMED name is
-	 * what shows up. A version that read $_GET keys unsanitized would fail
-	 * this the moment sanitize_key() stops being a no-op.
+	 * Sanitize_key() is only used to decide whether a $_GET key names an
+	 * active filter var; the ORIGINAL, unsanitized key is what gets pushed
+	 * into the removal list. Proven by making the stub transform the key
+	 * rather than pass it through — if reset_url() removed the sanitized
+	 * form instead, this would assert the wrong array and fail.
 	 */
-	public function test_reset_url_sanitizes_every_query_var_name_before_using_it(): void {
+	public function test_reset_url_uses_sanitize_key_only_to_detect_active_vars_but_removes_the_original_key(): void {
 		Functions\when( 'sanitize_key' )->alias( static fn ( string $key ): string => $key . '_clean' );
 		$_GET = [ 'filter_pa_colour' => 'amber' ];
 
 		Functions\expect( 'remove_query_arg' )
 			->once()
-			->with( [ 'filter_pa_colour_clean' ] )
+			->with( [ 'filter_pa_colour' ] )
+			->andReturn( 'https://example.test/' );
+
+		self::assertSame( 'https://example.test/', FilterRail::reset_url() );
+	}
+
+	/**
+	 * A real sanitize_key() lowercases its input, so a mixed-case $_GET key
+	 * like 'Filter_pa_colour' is only recognised as a filter var once
+	 * lowercased to 'filter_pa_colour'. Detection must still tolerate that
+	 * transformation while removal keeps the original, uppercase-preserving
+	 * key — the exact case this guards against remove_query_arg() silently
+	 * removing nothing because the sanitized name no longer matches any
+	 * actual query string key.
+	 */
+	public function test_reset_url_detects_a_var_sanitize_key_would_actually_lowercase_but_removes_the_original_case(): void {
+		Functions\when( 'sanitize_key' )->alias( static fn ( string $key ): string => strtolower( $key ) );
+		$_GET = [ 'Filter_pa_colour' => 'amber' ];
+
+		Functions\expect( 'remove_query_arg' )
+			->once()
+			->with( [ 'Filter_pa_colour' ] )
 			->andReturn( 'https://example.test/' );
 
 		self::assertSame( 'https://example.test/', FilterRail::reset_url() );
