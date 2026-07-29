@@ -1,6 +1,6 @@
 # Current State — Woodev Base
 
-> Updated: 28.07.2026 (s18)
+> Updated: 29.07.2026 (s19)
 
 ## Phase status
 
@@ -18,12 +18,61 @@
 | M3 — Public release prep | 🟡 In flight | Plan: `docs/plans/2026-07-26-m3-release-prep.md`. **R1 done and merged** ([ADR-010](adr/ADR-010-theme-json-identity.md), closes #26 + #25). **R4 largely done** — `readme.txt`, direct-access guards, Theme Check run, `comment-reply`, the eight core CSS classes; screenshot deferred to [#36](https://github.com/kalbac/woodev-base-theme/issues/36). **R2 measured and cut down** to a provenance question ([#17](https://github.com/kalbac/woodev-base-theme/issues/17)). **R3 done s16** — audit + a guard test; the `.pot`/`.po`/`.mo` stay Maksim's, in Poedit. Remaining: version bump off `0.1.0`, the `Tags:` list against wp.org's current allowed set, and the screenshot |
 | Front page (#18) | ✅ **Done s17**, merged `b4c592c` | Hero (eyebrow, lede, trust badges, art column), value band, promo, category tiles with plate art. Ten Customizer settings defaulting to EMPTY, every section self-suppressing. `Templates\Plate` ports the mockup's eight plates byte-identically. Coverage (#37) in the same PR [#39](https://github.com/kalbac/woodev-base-theme/pull/39). **Three mockup sections remain and are NOT part of #18** — «Выбор недели», «Журнал», «Письмо раз в месяц» → [#40](https://github.com/kalbac/woodev-base-theme/issues/40) |
 | Catalogue + product page (#41) | ✅ **Done s18**, merged `042c1a1` | PR [#44](https://github.com/kalbac/woodev-base-theme/pull/44). Filter rail (`sidebar-shop`, holding WooCommerce's own filter widgets — the theme builds no filtering), subcategory chips, `−24%` sale badge, breadcrumb separator, pagination chevrons with accessible names, card category eyebrow. Product page: breadcrumb + sale badge into the buy box, SKU by the rating, savings badge, quantity stepper, `<dl>` meta, 64px thumbnail column, two default-empty trust badges. Two template overrides only. **Three defects that had already shipped were fixed on the way** — see Known bugs |
-| **Pages vs the approved mockup** | 🟡 **Half closed** | Operator verdict s17 was **4/10, still a skeleton**; s18 closed the largest gap (#41). Still Woo-default with `woo.css` painted over: **cart, checkout, account, "заказ принят"** → [#42](https://github.com/kalbac/woodev-base-theme/issues/42). Also outstanding: the front page's last three sections → [#40](https://github.com/kalbac/woodev-base-theme/issues/40), and blog/text pages never compared against the mockup → [#43](https://github.com/kalbac/woodev-base-theme/issues/43). All designed in detail in `docs/design/v2-mockup/` |
+| Cart, checkout, account, receipt (#42) | 🟡 **Built s19, PR open** | Branch `feat/cart-checkout-account`. Plan: `docs/plans/2026-07-28-cart-checkout-account.md` — 38 nodes walked, verdict CSS/hook/override each. **Classic (shortcode) branch only** — a default Woo 10.9.4 install serves the cart and checkout as BLOCKS, where [ADR-009](adr/ADR-009-block-cart-checkout-styling.md) already bounds what is reachable and `woo-blocks.css` owns it. Account and order-received are classic regardless. `woo.css` split into an index + five partials (verified a byte-identical bundle). Three template overrides added (`myaccount/{navigation,dashboard,view-order}.php`), taking the theme to five. 32/32 new e2e green |
+| **Pages vs the approved mockup** | 🟡 **Two gaps left** | Operator verdict s17 was **4/10, still a skeleton**; s18 closed the catalogue and product page (#41), s19 closed cart/checkout/account/receipt (#42). Outstanding: the front page's last three sections → [#40](https://github.com/kalbac/woodev-base-theme/issues/40), and blog/text pages never compared against the mockup → [#43](https://github.com/kalbac/woodev-base-theme/issues/43). All designed in detail in `docs/design/v2-mockup/` |
 
 ## Known bugs
 
-**None open.** `main` is at **`042c1a1`** (s18, the catalogue and product page). CI green on all four jobs of
-PR [#44](https://github.com/kalbac/woodev-base-theme/pull/44), read by COUNTS rather than by the tick:
+**None open.** `main` is still at **`b4f85f4`**; s19's work is on `feat/cart-checkout-account`,
+PR [#50](https://github.com/kalbac/woodev-base-theme/pull/50), unmerged — merge is Maksim's call.
+
+### s19 measurements — CI green on all four jobs of PR #50, read by COUNTS
+
+- **CI** (`04b6b7c`) — `php-qa` unit **508** (1664 assertions) · `js-qa` vitest **64** in 3 files ·
+  `php-integration` **69** (235 assertions, 1 skip) · `e2e` **63 passed** in 2.9m — it ran, which is
+  worth stating each time, since that job declares `needs: js-qa` and has silently skipped on a PR
+  before. phpcs / phpstan L8 / eslint / prettier / `tokens:check` all 0.
+- **Local on the same tree** — unit **508** (1662 assertions; the 2-assertion difference is the one
+  test that skips on Windows, not a failure) · **new e2e 32/32**: `cart-checkout.spec.mjs` **17**
+  (13.2m) and `account-receipt.spec.mjs` **15** (5.9m), against the reseeded `:8891` store.
+- **CI still does not run `e2e:woo` at all** ([#48](https://github.com/kalbac/woodev-base-theme/issues/48)),
+  so those 32 exist only as a local measurement — the same caveat s18 recorded for its 37. Between
+  them that backlog item is now worth **69** Woo e2e tests and the only guards on eight shipped
+  defects.
+
+**Five defects that were already live on `main` were found and fixed on the way, none of them visible
+to any gate:**
+
+- **The commerce screens were 694px wide inside a 1248px article.** They are ordinary PAGES carrying
+  a shortcode, so they render through `.wtb-entry-content` and inherited its `max-width: var(--measure)`.
+  The cart table's six columns overflowed *under* the totals card. The mockup only measures `.article`
+  and explicit `.prose` blocks — see [`commerce-pages-inherit-the-prose-reading-measure`](gotchas/commerce-pages-inherit-the-prose-reading-measure.md).
+- **A publication date and an empty byline printed on the cart and checkout** ("WTB Classic Cart /
+  JULY 28, 2026 BY") — `content.php` printed post meta on every page. Now `'post' === get_post_type()`.
+- **`woo.js` was never enqueued on the cart**, so C4's stepper buttons rendered with `hidden` and
+  nothing removed it. `wp_enqueue_scripts` cannot answer "will the cart render" — the shortcode has
+  not run yet, so `is_cart()` falls back to a page-id comparison. Enqueued from `woocommerce_before_cart`
+  instead.
+- **The payment section sat on WooCommerce's lavender slab**, with the chosen method's description as
+  a lavender tooltip. Woo scopes those on an **ID**, so this theme's class-only rules lost on
+  specificity and had *never applied on a checkout* — a second mechanism now recorded in
+  [`source-order-only-wins-the-properties-you-redeclare`](gotchas/source-order-only-wins-the-properties-you-redeclare.md).
+- **Woo's clearfix `::before`/`::after` became grid items** on `.woocommerce` and on `ul.order_details`
+  the moment those were gridded — the account nav rendered top-right and the content bottom-left while
+  `gridTemplateColumns` measured correct. **Third occurrence** of this in the project →
+  [`woo-clearfix-pseudo-elements-become-grid-items`](gotchas/woo-clearfix-pseudo-elements-become-grid-items.md).
+
+**The critic gate ran 6 chunks plus a re-critic, all at `high`.** It found one real product defect —
+`Receipt::actions()` had no failed-order guard, and `woocommerce_thankyou` fires AFTER `thankyou.php`'s
+failed/success `endif`, so a declined payment would have been offered "Track order" beneath Woo's own
+"payment declined" notice ([gotcha](gotchas/woocommerce-thankyou-fires-for-failed-orders-too.md)) — one
+real media-query gap (`max-width: 63.9375rem` is not the complement of `min-width: 64rem`; a 1023.5px
+viewport matched neither), **three more vacuous assertions**, and six false factual claims in comments.
+**The re-critic found a defect inside the fixes, as every round in this project has.** Five findings
+were rejected with reasons, one of them caused by an incomplete token list in the orchestrator's own
+preamble rather than by the code — record that as a cost of the prompt, not of the review.
+
+### s18, kept for the trend: CI green on all four jobs of PR [#44](https://github.com/kalbac/woodev-base-theme/pull/44), read by COUNTS rather than by the tick:
 
 - **CI** — `e2e` **63 passed** in 4m44s (it ran; this is the job behind `needs: js-qa` that has silently
   skipped on a PR before) · `php-integration` **69** (235 assertions, 1 skip) · `php-qa` unit **396** (1256
@@ -166,23 +215,23 @@ T0→T1→T2 sequential; T3 parallel with T1/T2; T4–T6 parallelisable once T1�
 
 ## Last session
 
-s18 (28.07.2026): the catalogue and the product page built from the approved mockup and merged as `042c1a1`
-(PR [#44](https://github.com/kalbac/woodev-base-theme/pull/44)), closing
-[#41](https://github.com/kalbac/woodev-base-theme/issues/41) — the largest of the four gaps s17's inventory
-named. Full account in `docs/SESSION-LOG.md`. Three defects that had already shipped were found and fixed on
-the way, and four of this session's own test guards turned out to measure nothing.
+s19 (29.07.2026): **#42 built — the classic cart, checkout, My Account and order-received screens**, on
+branch `feat/cart-checkout-account`. Full account in `docs/SESSION-LOG.md`. Five defects already live on
+`main` were found and fixed on the way (see Known bugs), the critic gate found one more plus three
+vacuous assertions, and three new gotchas came out of it (45 entries now). Both CSS subagents died
+mid-task on a weekly API limit; the orchestrator finished their work, which is why the spec fixes and
+the `#payment` repair are its own rather than theirs.
+
 
 **Next session starts here, and the order is not a menu:**
 
-1. **Keep implementing the mockup. It is approved, detailed, and still half unbuilt.** The design document is
-   `docs/design/v2-mockup/woodev-base-identity.html`; the remaining gap list is #42, #40, #43.
-2. **[#42](https://github.com/kalbac/woodev-base-theme/issues/42) — cart, checkout, account, "заказ принят",
-   empty cart.** Now the largest and most visible gap. Same method that worked for #41: walk `id="s-cart"`,
-   `id="s-checkout"`, `id="s-account"` and `id="s-receipt"` node by node, write down per node what Woo's
-   default markup does not give, and decide CSS / hook / template override BEFORE touching code — override
-   last, because it pins the theme to a Woo version. Read the installed WooCommerce source first
-   (`C:\Users\maksi\.wp-env\wp-env-woodev_base_theme-woo-*\woocommerce\`). **[ADR-009](adr/ADR-009-block-cart-checkout-styling.md)
-   bounds what is reachable on the BLOCK cart and checkout** — the classic branch stays first-party supported.
+1. **Keep implementing the mockup. It is approved, detailed, and still partly unbuilt.** The design
+   document is `docs/design/v2-mockup/woodev-base-identity.html`; the remaining gap list is #40 and #43.
+2. **Get #42 merged first.** Branch `feat/cart-checkout-account`, PR
+   [#50](https://github.com/kalbac/woodev-base-theme/pull/50), CI green on all four jobs (counts above).
+   Merge is Maksim's call. Remember CI does not run `e2e:woo`
+   ([#48](https://github.com/kalbac/woodev-base-theme/issues/48)), so the 32 new Woo e2e tests are a
+   local measurement only.
 3. **[#40](https://github.com/kalbac/woodev-base-theme/issues/40) — the front page's last three sections**:
    «Выбор недели», «Журнал», «Письмо раз в месяц». The first two have real data sources; the newsletter needs
    a decision, not an invention — a shortcode setting, never our own submit handler (plugin territory).
@@ -193,9 +242,10 @@ the way, and four of this session's own test guards turned out to measure nothin
    ([#36](https://github.com/kalbac/woodev-base-theme/issues/36))** — Maksim closed that topic in s17: it
    happens when the theme is ready to be published.
 
-**The gate work opened in s18 and deliberately not done in it:**
-[#48](https://github.com/kalbac/woodev-base-theme/issues/48) `e2e:woo` is not run by CI — 37 tests, including
-the only guards on the three s18 defects, exist solely as a local measurement.
+**The gate work opened in s18 and deliberately not done in it or in s19:**
+[#48](https://github.com/kalbac/woodev-base-theme/issues/48) `e2e:woo` is not run by CI — now **69** tests
+(37 from s18 plus s19's 32), including the only guards on eight shipped defects, exist solely as a local
+measurement. This is the single highest-value gate item left.
 [#49](https://github.com/kalbac/woodev-base-theme/issues/49) nothing tests the declared WP 6.8 floor.
 [#47](https://github.com/kalbac/woodev-base-theme/issues/47) the integration harness loads no plugins, so any
 Woo-dependent integration test is unrunnable by construction. These are real, and they are still not worth

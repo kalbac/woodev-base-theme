@@ -76,8 +76,42 @@ different door: there the colliding class name came from the mockup, here it com
   namespace with Basecoat *and* with WooCommerce:
   `grep -o "[^}{,]*\.NAME\b[^{}]*{[^}]*}" woodev-base-theme/assets/dist/assets/style-*.css`
 
+## 3. The other way to lose: the vendor selector carries an ID (s19)
+
+Both cases above are about *omission* — you tie the vendor's specificity and win, but only for the
+properties you named. There is a second mechanism with the same symptom and a different cause: you
+never tied it at all.
+
+WooCommerce scopes its whole payment section on an **ID**:
+
+```css
+.woocommerce-checkout #payment                    { background: rgba(129,110,153,.14); border-radius: 5px }
+.woocommerce-checkout #payment ul.payment_methods { padding: 1em; border-bottom: 1px solid rgba(104,87,125,.14) }
+.woocommerce-checkout #payment div.payment_box    { background-color: #dcd7e2; color: #515151; border-radius: 2px; padding: 1em; margin: 1em 0 }
+.woocommerce-checkout #payment div.payment_box::before { border: 1em solid #dcd7e2; … }
+```
+
+Those score **(1,1,0)–(1,2,0)**. This theme's own rules — `ul.wc_payment_methods` and
+`li.wc_payment_method .payment_box`, nested under `.woocommerce` so they compile to (0,2,0) — lose
+outright, on specificity, regardless of source order. Which means that `.payment_box` rule's
+`padding-top`, `color` and `border-top` had **never applied on a checkout**, in any session, while
+reading exactly like a rule that owned the element. The payment methods sat on a lavender-grey slab
+breaking out of the review card, and the selected method's description rendered as a lavender tooltip
+with a pointer triangle.
+
+The fix mirrors the vendor's shape: `.woocommerce` (class) + `#payment` (id) is also **(1,1,0)**, so
+each of ours ties its counterpart and wins on source order — no `!important`, nothing relying on
+out-specifying the vendor.
+
+**So, before writing an override, read the vendor selector, not just the vendor's declarations.** An
+`#id` or a second class in it is the difference between "my rule wins the properties it declares" and
+"my rule does nothing at all", and both look identical in the source. A redundant-looking declaration
+is evidence in this case too: if you have declared something and the page has not changed, you have
+not tied the rule.
+
 ## Related
 
+- [[woo-clearfix-pseudo-elements-become-grid-items]] — the third family member: a vendor pseudo-element you did not account for, which grid promotes to a layout participant
 - [[porting-a-mockup-inherits-its-class-names-and-loses-its-use-site]] — the same collision family, with the class name coming from the mockup instead of from a dependency
 - [[tailwind-v4-layer-precedence]] — the other way an outside declaration wins over ours, at the layer level rather than the property level
 - [[qa-gates-cover-less-than-they-claim]] — the parent pattern: green results that measured something other than what was claimed

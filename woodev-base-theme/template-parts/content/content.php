@@ -18,8 +18,15 @@ defined( 'ABSPATH' ) || exit;
  * is 6.8). front-page.php passes `hide_entry_head` because the hero above it
  * has already rendered the page's title as the document's <h1> and its featured
  * image as the hero art — printing them again here gave a static front page two
- * <h1>s and the same photograph twice. `isset()` rather than `??` because a
- * template loaded outside get_template_part() has no `$args` at all.
+ * <h1>s and the same photograph twice. `page.php` passes it too, on the
+ * order-received screen, where `Woo\Receipt::hero()` prints the <h1>.
+ *
+ * The `isset()` is not load-bearing and the reason once given for it was
+ * false: `$args['hide_entry_head'] ?? false` handles an undefined `$args`
+ * and a missing key without a warning, so "a template loaded outside
+ * get_template_part() has no `$args`" was never an argument for either form.
+ * The explicit `true ===` comparison is the part that matters — a truthy
+ * string or `1` should not silently suppress the header.
  */
 $wtb_hide_entry_head = isset( $args['hide_entry_head'] ) && true === $args['hide_entry_head'];
 ?>
@@ -28,20 +35,39 @@ $wtb_hide_entry_head = isset( $args['hide_entry_head'] ) && true === $args['hide
 		<header class="wtb-entry-header mb-4">
 			<h1 class="wtb-entry-title"><?php the_title(); ?></h1>
 
-			<div class="wtb-entry-meta">
-				<time datetime="<?php echo esc_attr( get_the_date( DATE_W3C ) ); ?>">
-					<?php echo esc_html( get_the_date() ); ?>
-				</time>
-				<span class="wtb-entry-meta__author">
-					<?php
-					printf(
-						/* translators: %s: post author display name. */
-						esc_html__( 'by %s', 'woodev-base-theme' ),
-						esc_html( get_the_author() )
-					);
-					?>
-				</span>
-			</div>
+			<?php
+			/*
+			 * A publication date and a byline belong to a POST. On a static
+			 * page they are noise at best and wrong at worst — and this
+			 * template renders every page, WooCommerce's shortcode pages
+			 * included, so before this guard the classic cart read
+			 * "WTB Classic Cart / JULY 28, 2026 BY" with an empty author (a
+			 * page created by wp-cli has no author display name to print).
+			 * Found by looking at the rendered cart, s19 (#42) — no test saw
+			 * it, and the mockup draws no meta line on any of the commerce
+			 * screens or on its static-page example.
+			 *
+			 * `'post' === get_post_type()` rather than `is_single()`: core sets
+			 * `is_single()` for attachments and every public CPT, which is the
+			 * mistake `Layout::has_sidebar()` already records having made once.
+			 */
+			if ( 'post' === get_post_type() ) :
+				?>
+				<div class="wtb-entry-meta">
+					<time datetime="<?php echo esc_attr( get_the_date( DATE_W3C ) ); ?>">
+						<?php echo esc_html( get_the_date() ); ?>
+					</time>
+					<span class="wtb-entry-meta__author">
+						<?php
+						printf(
+							/* translators: %s: post author display name. */
+							esc_html__( 'by %s', 'woodev-base-theme' ),
+							esc_html( get_the_author() )
+						);
+						?>
+					</span>
+				</div>
+			<?php endif; ?>
 		</header>
 	<?php endif; ?>
 

@@ -28,6 +28,10 @@ final class Woo {
 		( new Catalogue() )->register();
 		( new FilterRail() )->register();
 		( new ProductPage() )->register();
+		( new Cart() )->register();
+		( new Checkout() )->register();
+		( new Account() )->register();
+		( new Receipt() )->register();
 		( new CardActionsWrapper() )->register();
 		( new CtaAttribute() )->register();
 		( new ProductPlaceholder() )->register();

@@ -1,0 +1,496 @@
+/* src/css/woo/account.css
+ * My Account — `templates/myaccount/*`. Mockup: `id="s-account"` (lines
+ * 2672-2837). Plan rows M1, M2-CSS, M4-CSS, M5-CSS, M6-CSS, M7-CSS, M8, M9,
+ * M10 in docs/plans/2026-07-28-cart-checkout-account.md (M3 is PHP-only —
+ * the greeting banner already gets the existing `.woocommerce-message`
+ * recipe from storefront.css, no CSS delta; M11's login/register split was
+ * already done in T4/T6).
+ *
+ * Read `./storefront.css`'s header for the four contracts every rule here
+ * obeys, and `../woo.css` for why a later partial beats an earlier one.
+ *
+ * BREAKPOINTS. `min-width: 64rem` is this theme's existing column-collapse
+ * point (cart/checkout/account all use it — the plan's "Breakpoints"
+ * section, NOT the mockup's 860px). Below it, two things in THIS file also
+ * need to change shape (the nav going horizontal, the edit-account form
+ * going one-column), and they use `@media not all and (min-width: 64rem)`
+ * rather than a `max-width` a hair under it.
+ *
+ * That is not pedantry. `max-width: 63.9375rem` (1023px) leaves a real gap:
+ * a viewport of 1023.5px — routine with browser zoom, a fractional device
+ * pixel ratio, or a resized window — matches NEITHER query, so the nav stays
+ * the vertical column it is above the breakpoint while the layout has already
+ * collapsed to one column. `not all and (min-width: 64rem)` is the exact
+ * logical complement of the queries it pairs with, so there is no width at
+ * which both are false. Written this way rather than as the newer range
+ * syntax (`(width < 64rem)`) purely for reach: the negated form has worked in
+ * every browser since media queries existed, and this theme ships on
+ * wordpress.org.
+ */
+
+.woocommerce {
+  /* ================================================================== *
+   * M1 — grid the shortcode wrapper into nav + content columns.
+   * ================================================================== *
+   * Scoped via `&:has(> .woocommerce-MyAccount-navigation)`, NOT a bare
+   * `.woocommerce { display: grid }`: `.woocommerce` is this shortcode's
+   * own <div> HERE, but it is the <body> on /shop/ and every product page
+   * (`wc_body_class()` adds the bare class there; there is no div at all) —
+   * see the plan's "Measured before any CSS was written". A bare rule would
+   * turn the catalogue's <body> into a grid container. `:has()` also means
+   * this still holds if the shortcode ever sits on a page other than
+   * /my-account/ itself. */
+  &:has(> .woocommerce-MyAccount-navigation) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    /* `minmax(0, 1fr)`, not the "just omit it and get one auto column"
+     * shortcut `form.checkout.woocommerce-checkout` uses (storefront.css) —
+     * that shortcut does NOT hold here. With `grid-template-columns: none`,
+     * the single implicit column is sized `auto`, which takes the MAX-
+     * CONTENT of its widest item into account rather than clamping to the
+     * grid container's own width. M10's `.woocommerce-EditAccountForm` has
+     * `max-width: 40rem` and nothing forcing it narrower, so its preferred
+     * (max-content) width is up to 640px — wider than a 390px viewport —
+     * and the auto column grew to fit it, overflowing the WHOLE PAGE
+     * horizontally (measured: `.woocommerce` 358px wide, its own resolved
+     * grid-template-columns 669.9px). `1fr` is an explicit fraction of the
+     * container's available space, not a content-based size, so it clamps
+     * the column — and everything inside it — to the container's actual
+     * width regardless of what a descendant would prefer. `minmax(0, …)`
+     * additionally defends the same column against the OTHER half of the
+     * classic grid-blowout trap (an unshrinkable min-content descendant),
+     * which nothing in this file currently has, but the next one might. */
+    gap: var(--space-2xl);
+    align-items: start;
+  }
+
+  @media (min-width: 64rem) {
+    &:has(> .woocommerce-MyAccount-navigation) {
+      grid-template-columns: 230px minmax(0, 1fr);
+    }
+  }
+
+  /* MEASURED CORRECTION to this task's own brief: `.woocommerce-notices-
+   * wrapper` is NOT a direct child of `.woocommerce` here. `woocommerce_
+   * output_all_notices()` is hooked to `woocommerce_account_content` at
+   * priority 5 (wc-template-hooks.php), and that action fires INSIDE
+   * `div.woocommerce-MyAccount-content` (`myaccount/my-account.php`) — two
+   * levels down, not a sibling of the nav. A `grid-column: 1/-1` rule on
+   * `.woocommerce > .woocommerce-notices-wrapper` would therefore match
+   * nothing here; not written, rather than shipped as dead code. Whatever
+   * notice markup renders lands inside the content column and needs no
+   * special grid placement of its own.
+   *
+   * The REAL trap on this element, found only by reading the actual
+   * computed boxes (not assumed from the markup): WooCommerce's own
+   * `woocommerce.css` clearfixes `.woocommerce` itself, on this page only —
+   * `.woocommerce-account .woocommerce::after, .woocommerce-account
+   * .woocommerce::before { content:" "; display:table }` plus
+   * `.woocommerce-account .woocommerce::after{clear:both}` (quoted from the
+   * installed 10.9.4 `assets/css/woocommerce.css`; BOTH pseudo-elements are
+   * scoped by the body class — there is no unscoped `.woocommerce::after`
+   * rule, which an earlier version of this comment claimed) — and
+   * `woocommerce-account` is exactly this page's body class. Once
+   * `.woocommerce` becomes a grid container, BOTH pseudo-elements become
+   * GRID ITEMS in DOM order: `::before`, then `nav`, then `.…-content`,
+   * then `::after`. With two explicit column tracks and default row-flow
+   * auto-placement, that pushes `nav` into ROW 1 COLUMN 2 (next to the
+   * empty `::before`) and `.…-content` into ROW 2 COLUMN 1 (next to
+   * `::after`) — nav renders top-right, content renders bottom-left,
+   * stacked rather than side by side. The identical failure shape
+   * storefront.css already documents for `.col2-set::before`/`::after`
+   * (docs/gotchas/source-order-only-wins-the-properties-you-redeclare.md),
+   * this time on `.woocommerce` itself rather than a descendant, and only
+   * visible once this rule made it a grid — Chromium screenshot, not
+   * something a markup read would have caught.
+   *
+   * SPECIFICITY. `:has()` contributes nothing of its own — it takes the
+   * specificity of the MOST SPECIFIC selector in its argument list. So
+   * `.woocommerce:has(> .woocommerce-MyAccount-navigation)::before` scores
+   * `.woocommerce` (1 class) + the argument's `.woocommerce-MyAccount-navigation`
+   * (1 class) + one pseudo-element = **(0,2,1)**, which TIES the vendor's
+   * `.woocommerce-account .woocommerce::before` (2 classes + 1
+   * pseudo-element) exactly, and wins on source order because this bundle is
+   * un-layered and loads after Woo's. Nothing here out-specifies the vendor.
+   * `display: none`, not `content: none`:
+   * removing the box entirely is what takes it out of the grid, mirroring
+   * storefront.css's own `.col2-set::before,::after{display:none}` fix. */
+  &:has(> .woocommerce-MyAccount-navigation)::before,
+  &:has(> .woocommerce-MyAccount-navigation)::after {
+    display: none;
+  }
+
+  /* ---- Nav below the column-collapse breakpoint: horizontal scroll ----
+   * Mockup line 924 (`.account-nav{ position:static; flex-direction:row;
+   * overflow-x:auto }`). `position: static` needs no rule of its own: the
+   * `position: sticky` this file's storefront.css sibling gives the nav is
+   * itself gated to `min-width: 64rem`, so below that the initial value
+   * (static) already applies — only the axis and scroll need setting. The
+   * `ul` is the flex container (storefront.css: `.woocommerce-MyAccount-
+   * navigation ul { display: flex; flex-direction: column }`); `display`
+   * stays untouched here since only the axis changes. */
+  @media not all and (min-width: 64rem) {
+    .woocommerce-MyAccount-navigation ul {
+      flex-direction: row;
+      overflow-x: auto;
+    }
+
+    .woocommerce-MyAccount-navigation li {
+      flex: none;
+    }
+  }
+
+  /* ================================================================== *
+   * M3's greeting banner already carries its OWN inline icon
+   * (`dashboard.php`'s `Icons::get('circle-check', …)`, before the
+   * `<span>`). `../checkout.css`'s K4 rule reinstates a real `::before`
+   * icon on the shared `.woocommerce-message` recipe for every notice on
+   * every page — correct for a plain notice, but on THIS ONE it stacks a
+   * second check-circle glyph next to the first, found only by looking at
+   * the screenshot (the markup alone reads as "one icon, one message").
+   * Suppressing it needs no edit to checkout.css: `.wtb-account-greeting`
+   * is a class this file owns, and `.woocommerce .wtb-account-greeting::
+   * before` ties K4's `.woocommerce .woocommerce-message::before` at
+   * (0,2,1) exactly (both match THIS element) — equal specificity, later
+   * source order wins (this file imports after checkout.css), and
+   * `content: none` removes the box outright rather than leaving an empty
+   * one still sized by K4's `width`/`height`. */
+  .wtb-account-greeting::before {
+    content: none;
+  }
+
+  /* ================================================================== *
+   * M2 — nav icon (Account::nav_icon(), M2 template override).
+   * ================================================================== */
+  .woocommerce-MyAccount-navigation a {
+    /* storefront.css's own `a` rule has no gap: the anchor used to hold
+     * only text, and now holds `svg.wtb-account-nav__icon` + the label. */
+    gap: 0.6rem;
+  }
+
+  .wtb-account-nav__icon {
+    flex: none;
+    width: 18px;
+    height: 18px;
+    opacity: 0.7;
+  }
+
+  .woocommerce-MyAccount-navigation li.is-active .wtb-account-nav__icon {
+    opacity: 1;
+  }
+
+  /* ================================================================== *
+   * M4 — dashboard metric cards (`div.wtb-dash-cards` > `div.wtb-dash-card`
+   * > `p.wtb-dash-card__k` / `p.wtb-dash-card__l`). Currently `display:
+   * block` — three cards stacked full-width with no card treatment.
+   * ================================================================== *
+   * `repeat(auto-fit, minmax(9rem, 1fr))`, not the mockup's fixed
+   * `repeat(3, 1fr)` + two extra breakpoints (860px → 2-up, 560px → 1-up):
+   * the column count falls out of the available width instead of a second
+   * breakpoint SYSTEM competing with this file's 64rem one. Same reasoning
+   * as R2's `.woocommerce-order-overview` fix in ../receipt.css. */
+  .wtb-dash-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    gap: var(--space-md);
+  }
+
+  .wtb-dash-card {
+    border: var(--rule);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    background-color: var(--card);
+  }
+
+  .wtb-dash-card__k {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: var(--text-2xl);
+    font-weight: 500;
+  }
+
+  .wtb-dash-card__l {
+    margin: 0.2rem 0 0;
+    font-size: var(--text-sm);
+    color: var(--muted-foreground);
+  }
+
+  /* ================================================================== *
+   * M5 — the "Recent orders" section heading above `table.wtb-recent-
+   * orders`. The table itself needs nothing beyond the shared
+   * `table.shop_table` recipe (storefront.css) — its status cell is M6
+   * below, its total cell reuses the global `.woocommerce-Price-amount`
+   * mono rule, and its action cell is the generic `.button`.
+   * ================================================================== */
+  .wtb-account-section-title {
+    margin: var(--space-2xl) 0 var(--space-md);
+    font-size: var(--text-xl);
+    letter-spacing: -0.02em;
+  }
+
+  /* ================================================================== *
+   * M6 — status badge tones. `Woo\Account::status_badge()` emits BOTH
+   * `wtb-status-badge--{tone}` (tone ∈ success/accent/neutral — the load-
+   * bearing class) and `is-{status}` (a hook, not styled here — see that
+   * method's docblock for why the mapping lives in PHP and not twice).
+   * Retires the stale comment in storefront.css around
+   * `.woocommerce-orders-table__cell-order-status` claiming there is no
+   * status-specific class to hang a colour on — reported, not edited (out
+   * of scope for this file).
+   * ================================================================== */
+  .wtb-status-badge {
+    display: inline-flex;
+    padding: 0.2rem 0.55rem;
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    font-weight: 600;
+  }
+
+  .wtb-status-badge--success {
+    background-color: color-mix(in oklab, var(--success) 15%, var(--card));
+    color: var(--success-text);
+  }
+
+  .wtb-status-badge--accent {
+    background-color: color-mix(in oklab, var(--primary) 15%, var(--card));
+    color: var(--primary);
+  }
+
+  .wtb-status-badge--neutral {
+    background-color: var(--secondary);
+    color: var(--secondary-foreground);
+  }
+
+  /* ================================================================== *
+   * M7 — view-order (`woocommerce/myaccount/view-order.php` override):
+   * order head, meta grid. The breadcrumb needs NO rule here: storefront.css
+   * already styles `.woocommerce-breadcrumb`/`.wtb-breadcrumb__sep`
+   * unscoped (built for the shop breadcrumb, catalogue.spec.mjs), and this
+   * template reuses the exact same classes — the identical component,
+   * reached from a different page. A second copy in this file would compile
+   * to the SAME selector, one file later, and silently repaint the SHOP
+   * breadcrumb too the moment its values drifted from storefront.css's.
+   * ================================================================== */
+
+  /* Order head: title + status badge, `display: block` today. Declaring
+   * `display` AND `flex-direction` together even though nothing else
+   * competes for this class — see docs/gotchas/source-order-only-wins-
+   * the-properties-you-redeclare.md; the habit is the point, not just the
+   * defence against a specific vendor rule. */
+  .wtb-order-head {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    margin: 0 0 var(--space-lg);
+  }
+
+  .wtb-order-head__title {
+    margin: 0;
+    font-size: var(--text-2xl);
+    letter-spacing: -0.03em;
+  }
+
+  /* `.wtb-order-meta` (this element) is styled TOGETHER with the receipt's
+   * `ul.woocommerce-order-overview` — ONE rule list, in ../receipt.css
+   * (the later-imported partial, per ../woo.css's header), because the
+   * mockup draws both as the same `.receipt-meta` component (lines 759 and
+   * 763). Do not add a second copy here. */
+
+  /* ================================================================== *
+   * M8 — addresses (`woocommerce/myaccount/my-address.php`, core,
+   * unmodified). `.col2-set`/`.col-1`/`.col-2` are already handled by
+   * storefront.css; this is the card + heading + edit-link delta.
+   * ================================================================== */
+  .woocommerce-Address {
+    border: var(--rule);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+  }
+
+  /* A ROW with `justify-content: space-between` was the first version of
+   * this rule, and it broke: `.col2-set` gives each card roughly HALF the
+   * content column (~190px at a 1280px viewport, once the 230px nav track
+   * and its gap are subtracted), and neither the heading nor the edit
+   * button carries `white-space: nowrap` or a `flex-shrink: 0` floor —
+   * `flex-shrink`'s default automatic minimum is the item's min-content
+   * width, but that still let both boxes get squeezed down to a sliver
+   * (measured 31.75px for the h2, on a browser), wrapping "Billing
+   * address" and "Add Billing address" one word (sometimes one syllable)
+   * per line — found only in the screenshot, exactly the class of defect
+   * catalogue.spec.mjs's 320px header test already guards elsewhere. A
+   * COLUMN stack has no such contest: each child gets the header's full
+   * width and sizes to its own content, regardless of how narrow the card
+   * gets. */
+  .woocommerce-Address-title {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-sm);
+    margin: 0 0 var(--space-md);
+  }
+
+  .woocommerce-Address-title h2 {
+    margin: 0;
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+  }
+
+  /* The edit control carries no `.button` class of its own (core's
+   * `my-address.php` prints a bare `<a class="edit">`), so this is a fresh
+   * small "secondary button" recipe rather than an override of the generic
+   * `.button` one — no Woo specificity to tie. */
+  .woocommerce-Address-title .edit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    padding: 0.35rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background-color: var(--secondary);
+    color: var(--secondary-foreground);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    text-decoration: none;
+    transition:
+      background-color var(--dur-fast) var(--ease-out),
+      border-color var(--dur-fast) var(--ease-out);
+  }
+
+  .woocommerce-Address-title .edit:hover {
+    background-color: var(--surface-3);
+    border-color: var(--border-strong);
+  }
+
+  .woocommerce-Address address {
+    font-style: normal;
+    font-size: var(--text-sm);
+    line-height: var(--lh-body);
+  }
+
+  /* ================================================================== *
+   * M9 — downloads table (`table.woocommerce-table--order-downloads`,
+   * core `order/order-downloads.php`, unmodified). The file-download link
+   * already carries Woo's own `button alt` classes (primary button, via
+   * the generic recipe) — nothing to add there. This is the two mono
+   * columns + the file cell's alignment.
+   * ================================================================== */
+  .woocommerce-table--order-downloads .download-remaining,
+  .woocommerce-table--order-downloads .download-expires {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .woocommerce-table--order-downloads .download-file {
+    text-align: right;
+  }
+
+  /* ================================================================== *
+   * M10 — edit-account form (`form-edit-account.php`, core, unmodified).
+   * `display: block` today; the mockup's `.form-grid` 2-column mapping is
+   * entirely missing.
+   * ================================================================== */
+  .woocommerce-EditAccountForm {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-md);
+    max-width: 40rem;
+  }
+
+  /* `minmax(0, 1fr)`, not a bare `1fr`. `1fr` is shorthand for
+   * `minmax(auto, 1fr)`, whose AUTO minimum is the track's min-content — and
+   * this form is precisely the element whose intrinsic width blew the account
+   * layout out horizontally once already (its own `max-width: 40rem` is a
+   * preferred size, not a cap on min-content). The parent column is already
+   * `minmax(0, 1fr)` and clamps the track, so this is defence in depth rather
+   * than the fix for that bug — but it costs nothing and it stops the next
+   * unshrinkable descendant (a long unbroken order number, a wide `<select>`)
+   * from reaching for room the viewport does not have. */
+  @media not all and (min-width: 64rem) {
+    .woocommerce-EditAccountForm {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  .woocommerce-EditAccountForm .woocommerce-form-row--wide {
+    grid-column: 1 / -1;
+  }
+
+  /* Core's own clearfix spacers (`<div class="clear">`, four of them in
+   * `form-edit-account.php`) had a job when the fields were floated; once
+   * they are grid items instead, floats are gone from the children and an
+   * empty grid item just punches a hole in the sequence — same reasoning
+   * storefront.css already gives for `.col2-set::before`/`::after`. Hiding
+   * it removes it from the grid entirely, so the auto-placed fields that
+   * follow land in the next real cell instead of skipping one. */
+  .woocommerce-EditAccountForm .clear {
+    display: none;
+  }
+
+  .woocommerce-EditAccountForm fieldset {
+    grid-column: 1 / -1;
+    margin: 0;
+    border: var(--rule);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+  }
+
+  .woocommerce-EditAccountForm legend {
+    padding: 0 var(--space-sm);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--muted-foreground);
+  }
+
+  /* The trailing `<p>` wrapping the nonce field + submit button carries
+   * none of Woo's `.woocommerce-form-row` classes — the one reliable way
+   * to select it without depending on DOM position (a plugin hooked into
+   * `woocommerce_edit_account_form_fields` could add more fields between
+   * it and the password fieldset). */
+  .woocommerce-EditAccountForm > p:not(.woocommerce-form-row) {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ================================================================== *
+ * M1 — Woo's own `woocommerce-layout.css` floats AND sizes both account
+ * columns at (0,2,0): `.woocommerce-account .woocommerce-MyAccount-
+ * navigation{float:left;width:30%}` / `.woocommerce-account
+ * .woocommerce-MyAccount-content{float:right;width:68%}` — ancestor-scoped
+ * to the BODY class `woocommerce-account` (`wc_body_class()` on this
+ * page), NOT bare. A first pass at this comment read the selector off a
+ * grep that had stripped that ancestor prefix and called it (0,1,0); the
+ * live computed `float` staying `left` after the reset below was what
+ * exposed the misreading — measured, not assumed, per this file's own
+ * rule for everything else in it.
+ *
+ * A grid item ignores `float` but NOT an explicit `width`, and that
+ * percentage resolves against the item's OWN grid track (not the whole
+ * row) — on a 2-column grid each track is roughly half the row, so
+ * 30%/68% of a ~50%-wide track renders each column at roughly HALF its
+ * own track's visual width. The identical trap storefront.css documents
+ * for `.col2-set .col-1`/`.col-2`, arriving through the same door.
+ *
+ * Reset BOTH properties at the SAME `.woocommerce-account` ancestor-scoped
+ * specificity Woo uses — written OUTSIDE the `.woocommerce { … }` block
+ * above on purpose, so this does not compile to `.woocommerce
+ * .woocommerce-account .woocommerce-MyAccount-navigation` (which would
+ * EXCEED Woo's specificity instead of tying it, and would also require an
+ * ancestor `.woocommerce` that is never actually inside `.woocommerce-
+ * account` — the body carries both classes on itself, it does not nest
+ * one under the other). Ties at (0,2,0), wins on source order: this bundle
+ * enqueues after Woo's
+ * (docs/gotchas/source-order-only-wins-the-properties-you-redeclare.md).
+ * ================================================================== */
+.woocommerce-account .woocommerce-MyAccount-navigation,
+.woocommerce-account .woocommerce-MyAccount-content {
+  float: none;
+  width: auto;
+}

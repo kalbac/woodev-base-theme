@@ -205,18 +205,35 @@ final class ProductPage {
 	}
 
 	/**
-	 * B8 — decrement button, printed on `woocommerce_before_quantity_input_field`.
+	 * B8/C4 — decrement button, printed on `woocommerce_before_quantity_input_field`.
 	 *
-	 * `templates/global/quantity-input.php` fires this same hook on the cart
-	 * page (and anywhere else a quantity field renders), so the guard is
-	 * `is_product()`, not "this hook fired". The button ships `hidden`: with
-	 * JS disabled there is nothing that would ever un-hide it, and a dead
+	 * `templates/global/quantity-input.php` fires this same hook anywhere a
+	 * quantity field renders — the product page's own add-to-cart forms AND
+	 * the cart page's per-line quantity cell — so the guard cannot be
+	 * unconditional. `is_product() || is_cart()` covers both without a page
+	 * conditional creeping in: `is_cart()` (`wc-conditional-functions.php`)
+	 * resolves to true once the `WOOCOMMERCE_CART` constant is defined, and
+	 * `WC_Shortcode_Cart::output()` (`class-wc-shortcode-cart.php`) defines
+	 * exactly that constant, unconditionally, before it ever loads
+	 * `cart.php` — the template that fires this hook. That happens whether
+	 * the current page IS `woocommerce_cart_page_id` or not, so it also
+	 * covers this project's e2e fixture, which deliberately serves
+	 * `[woocommerce_cart]` from a page that is not the option's page
+	 * (`tests/e2e-woo/global-setup.mjs`, `CLASSIC_CART_PAGE_SLUG`'s
+	 * docblock) — by the time this callback runs, `is_cart()` is already
+	 * true there too, with no extra state needed in this class.
+	 *
+	 * Still not unconditional: nothing else on a cart page's own render path
+	 * calls `woocommerce_quantity_input()` (cross-sells and the mini-cart
+	 * print quantity as plain text, not an input), so this stays scoped to
+	 * the one cell it is meant for. The button ships `hidden`: with JS
+	 * disabled there is nothing that would ever un-hide it, and a dead
 	 * button that looks clickable is a worse default than a plain number
 	 * input the visitor can still type into directly (progressive
 	 * enhancement — AGENTS.md).
 	 */
 	public function quantity_step_down(): void {
-		if ( ! is_product() ) {
+		if ( ! is_product() && ! is_cart() ) {
 			return;
 		}
 
@@ -229,12 +246,12 @@ final class ProductPage {
 	}
 
 	/**
-	 * B8 — increment button, printed on `woocommerce_after_quantity_input_field`.
-	 * See quantity_step_down() for the is_product() guard and the `hidden`
-	 * default.
+	 * B8/C4 — increment button, printed on `woocommerce_after_quantity_input_field`.
+	 * See quantity_step_down() for the widened `is_product() || is_cart()`
+	 * guard and the `hidden` default.
 	 */
 	public function quantity_step_up(): void {
-		if ( ! is_product() ) {
+		if ( ! is_product() && ! is_cart() ) {
 			return;
 		}
 

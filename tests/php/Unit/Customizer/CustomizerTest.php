@@ -32,6 +32,8 @@ final class CustomizerTest extends TestCase {
 			'cta_reveal'              => [ 'cta_reveal', 'hover' ],
 			'product_trust_badge_one' => [ 'product_trust_badge_one', '' ],
 			'product_trust_badge_two' => [ 'product_trust_badge_two', '' ],
+			'cart_secure_note'        => [ 'cart_secure_note', '' ],
+			'checkout_secure_note'    => [ 'checkout_secure_note', '' ],
 			'front_hero_eyebrow'      => [ 'front_hero_eyebrow', '' ],
 			'front_hero_lede'         => [ 'front_hero_lede', '' ],
 			'front_hero_trust'        => [ 'front_hero_trust', '' ],
