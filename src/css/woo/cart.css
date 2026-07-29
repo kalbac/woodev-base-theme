@@ -1,0 +1,314 @@
+/* src/css/woo/cart.css
+ * The classic cart page — `templates/cart/cart.php`, `cart-totals.php`,
+ * `cart-empty.php`. Mockup: `docs/design/v2-mockup/woodev-base-identity.html`
+ * `id="s-cart"` (lines 2364-2530) and the empty-cart panel inside `id="s-misc"`
+ * (3236-3253). Plan rows C1-C12 in
+ * docs/plans/2026-07-28-cart-checkout-account.md.
+ *
+ * Read `./storefront.css`'s header for the four contracts every rule here
+ * obeys, and `../woo.css` for why a later partial beats an earlier one.
+ *
+ * BREAKPOINT: 64rem everywhere below, not the mockup's 860px — this theme's
+ * existing column-collapse/sticky threshold (already used by
+ * `.cart_totals`/`#order_review` in storefront.css) and what the e2e specs
+ * are written against. See the plan's "Breakpoints" section.
+ */
+.woocommerce {
+  /* ================================================================== *
+   * C1 — the grid wrapper. inc/Woo/Cart.php opens/closes
+   * `div.wtb-cart-layout` on `woocommerce_before_cart`/`woocommerce_after_cart`,
+   * which bracket exactly `form.woocommerce-cart-form` (the table) and
+   * `div.cart-collaterals` (the totals panel) — the two direct children this
+   * grid auto-places into its two tracks, no explicit grid-column needed.
+   * ================================================================== */
+  .wtb-cart-layout {
+    display: grid;
+    gap: var(--space-2xl);
+    align-items: start;
+  }
+
+  /* Grid items default to a min-width driven by their content's intrinsic
+   * size, not the track — `table.shop_table`'s own `width: 100%` cannot
+   * shrink narrower than its widest cell's content otherwise, so the totals
+   * track would either overflow or get squeezed instead of the table
+   * wrapping. `min-width: 0` lets the track's own size win. */
+  .wtb-cart-layout > * {
+    min-width: 0;
+  }
+
+  /* Safety net, not a live fix — stated plainly because it was one until
+   * `adapter/content.css` stopped capping `.wtb-entry-content` at
+   * `var(--measure)` on commerce surfaces. Measured before that change:
+   * `table.shop_table.cart`'s own minimum content width (six columns, and
+   * the C4 stepper alone is 142px) exceeded the then-285px 1fr track, and
+   * the table rendered UNDER the totals card (later in DOM, so painted on
+   * top) rather than wrapping or scrolling. Re-measured after the fix at a
+   * 1280px viewport: the 1fr track is now 840px, `table.scrollWidth` (840)
+   * equals `form.clientWidth` (840) — `formOverflows` is `false`, nothing
+   * here is fixing an active defect any more. Kept anyway: it is a one-line,
+   * zero-cost guard against the SAME collision recurring for a store with a
+   * longer product name, a narrower `--wtb-container-max`, or a smaller
+   * viewport between 64rem and whatever width the six columns actually
+   * need — the standard responsive-table safety net, dormant until one of
+   * those conditions makes it not be. */
+  form.woocommerce-cart-form {
+    overflow-x: auto;
+  }
+
+  @media (min-width: 64rem) {
+    .wtb-cart-layout {
+      grid-template-columns: 1fr 360px;
+    }
+  }
+
+  /* Measured, not assumed: `woocommerce_output_all_notices()` is hooked to
+   * `woocommerce_before_cart` at priority 10
+   * (wc-template-hooks.php) — AFTER open_layout()'s priority 5 — so
+   * `.woocommerce-notices-wrapper` (printed unconditionally, empty or not)
+   * lands as a THIRD child of `.wtb-cart-layout`, before the form. Without
+   * this it auto-placed into row 1's first track, pushing the table into
+   * row 1's second track and the totals panel into an otherwise-empty
+   * second row — the exact trap the plan's own M1 section records for the
+   * account page's identical notices-wrapper-inside-a-grid shape. Spanning
+   * both tracks keeps it a full-width banner above the two real columns. */
+  .wtb-cart-layout > .woocommerce-notices-wrapper {
+    grid-column: 1 / -1;
+  }
+
+  /* Woo's own `.woocommerce .cart-collaterals .cart_totals{float:right;
+   * width:48%}` (woocommerce-layout.css, 3 classes = (0,3,0)) does not stop
+   * just because `.cart-collaterals` is now a grid item — a grid item
+   * ignores `float` but NOT an explicit `width`, and 48% of the 360px
+   * track renders the totals card at ~173px, roughly half its own column.
+   * The exact trap storefront.css's own `.col2-set .col-1/.col-2` comment
+   * documents, landing on a different selector. Reset at the same (0,3,0)
+   * so this ties and wins on source order. Measured before the fix:
+   * `.cart_totals` at 172.8px inside a 360px `.cart-collaterals`; after,
+   * `width: auto` lets it fill the column. */
+  .cart-collaterals .cart_totals {
+    float: none;
+    width: auto;
+  }
+
+  /* ================================================================== *
+   * C3 — narrow the thumbnail column. Woo already splits the thumbnail into
+   * its own `td.product-thumbnail`, adjacent to `td.product-name` — this
+   * only tightens the column, it does not merge cells. The header cell's
+   * `.screen-reader-text` (cart.php) is untouched. */
+  table.shop_table.cart th.product-thumbnail,
+  table.shop_table.cart td.product-thumbnail {
+    width: 64px;
+    padding-right: 0;
+  }
+
+  /* ================================================================== *
+   * C4 (CSS half) — the product-page's own quantity stepper
+   * (div.product form.cart .wtb-qty-step, storefront.css), widened to the
+   * cart's `.quantity` wrapper. inc/Woo/ProductPage.php already widened its
+   * PHP guard to `is_product() || is_cart()` (#42); this is the matching CSS
+   * half for the cart. `.wtb-qty-step` is this theme's own markup, not
+   * Woo's, so there is no vendor rule to tie specificity against here — the
+   * selectors below only need to beat storefront's own bare `.quantity .qty`
+   * rule (the no-JS fallback), which they do on class count alone.
+   * ================================================================== */
+  table.shop_table.cart .quantity {
+    display: inline-flex;
+    align-items: stretch;
+    border: 1px solid var(--input);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background-color: var(--card);
+  }
+
+  table.shop_table.cart .wtb-qty-step {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    min-height: 44px;
+    flex: none;
+    border: 0;
+    background-color: transparent;
+    color: var(--foreground);
+    cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease-out);
+  }
+
+  table.shop_table.cart .wtb-qty-step svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  table.shop_table.cart .wtb-qty-step:hover {
+    background-color: var(--accent);
+  }
+
+  table.shop_table.cart .wtb-qty-step:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: -2px;
+  }
+
+  /* `[hidden]` is an author-overridable UA rule and `display: grid` above
+   * would beat it — the no-JS state (src/js/woo.js not having run) depends
+   * on this staying declared. Mirrors the identical comment on the
+   * product-page rule this is widening. */
+  table.shop_table.cart .wtb-qty-step[hidden] {
+    display: none;
+  }
+
+  table.shop_table.cart .quantity .qty {
+    width: 3.25rem;
+    min-height: 44px;
+    padding: 0 0.5rem;
+    border: 0;
+    border-radius: 0;
+    background-color: transparent;
+  }
+
+  /* Only between the buttons — a rule against the wrapper's own border would
+   * double it. `:has()` keeps the no-JS rendering borderless inside, same as
+   * the product-page version. */
+  table.shop_table.cart .quantity:has(.wtb-qty-step:not([hidden])) .qty {
+    border-inline: 1px solid var(--border);
+  }
+
+  /* ================================================================== *
+   * C6 — the actions row (coupon + "Update cart", plus "Continue shopping"
+   * added by inc/Woo/Cart.php on `woocommerce_cart_actions`) becomes a
+   * cluster: coupon left, the two buttons right. Gated to `min-width: 48rem`
+   * (WooCommerce's own smallscreen breakpoint,
+   * `woocommerce_style_smallscreen_breakpoint` filter, default 768px) rather
+   * than fought at every width: below that, `<link media="…max-width:768px">`
+   * makes woocommerce-smallscreen.css's `.woocommerce table.cart
+   * td.actions{text-align:left}` the live layout. That selector is **(0,3,2)**
+   * — three classes (`.woocommerce`, `.cart`, `.actions`) and two type
+   * selectors (`table`, `td`) — against this theme's own `.woocommerce
+   * td.actions` at **(0,2,1)**, so Woo wins on the class count, which is what
+   * decides; the type count never enters into it. This rule has no business
+   * fighting a mechanism C11 already leaves alone. Above 768px that stylesheet
+   * is not loaded at all (the `media` attribute, not an internal `@media`), so
+   * there is nothing to tie or beat here.
+   *
+   * Floats, not flex — a first version set `display: flex` directly on
+   * `td.actions` and it measured broken: a table cell cannot be
+   * simultaneously `display: table-cell` at the outer level and
+   * `display: flex` at the inner one, so the cell was stripped from table
+   * layout participation entirely and shrank to its content's size instead
+   * of spanning its `colspan="6"` — confirmed in the probe: 205.78px inside
+   * a 692.59px row. A table cell always establishes a block formatting
+   * context, so floats inside it are contained without a clearfix, which is
+   * what lets this work without changing `display` at all. */
+  @media (min-width: 48rem) {
+    td.actions .coupon {
+      float: left;
+    }
+
+    /* DOM order (cart.php prints coupon, then this button, then
+     * inc/Woo/Cart.php's continue-shopping link on `woocommerce_cart_actions`)
+     * puts `update_cart` first among the two `float: right` elements, so it
+     * claims the row's right edge; `.wtb-continue-shopping` floats to its
+     * immediate left — reading left-to-right as "Continue shopping, Update
+     * cart", matching the mockup's own left-to-right order for that pair. */
+    td.actions button[name='update_cart'] {
+      float: right;
+    }
+
+    td.actions .wtb-continue-shopping {
+      float: right;
+      margin-right: var(--space-md);
+    }
+  }
+
+  /* ================================================================== *
+   * C10 — optional secure-payment note, printed by inc/Woo/Cart.php on
+   * `woocommerce_after_cart_totals` (empty by default). Shared verbatim by
+   * inc/Woo/Checkout.php's K9-note on `woocommerce_review_order_after_submit`
+   * — one class, styled once, here.
+   * ================================================================== */
+  .wtb-secure-note {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    margin-top: var(--space-sm);
+    color: var(--muted-foreground);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    text-align: center;
+  }
+
+  .wtb-secure-note svg {
+    flex: none;
+  }
+
+  /* ================================================================== *
+   * C12 — empty-cart panel, replacing wc_empty_cart_message() (inc/Woo/Cart.php).
+   * Woo's own `p.return-to-shop` prints right after this, as a SIBLING, not
+   * a child — cart-empty.php's own unconditional markup, left alone and
+   * only centred to read as part of the same panel.
+   * ================================================================== */
+  .wtb-cart-empty {
+    text-align: center;
+    padding: var(--space-2xl) 0;
+  }
+
+  .wtb-cart-empty__icon {
+    display: grid;
+    place-items: center;
+    width: 56px;
+    height: 56px;
+    margin: 0 auto var(--space-md);
+    border-radius: var(--radius-full);
+    background-color: var(--secondary);
+    color: var(--muted-foreground);
+  }
+
+  .wtb-cart-empty__title {
+    margin: 0;
+    font-size: var(--text-lg);
+  }
+
+  .wtb-cart-empty__lede {
+    max-width: 28rem;
+    margin: 0.4rem auto var(--space-lg);
+    color: var(--muted-foreground);
+  }
+
+  .wtb-cart-empty + p.return-to-shop {
+    text-align: center;
+  }
+
+  /* ================================================================== *
+   * C11 — mobile stacked cards. Woo's own `shop_table_responsive` +
+   * woocommerce-smallscreen.css already do the mechanism (`tr{display:block}`,
+   * `td::before{content:attr(data-title)}`); this only adds the rhythm
+   * between rows and the label's type treatment, gated to the same 768px
+   * (`woocommerce_style_smallscreen_breakpoint` default) that stylesheet
+   * loads at. */
+  @media (max-width: 48rem) {
+    table.shop_table_responsive.cart tbody tr.cart_item {
+      display: block;
+      margin-bottom: var(--space-md);
+      padding-bottom: var(--space-md);
+      border-bottom: var(--rule);
+    }
+
+    table.shop_table_responsive.cart tbody tr.cart_item:last-child {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: 0;
+    }
+
+    table.shop_table_responsive.cart tbody tr.cart_item td {
+      padding: 0.3rem var(--space-md);
+      border-top: 0;
+    }
+
+    table.shop_table_responsive.cart tbody tr.cart_item td[data-title]::before {
+      color: var(--muted-foreground);
+      font-family: var(--font-body);
+      font-size: var(--text-xs);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+  }
+}

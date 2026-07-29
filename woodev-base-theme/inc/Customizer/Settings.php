@@ -300,10 +300,18 @@ final class Settings {
 	public const FRONT_ICON_DEFAULT = 'check';
 
 	/**
-	 * The closed set of icon slugs the F0 sprite ships for the front page
-	 * surfaces. A line naming an icon outside this set falls back to
-	 * FRONT_ICON_DEFAULT — never a fatal, never a reference to an SVG the
-	 * theme did not ship.
+	 * The closed set of icon slugs a `… | icon` badge line may name. A line
+	 * naming an icon outside this set falls back to FRONT_ICON_DEFAULT — never
+	 * a fatal, never a reference to an SVG the theme did not ship.
+	 *
+	 * The name is historical: this began (s17) as the front page's own icon
+	 * set, and it is now the shared whitelist for every badge-shaped setting —
+	 * the front hero's trust lines, the value band, the two product-page
+	 * badges, and s19's cart/checkout secure notes. It is deliberately NOT the
+	 * full vendored icon list (`scripts/copy-icons.mjs`): most of those are
+	 * chrome (`menu`, `chevron-*`, `log-out`) that would be meaningless next to
+	 * a sentence, and offering them in a Customizer description is worse than
+	 * not offering them at all.
 	 *
 	 * @var array<int, string>
 	 */
@@ -316,6 +324,7 @@ final class Settings {
 		'package',
 		'credit-card',
 		'headphones',
+		'lock',
 	];
 
 	/**
@@ -421,7 +430,7 @@ final class Settings {
 	 * @param mixed $value Raw value.
 	 */
 	public static function sanitize_product_trust_badge_one( mixed $value ): string {
-		return self::sanitize_product_trust_badge( $value );
+		return self::sanitize_badge_line( $value );
 	}
 
 	/**
@@ -433,7 +442,7 @@ final class Settings {
 	public static function product_trust_badge_one(): ?array {
 		$raw = get_theme_mod( 'product_trust_badge_one', self::PRODUCT_TRUST_BADGE_ONE_DEFAULT );
 
-		return self::parse_product_trust_badge( self::sanitize_product_trust_badge_one( $raw ) );
+		return self::parse_badge_line( self::sanitize_product_trust_badge_one( $raw ) );
 	}
 
 	/**
@@ -443,7 +452,7 @@ final class Settings {
 	 * @param mixed $value Raw value.
 	 */
 	public static function sanitize_product_trust_badge_two( mixed $value ): string {
-		return self::sanitize_product_trust_badge( $value );
+		return self::sanitize_badge_line( $value );
 	}
 
 	/**
@@ -455,7 +464,99 @@ final class Settings {
 	public static function product_trust_badge_two(): ?array {
 		$raw = get_theme_mod( 'product_trust_badge_two', self::PRODUCT_TRUST_BADGE_TWO_DEFAULT );
 
-		return self::parse_product_trust_badge( self::sanitize_product_trust_badge_two( $raw ) );
+		return self::parse_badge_line( self::sanitize_product_trust_badge_two( $raw ) );
+	}
+
+	/**
+	 * The reassurance line under the cart's and the checkout's place-order
+	 * button (#42, plan rows C10 and K9): one `Text | icon` line each, icon
+	 * optional, defaulting to `lock`.
+	 *
+	 * BOTH DEFAULT TO EMPTY, and that is the whole design. The mockup writes
+	 * "Payment happens on the bank's secure page" on the cart and "Card details
+	 * never reach the shop" on the checkout — but whether either sentence is
+	 * TRUE depends on the payment gateway the store owner installs, and a theme
+	 * cannot know. Shipping a default would have the theme make a payment-
+	 * security claim on the store's behalf. An empty value renders nothing at
+	 * all, exactly like the product-page badges above.
+	 *
+	 * Two settings rather than one shared line, because the mockup's two
+	 * sentences differ and they sit on different pages: an owner may well want
+	 * the delivery-side reassurance on the cart and the card-side one at
+	 * payment.
+	 */
+	public const CART_SECURE_NOTE_DEFAULT     = '';
+	public const CHECKOUT_SECURE_NOTE_DEFAULT = '';
+
+	/**
+	 * Icon used when a secure-note line names none. Not FRONT_ICON_DEFAULT
+	 * (`check`): a padlock is what the mockup draws and what the sentence is
+	 * about, and a tick next to "payment is secure" reads as a confirmation
+	 * that something already happened.
+	 */
+	public const SECURE_NOTE_ICON_DEFAULT = 'lock';
+
+	/**
+	 * Customizer sanitize callback for `cart_secure_note`.
+	 *
+	 * @param mixed $value Raw value.
+	 */
+	public static function sanitize_cart_secure_note( mixed $value ): string {
+		return self::sanitize_badge_line( $value, self::SECURE_NOTE_ICON_DEFAULT );
+	}
+
+	/**
+	 * The cart panel's secure-payment note, parsed and validated; null when
+	 * unset (the default), which is what suppresses the whole line.
+	 *
+	 * @return array{label: string, icon: string}|null
+	 */
+	public static function cart_secure_note(): ?array {
+		return self::secure_note( 'cart_secure_note', self::CART_SECURE_NOTE_DEFAULT );
+	}
+
+	/**
+	 * Customizer sanitize callback for `checkout_secure_note`. See
+	 * sanitize_cart_secure_note() — identical shape, checkout panel.
+	 *
+	 * @param mixed $value Raw value.
+	 */
+	public static function sanitize_checkout_secure_note( mixed $value ): string {
+		return self::sanitize_badge_line( $value, self::SECURE_NOTE_ICON_DEFAULT );
+	}
+
+	/**
+	 * The checkout panel's secure-payment note, parsed and validated; null when
+	 * unset (the default).
+	 *
+	 * @return array{label: string, icon: string}|null
+	 */
+	public static function checkout_secure_note(): ?array {
+		return self::secure_note( 'checkout_secure_note', self::CHECKOUT_SECURE_NOTE_DEFAULT );
+	}
+
+	/**
+	 * Shared reader for the two secure-note settings.
+	 *
+	 * Differs from product_trust_badge_one()/-two() in exactly one place: the
+	 * icon a line that names none falls back to is SECURE_NOTE_ICON_DEFAULT,
+	 * not FRONT_ICON_DEFAULT. That default is threaded all the way down to
+	 * sanitize_icon() rather than substituted afterwards, which is not a
+	 * refinement — substituting afterwards cannot tell "no icon given" from
+	 * "`check` given explicitly", so an admin who typed `Text | check` would
+	 * silently get a padlock.
+	 *
+	 * @param string $mod           Theme-mod name.
+	 * @param string $default_value That setting's documented default.
+	 * @return array{label: string, icon: string}|null
+	 */
+	private static function secure_note( string $mod, string $default_value ): ?array {
+		$raw = get_theme_mod( $mod, $default_value );
+
+		return self::parse_badge_line(
+			self::sanitize_badge_line( $raw, self::SECURE_NOTE_ICON_DEFAULT ),
+			self::SECURE_NOTE_ICON_DEFAULT
+		);
 	}
 
 	/**
@@ -463,14 +564,25 @@ final class Settings {
 	 * input, a blank value, or a value whose label is empty all sanitize to
 	 * '' — the same "unset" state as the default.
 	 *
-	 * @param mixed $value Raw value.
+	 * Shared by four settings, not two: the two product-page trust badges
+	 * (s18) and the cart and checkout secure notes (s19). The name says
+	 * "badge line" rather than "product trust badge" for that reason.
+	 *
+	 * Note this WRITES the resolved icon back into the stored value, so
+	 * `$default_icon` has to match the reader's — an icon-less "Delivery" is
+	 * stored as "Delivery | check" for a product badge and "Delivery | lock"
+	 * for a secure note, and a mismatch here would make the stored value
+	 * disagree with what the page renders.
+	 *
+	 * @param mixed  $value        Raw value.
+	 * @param string $default_icon Icon for a line that names none.
 	 */
-	private static function sanitize_product_trust_badge( mixed $value ): string {
+	private static function sanitize_badge_line( mixed $value, string $default_icon = self::FRONT_ICON_DEFAULT ): string {
 		if ( ! \is_string( $value ) ) {
 			return '';
 		}
 
-		$item = self::parse_product_trust_badge( $value );
+		$item = self::parse_badge_line( $value, $default_icon );
 
 		return null === $item ? '' : "{$item['label']} | {$item['icon']}";
 	}
@@ -481,10 +593,12 @@ final class Settings {
 	 * control, not a textarea, so a stray newline (however it got there) is
 	 * not a second badge.
 	 *
-	 * @param string $raw Raw or already-canonical `Text | icon` value.
+	 * @param string $raw          Raw or already-canonical `Text | icon` value.
+	 * @param string $default_icon Icon for a line that names none — see
+	 *                             sanitize_icon().
 	 * @return array{label: string, icon: string}|null
 	 */
-	private static function parse_product_trust_badge( string $raw ): ?array {
+	private static function parse_badge_line( string $raw, string $default_icon = self::FRONT_ICON_DEFAULT ): ?array {
 		$lines = self::split_lines( $raw, 1 );
 
 		if ( [] === $lines ) {
@@ -500,7 +614,7 @@ final class Settings {
 
 		return [
 			'label' => $label,
-			'icon'  => self::sanitize_icon( $fields[1] ),
+			'icon'  => self::sanitize_icon( $fields[1], $default_icon ),
 		];
 	}
 
@@ -636,12 +750,26 @@ final class Settings {
 	}
 
 	/**
-	 * Shared shape for validating an icon slug against the closed F0 set.
+	 * Shared shape for validating an icon slug against the closed FRONT_ICONS
+	 * set.
 	 *
-	 * @param string $value Raw icon slug, already trimmed.
+	 * `$default_icon` exists because not every consumer wants `check` back for
+	 * an icon-less or unrecognised line: the cart/checkout secure notes want a
+	 * padlock (Settings::SECURE_NOTE_ICON_DEFAULT). It must itself be a member
+	 * of FRONT_ICONS — this is the one place that guarantees the returned slug
+	 * names a vendored SVG, so a caller passing a slug the theme does not ship
+	 * would defeat the whole check. Anything outside the set falls back to
+	 * FRONT_ICON_DEFAULT rather than being trusted.
+	 *
+	 * @param string $value        Raw icon slug, already trimmed.
+	 * @param string $default_icon Slug to use when `$value` is empty or unknown.
 	 */
-	private static function sanitize_icon( string $value ): string {
-		return \in_array( $value, self::FRONT_ICONS, true ) ? $value : self::FRONT_ICON_DEFAULT;
+	private static function sanitize_icon( string $value, string $default_icon = self::FRONT_ICON_DEFAULT ): string {
+		if ( \in_array( $value, self::FRONT_ICONS, true ) ) {
+			return $value;
+		}
+
+		return \in_array( $default_icon, self::FRONT_ICONS, true ) ? $default_icon : self::FRONT_ICON_DEFAULT;
 	}
 
 	/**

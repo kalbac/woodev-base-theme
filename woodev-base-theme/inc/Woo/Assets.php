@@ -34,6 +34,11 @@ final class Assets {
 	public function register(): void {
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue' ] );
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_storefront_behaviour' ] );
+
+		// The CART is enqueued from inside the cart markup, not from
+		// `wp_enqueue_scripts` — see enqueue_cart_behaviour() for why a page
+		// conditional cannot answer this one.
+		add_action( 'woocommerce_before_cart', [ $this, 'enqueue_cart_behaviour' ], 1 );
 	}
 
 	/**
@@ -85,6 +90,10 @@ final class Assets {
 	 *   an `is_product()` gate excluded exactly the pages it runs on: the rail
 	 *   stayed expanded above the grid on mobile, looking like a CSS bug.
 	 *
+	 * The CART is a third surface as of s19 (#42 row C4 puts the stepper on the
+	 * cart's quantity fields too) and is deliberately NOT in the list above —
+	 * enqueue_cart_behaviour() handles it, for the reason written there.
+	 *
 	 * Not unconditional, unlike the CSS bundle next to it: that one is inert on
 	 * a page without Woo markup because every rule is scoped, whereas a script
 	 * is a network request whether or not it finds anything to do.
@@ -94,6 +103,50 @@ final class Assets {
 			return;
 		}
 
+		$this->enqueue_behaviour_module();
+	}
+
+	/**
+	 * Enqueue the behaviour module for the CART's quantity stepper (#42, C4),
+	 * from a hook inside the cart markup rather than from
+	 * `wp_enqueue_scripts`.
+	 *
+	 * WHY NOT JUST ADD `is_cart()` TO THE GATE ABOVE. `wp_enqueue_scripts` runs
+	 * before `the_content`, i.e. before the `[woocommerce_cart]` shortcode has
+	 * executed — and it is that shortcode which defines `WOOCOMMERCE_CART`, the
+	 * constant `is_cart()` looks at first (`wc-conditional-functions.php`). At
+	 * enqueue time `is_cart()` therefore falls back to comparing the queried
+	 * object against `woocommerce_cart_page_id`, which is true on the store's
+	 * designated Cart page and FALSE for the same shortcode on any other page.
+	 * A store can legitimately put `[woocommerce_cart]` elsewhere, and this
+	 * theme's own e2e fixture does exactly that (the Cart page option keeps
+	 * pointing at the block Cart page — `tests/e2e-woo/global-setup.mjs`,
+	 * `CLASSIC_CART_PAGE_SLUG`). A page conditional cannot answer "will the
+	 * cart render on this request"; the cart's own hook can, because it only
+	 * fires when it already has.
+	 *
+	 * Enqueuing a script module mid-body is fine: `WP_Script_Modules` prints
+	 * enqueued modules on `wp_footer` as well as `wp_head`, and
+	 * `woocommerce_before_cart` fires during `the_content`, long before either
+	 * footer hook.
+	 *
+	 * The stepper buttons ship with the `hidden` attribute and this module is
+	 * what removes it (`src/js/woo.js`), so without this the cart carries two
+	 * permanently invisible buttons — which is exactly what it did when C4 first
+	 * landed, and is the same "a new surface silently gets no script" failure
+	 * the docblock above already records once.
+	 */
+	public function enqueue_cart_behaviour(): void {
+		$this->enqueue_behaviour_module();
+	}
+
+	/**
+	 * Resolve the behaviour module out of the Vite manifest and enqueue it.
+	 *
+	 * Idempotent: `wp_enqueue_script_module()` keys on the handle, so the two
+	 * callers above cannot double-print it.
+	 */
+	private function enqueue_behaviour_module(): void {
 		$dist     = get_template_directory() . '/assets/dist';
 		$dist_uri = get_template_directory_uri() . '/assets/dist';
 		$manifest = BaseAssets::read_manifest( $dist . '/.vite/manifest.json' );

@@ -1,0 +1,238 @@
+/* src/css/woo/receipt.css
+ * The order-received screen — `templates/checkout/thankyou.php`,
+ * `order-received.php` and the shared `templates/order/*` details/customer
+ * templates it renders. Mockup: `id="s-receipt"` (lines 2840-2883). Plan
+ * rows R1-CSS, R2, R3, R4, R5-CSS in
+ * docs/plans/2026-07-28-cart-checkout-account.md.
+ *
+ * Read `./storefront.css`'s header for the four contracts every rule here
+ * obeys, and `../woo.css` for why a later partial beats an earlier one —
+ * THIS file is the last import, which is why the shared meta-grid rule
+ * below lives here rather than in `./account.css`.
+ */
+
+.woocommerce {
+  /* ================================================================== *
+   * R1 — the hero (`inc/Woo/Receipt.php::hero()`) and Woo's own,
+   * previously-unstyled lede paragraph right after it.
+   * ================================================================== */
+  .wtb-receipt-hero {
+    padding: var(--space-2xl) 0;
+    text-align: center;
+  }
+
+  .wtb-receipt-hero__check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    margin-bottom: var(--space-md);
+    border-radius: var(--radius-full);
+    background-color: color-mix(in oklab, var(--success) 15%, var(--card));
+    color: var(--success);
+  }
+
+  .wtb-receipt-hero__check svg {
+    width: 32px;
+    height: 32px;
+  }
+
+  .wtb-receipt-hero__title {
+    margin: 0;
+    font-size: var(--text-3xl);
+    letter-spacing: -0.03em;
+  }
+
+  /* Woo's own lede (`checkout/order-received.php`) — a sibling of the hero
+   * above, NOT a child (`woocommerce_before_thankyou` fires and closes
+   * before core prints this), so it needs its own centring rather than
+   * inheriting the hero's `text-align`. Mockup line 852 (`.lede`). */
+  .woocommerce-thankyou-order-received {
+    max-width: 32rem;
+    margin: var(--space-sm) auto 0;
+    text-align: center;
+    color: var(--muted-foreground);
+  }
+
+  /* ================================================================== *
+   * R2 (+ M7's `.wtb-order-meta`, ../account.css) — the "receipt-meta"
+   * component, mockup lines 763-766. ONE rule list for BOTH selectors
+   * because the mockup draws them as the same component (the pointer
+   * comment in ../account.css sends readers here). This file loads last,
+   * so it reaches both `ul.woocommerce-order-overview` here AND
+   * `.wtb-order-meta` on the account view-order page.
+   *
+   * `repeat(auto-fit, minmax(6.5rem, 1fr))`, not storefront.css's
+   * `repeat(4, 1fr)`: `ul.woocommerce-order-overview` can carry 3-5 <li>s
+   * depending on the gateway and login state (`checkout/thankyou.php` —
+   * email and payment-method are each conditional), and a FIXED 4-column
+   * grid orphans a 5th item alone on its own row at roughly a quarter
+   * width. auto-fit recomputes the column count from what is actually
+   * there, so 3, 4 or 5 items all fill the row evenly. Re-declares the
+   * WHOLE box + li + li-strong recipe storefront.css already has for
+   * `ul.woocommerce-order-overview` alone (not just grid-template-columns)
+   * — ties its specificity (`.woocommerce ul.woocommerce-order-overview`,
+   * (0,2,1), same nesting depth here) and wins on source order
+   * (docs/gotchas/source-order-only-wins-the-properties-you-redeclare.md). */
+  ul.woocommerce-order-overview,
+  .wtb-order-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr));
+    gap: var(--space-md);
+    margin: 0 0 var(--space-lg);
+    padding: var(--space-lg);
+    list-style: none;
+    text-align: center;
+    background-color: var(--surface-2);
+    border: var(--rule);
+    border-radius: var(--radius-lg);
+  }
+
+  /* The one property this pair does NOT share: view-order's head already
+   * carries the order number and status badge, so its meta grid reads
+   * left-aligned in the mockup (line 759, `style="text-align:left"`),
+   * unlike the receipt's centred one (line 763, no override). */
+  .wtb-order-meta {
+    text-align: left;
+  }
+
+  ul.woocommerce-order-overview li,
+  .wtb-order-meta .wtb-order-meta__l {
+    margin: 0;
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted-foreground);
+  }
+
+  ul.woocommerce-order-overview li strong,
+  .wtb-order-meta .wtb-order-meta__v {
+    display: block;
+    margin-top: 2px;
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
+    color: var(--foreground);
+  }
+
+  /* R2, continued — a THIRD instance of the `::before`/`::after` clearfix
+   * trap this plan has already hit twice (`.woocommerce` itself and
+   * `.woocommerce-message`, both in ../account.css). `checkout/thankyou.php`
+   * gives this `<ul>` a THIRD class beyond the two named above —
+   * `order_details` — and Woo's own `woocommerce.css` clearfixes exactly
+   * that: `.woocommerce ul.order_details::after, .woocommerce
+   * ul.order_details::before { content:" "; display:table }`. Once the
+   * `<ul>` is a grid, both pseudo-elements become grid items sharing the 5
+   * auto-fit tracks with the 5 real `<li>`s: `::before` lands in row 1
+   * track 1 (pushing order/date/email/total into tracks 2-5), and the 5th
+   * real item (`payment-method`) is bumped to row 2, orphaned in a single
+   * narrow column — the EXACT defect R2 exists to prevent, reintroduced by
+   * an element this plan never mentioned. Measured via
+   * `getComputedStyle(ul, '::before').content` reading `'" "'`, not
+   * inferred from the screenshot alone (though the screenshot showed it
+   * first: "Payment method" sitting alone, indented, under the row above).
+   *
+   * `table.order_details` (R3, below) is a DIFFERENT element with the same
+   * class — Woo's selector requires the `ul` type, so the table is
+   * unaffected and needs no equivalent rule.
+   *
+   * Ties `.woocommerce ul.order_details::before`/`::after` at (0,2,2)
+   * exactly (1 class `.woocommerce` + 1 class `.order_details` + 1 element
+   * `ul` + 1 pseudo-element), wins on source order. `display: none`, same
+   * fix shape as ../account.css's `.woocommerce::before`/`::after`. */
+  ul.woocommerce-order-overview::before,
+  ul.woocommerce-order-overview::after {
+    display: none;
+  }
+
+  /* ================================================================== *
+   * R3 — `table.order_details` (`order/order-details.php`). Rendered
+   * identically on the account view-order page via `woocommerce_view_order`
+   * (M7) — same markup, same classes, so this reaches both without a
+   * second copy.
+   *
+   * This table carries NO `shop_table_responsive` class (unlike the
+   * account orders/downloads tables), so Woo's own smallscreen
+   * `td::before { content: attr(data-title) }` mechanism never activates
+   * for it AT ALL, with or without the attribute — core never put one on
+   * these `<td>`s (checked `order/order-details-item.php`). Nothing here
+   * tries to rely on `data-title` for this table; at two columns (product,
+   * total) it does not need the stacked-card treatment the 5+-column
+   * account tables get.
+   * ================================================================== */
+  .order_details .product-quantity {
+    margin-left: 0.35rem;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-weight: 400;
+    color: var(--muted-foreground);
+  }
+
+  .order_details .product-total,
+  .order_details tfoot td {
+    text-align: right;
+  }
+
+  /* ================================================================== *
+   * R4 — `.woocommerce-column--billing-address` / `--shipping-address`
+   * (`order/order-details-customer.php`). The card/border/padding
+   * storefront.css already gives these is kept; only the heading
+   * changes, from a display-font `text-lg` treatment to the mockup's
+   * small uppercase label (line 769, `.addr-card h4`).
+   *
+   * Declares the WHOLE heading property set, not just the ones that
+   * differ (font-size/text-transform) — leaving storefront.css's
+   * `font-family: var(--font-display)` and `font-weight: 650` in place
+   * next to this file's smaller size would be a hybrid neither design
+   * intends, the exact mistake
+   * docs/gotchas/source-order-only-wins-the-properties-you-redeclare.md
+   * warns about, this time against this codebase's OWN earlier rule
+   * rather than a vendor one. Ties storefront.css's specificity
+   * (`.woocommerce .woocommerce-column--billing-address h2`, (0,2,1)) by
+   * nesting at the same depth, wins on source order.
+   * ================================================================== */
+  .woocommerce-column--billing-address h2,
+  .woocommerce-column--shipping-address h2 {
+    margin: 0 0 var(--space-sm);
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+  }
+
+  /* ================================================================== *
+   * R5 — the "track order" / "back to shop" cluster
+   * (`inc/Woo/Receipt.php::actions()`), `display: block` today.
+   * ================================================================== */
+  .wtb-receipt-actions {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-sm);
+    margin-top: var(--space-2xl);
+  }
+
+  /* `a.button.wtb-button--outline`, not the bare class: nested under
+   * `.woocommerce` this compiles to `.woocommerce a.button.wtb-button--
+   * outline` ((0,3,1)) — high enough to beat storefront.css's own
+   * `.woocommerce a.button` base rule ((0,2,1)) on the properties both
+   * set (background-color, border-color, color), which a bare
+   * `.wtb-button--outline` ((0,2,0), one class short of the base rule's
+   * element selector) would have LOST to regardless of source order. */
+  a.button.wtb-button--outline {
+    background-color: transparent;
+    border-color: var(--border);
+    color: var(--foreground);
+  }
+
+  a.button.wtb-button--outline:hover {
+    background-color: var(--surface-2);
+    border-color: var(--border-strong);
+  }
+}

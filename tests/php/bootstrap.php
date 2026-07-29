@@ -36,3 +36,9 @@ require_once __DIR__ . '/../../woodev-base-theme/inc/autoload.php';
  * it pointed at was real.
  */
 require_once __DIR__ . '/Support/wc-product-double.php';
+
+/*
+ * The `WC_Order` stand-in `Account` and `Receipt` tests need — same rationale
+ * and loading position as `wc-product-double.php` immediately above.
+ */
+require_once __DIR__ . '/Support/wc-order-double.php';

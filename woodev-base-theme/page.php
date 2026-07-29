@@ -8,6 +8,16 @@
  * wrapper stays for consistency with the other templates rather than being
  * special-cased.
  *
+ * The checkout page — a WP page like any other — renders through this same
+ * template, order-received endpoint included. `Receipt::hero()` prints its
+ * own `<h1>` on `woocommerce_before_thankyou` (see
+ * `inc/Woo/Receipt.php`), so on that one page `hide_entry_head` is passed to
+ * `template-parts/content/content`, the same `$args` contract
+ * `front-page.php` already uses for its own hero — otherwise the page would
+ * carry two `<h1>`s, the exact class of defect the front page already
+ * guards against (s16). `function_exists()` because this template also runs
+ * with WooCommerce inactive, where `is_order_received_page()` does not exist.
+ *
  * @package Woodev\Theme\Base
  */
 
@@ -26,7 +36,12 @@ get_header();
 		<?php
 		while ( have_posts() ) {
 			the_post();
-			get_template_part( 'template-parts/content/content' );
+
+			$wtb_content_args = ( function_exists( 'is_order_received_page' ) && is_order_received_page() )
+				? [ 'hide_entry_head' => true ]
+				: [];
+
+			get_template_part( 'template-parts/content/content', null, $wtb_content_args );
 
 			if ( comments_open() || get_comments_number() ) {
 				comments_template();

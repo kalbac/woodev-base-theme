@@ -295,14 +295,54 @@ final class ProductPageTest extends TestCase {
 
 	// ------------------------------------------------------ quantity_step_down/up()
 
-	public function test_quantity_steppers_print_nothing_off_the_product_page(): void {
+	public function test_quantity_steppers_print_nothing_off_the_product_page_and_off_the_cart(): void {
 		Functions\when( 'is_product' )->justReturn( false );
+		Functions\when( 'is_cart' )->justReturn( false );
 
 		\ob_start();
 		( new ProductPage() )->quantity_step_down();
 		( new ProductPage() )->quantity_step_up();
 
 		self::assertSame( '', \ob_get_clean() );
+	}
+
+	/**
+	 * C4 — the widened guard: `templates/global/quantity-input.php` fires
+	 * these two hooks on the cart page too (see ProductPage's own docblock
+	 * for the `is_cart()`/`WOOCOMMERCE_CART` evidence chain), so the stepper
+	 * must render there even though `is_product()` is false.
+	 */
+	public function test_quantity_step_down_prints_the_button_on_the_cart_even_off_a_product_page(): void {
+		Functions\when( 'is_product' )->justReturn( false );
+		Functions\when( 'is_cart' )->justReturn( true );
+		Functions\when( 'esc_attr__' )->returnArg( 1 );
+
+		\ob_start();
+		( new ProductPage() )->quantity_step_down();
+		$html = self::strip_icon_markup( \ob_get_clean() );
+
+		self::assertSame(
+			'<button type="button" class="wtb-qty-step" data-step="down" aria-label="Decrease quantity" hidden></button>',
+			$html
+		);
+	}
+
+	/**
+	 * @see test_quantity_step_down_prints_the_button_on_the_cart_even_off_a_product_page
+	 */
+	public function test_quantity_step_up_prints_the_button_on_the_cart_even_off_a_product_page(): void {
+		Functions\when( 'is_product' )->justReturn( false );
+		Functions\when( 'is_cart' )->justReturn( true );
+		Functions\when( 'esc_attr__' )->returnArg( 1 );
+
+		\ob_start();
+		( new ProductPage() )->quantity_step_up();
+		$html = self::strip_icon_markup( \ob_get_clean() );
+
+		self::assertSame(
+			'<button type="button" class="wtb-qty-step" data-step="up" aria-label="Increase quantity" hidden></button>',
+			$html
+		);
 	}
 
 	public function test_quantity_step_down_prints_a_hidden_decrement_button(): void {
