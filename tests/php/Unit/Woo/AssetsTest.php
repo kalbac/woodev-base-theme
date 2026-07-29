@@ -18,6 +18,51 @@ final class AssetsTest extends TestCase {
 	}
 
 	/**
+	 * The cart's behaviour module is enqueued from inside the cart markup, not
+	 * from `wp_enqueue_scripts` — see Assets::enqueue_cart_behaviour()'s
+	 * docblock. Pinning the HOOK, not just the method, because moving it back
+	 * onto `wp_enqueue_scripts` is precisely the change that breaks it (the
+	 * `[woocommerce_cart]` shortcode has not run yet at that point, so nothing
+	 * has defined `WOOCOMMERCE_CART` and `is_cart()` falls back to a page-id
+	 * comparison that is false for the shortcode on any other page).
+	 */
+	public function test_register_hooks_the_cart_behaviour_inside_the_cart_markup(): void {
+		$assets = new Assets();
+		$assets->register();
+
+		self::assertSame(
+			1,
+			\has_action( 'woocommerce_before_cart', [ $assets, 'enqueue_cart_behaviour' ] ),
+			'the cart behaviour module must be enqueued from woocommerce_before_cart, at priority 1'
+		);
+		self::assertFalse(
+			\has_action( 'wp_enqueue_scripts', [ $assets, 'enqueue_cart_behaviour' ] ),
+			'wp_enqueue_scripts runs before the cart shortcode, so it cannot know the cart will render'
+		);
+	}
+
+	/**
+	 * And it must enqueue WITHOUT consulting a page conditional. `is_cart()` is
+	 * declared here only to assert it is never reached: a "tidy-up" that adds
+	 * `if ( ! is_cart() ) { return; }` would pass a test that merely checked the
+	 * script was enqueued on a stubbed cart page, while silently killing the
+	 * stepper on every store that puts the shortcode somewhere else.
+	 */
+	public function test_enqueue_cart_behaviour_does_not_consult_a_page_conditional(): void {
+		Functions\expect( 'is_cart' )->never();
+
+		$scripts = $this->enqueue_behaviour_with_manifest(
+			[ 'src/js/woo.js' => [ 'file' => 'assets/wooJs-cart.js' ] ],
+			'enqueue_cart_behaviour'
+		);
+
+		self::assertSame(
+			[ 'woodev-base-woo-js' => 'https://example.test/wp-content/themes/woodev-base-theme/assets/dist/assets/wooJs-cart.js' ],
+			$scripts
+		);
+	}
+
+	/**
 	 * The old contract — "off every Woo context, enqueue nothing" — is gone:
 	 * `[products]`/`[product_category]`/`[featured_products]` and the Woo
 	 * product blocks render our `content-product.php` override on ANY page,
@@ -158,6 +203,17 @@ final class AssetsTest extends TestCase {
 	 * @return array<string, string>
 	 */
 	private function enqueue_stepper_with_manifest( array $manifest ): array {
+		return $this->enqueue_behaviour_with_manifest( $manifest, 'enqueue_storefront_behaviour' );
+	}
+
+	/**
+	 * Same, for either public entry point onto the shared private resolver.
+	 *
+	 * @param array<string, array{file: string, css?: list<string>}> $manifest
+	 * @param string                                                 $method   Public method to invoke.
+	 * @return array<string, string>
+	 */
+	private function enqueue_behaviour_with_manifest( array $manifest, string $method ): array {
 		$root = \sys_get_temp_dir() . '/wtb-woo-js-' . \uniqid();
 		\mkdir( $root . '/assets/dist/.vite', 0777, true );
 		\file_put_contents( $root . '/assets/dist/.vite/manifest.json', '{}' );
@@ -174,7 +230,7 @@ final class AssetsTest extends TestCase {
 				}
 			);
 
-			( new Assets() )->enqueue_storefront_behaviour();
+			( new Assets() )->{$method}();
 
 			return $scripts;
 		} finally {

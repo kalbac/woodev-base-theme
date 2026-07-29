@@ -447,6 +447,111 @@ final class SettingsTest extends TestCase {
 		self::assertSame( '', Settings::sanitize_product_trust_badge_two( new \stdClass() ) );
 	}
 
+	/**
+	 * The two secure-note settings (#42, plan rows C10/K9) share the badge-line
+	 * sanitizer with the product badges above, and differ in exactly one place:
+	 * an icon-less line falls back to `lock`, not `check`.
+	 */
+	public function test_secure_note_resolvers_parse_a_valid_line(): void {
+		$this->stub_theme_mod( 'Payment happens on the bank page | shield-check' );
+
+		self::assertSame(
+			[
+				'label' => 'Payment happens on the bank page',
+				'icon'  => 'shield-check',
+			],
+			Settings::cart_secure_note()
+		);
+		self::assertSame(
+			[
+				'label' => 'Payment happens on the bank page',
+				'icon'  => 'shield-check',
+			],
+			Settings::checkout_secure_note()
+		);
+	}
+
+	public function test_secure_note_resolvers_return_null_when_unset(): void {
+		$this->stub_theme_mod( '' );
+		self::assertNull( Settings::cart_secure_note() );
+		self::assertNull( Settings::checkout_secure_note() );
+	}
+
+	public function test_secure_note_resolvers_default_the_icon_to_lock_not_check(): void {
+		$this->stub_theme_mod( 'No icon note |' );
+		self::assertSame(
+			[
+				'label' => 'No icon note',
+				'icon'  => 'lock',
+			],
+			Settings::cart_secure_note()
+		);
+
+		$this->stub_theme_mod( 'Unknown icon note | not-a-real-icon' );
+		self::assertSame(
+			[
+				'label' => 'Unknown icon note',
+				'icon'  => 'lock',
+			],
+			Settings::checkout_secure_note()
+		);
+	}
+
+	/**
+	 * The regression this pins is one the first implementation actually had:
+	 * substituting `lock` for `check` AFTER parsing cannot tell "no icon given"
+	 * from "`check` given on purpose", so an admin who typed `… | check` got a
+	 * padlock. The default is threaded down to the icon validator instead, and
+	 * this is the assertion that fails if anyone reverts to the shortcut.
+	 */
+	public function test_secure_note_keeps_an_explicitly_chosen_check_icon(): void {
+		$this->stub_theme_mod( 'Order confirmed by email | check' );
+
+		self::assertSame(
+			[
+				'label' => 'Order confirmed by email',
+				'icon'  => 'check',
+			],
+			Settings::cart_secure_note()
+		);
+	}
+
+	/**
+	 * The sanitizer WRITES the resolved icon back into the stored value, so the
+	 * stored string has to carry the same `lock` the resolver reports — a
+	 * mismatch here is how a setting starts disagreeing with the page.
+	 */
+	public function test_secure_note_sanitizer_canonicalises_with_the_lock_default(): void {
+		self::assertSame( 'Secure payment | lock', Settings::sanitize_cart_secure_note( 'Secure payment |' ) );
+		self::assertSame( 'Secure payment | lock', Settings::sanitize_checkout_secure_note( 'Secure payment | nope' ) );
+		self::assertSame( 'Secure payment | truck', Settings::sanitize_cart_secure_note( 'Secure payment | truck' ) );
+	}
+
+	public function test_secure_note_sanitizers_reject_non_string_input(): void {
+		self::assertSame( '', Settings::sanitize_cart_secure_note( [ 'x' ] ) );
+		self::assertSame( '', Settings::sanitize_cart_secure_note( new \stdClass() ) );
+		self::assertSame( '', Settings::sanitize_checkout_secure_note( 42 ) );
+	}
+
+	/**
+	 * `lock` was added to the whitelist for these two settings, and the badge
+	 * settings share that whitelist — so it has to be reachable from them too,
+	 * rather than being a slug the icon validator accepts in one caller and
+	 * rejects in another.
+	 */
+	public function test_lock_is_selectable_from_the_shared_badge_whitelist(): void {
+		self::assertContains( 'lock', Settings::FRONT_ICONS );
+
+		$this->stub_theme_mod( 'Secure checkout | lock' );
+		self::assertSame(
+			[
+				'label' => 'Secure checkout',
+				'icon'  => 'lock',
+			],
+			Settings::product_trust_badge_one()
+		);
+	}
+
 	public function test_front_value_items_resolver_parses_valid_lines_into_structured_items(): void {
 		$this->stub_theme_mod( "Fast delivery | Same-day dispatch | truck\nEco packaging | Recycled materials | leaf" );
 

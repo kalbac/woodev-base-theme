@@ -43,7 +43,27 @@ const FIXTURES_PATH = path.join(__dirname, '.fixtures.json');
  *   attributes: {
  *     colour: { id: number, taxonomy: string, terms: Record<string, number> },
  *   },
+ *   productsShortcodePage: number,
+ *   classicPages: { cart: number, checkout: number },
+ *   downloadable: number,
+ *   coupon: { code: string, id: number },
+ *   orders: {
+ *     processing: { id: number, key: string },
+ *     completed: { id: number, key: string },
+ *   },
  * }}
+ *
+ * The `classicPages`, `downloadable`, `coupon` and `orders` keys arrived with
+ * #42 (F1). Two things about them a spec has to respect:
+ *
+ *  - `classicPages.cart` / `.checkout` are ADDITIONAL pages carrying the
+ *    `[woocommerce_cart]` / `[woocommerce_checkout]` shortcodes. The Woo page
+ *    OPTIONS still point at the block-based pages at `/cart/` and `/checkout/`
+ *    (blocks.spec.mjs asserts on those), so on these two pages `is_cart()` and
+ *    `is_checkout()` are FALSE. See CLASSIC_CART_PAGE_SLUG in global-setup.mjs.
+ *  - `orders.*.key` is the `order_key`. A logged-in owner reaching
+ *    `/checkout/order-received/{id}/` does not need it; a spec that checks the
+ *    receipt WITHOUT logging in has to pass it as the `key` query arg.
  */
 export function loadFixtures() {
   let raw;
@@ -58,5 +78,24 @@ export function loadFixtures() {
     );
   }
 
-  return JSON.parse(raw);
+  const fixtures = JSON.parse(raw);
+
+  // Fail loudly on a fixture file written by an OLDER seed than the specs
+  // reading it. Without this, `fixtures.orders.processing.id` is `undefined`,
+  // the spec navigates to `/checkout/order-received/undefined/`, and the
+  // failure it reports is a 404 assertion rather than "your store was seeded
+  // before these fixtures existed" — which is minutes of the wrong
+  // investigation. The keys checked are exactly the ones #42 (F1) added.
+  const missing = ['classicPages', 'downloadable', 'coupon', 'orders'].filter(
+    (key) => !(key in fixtures),
+  );
+  if (missing.length > 0) {
+    throw new Error(
+      `[e2e-woo] ${FIXTURES_PATH} is missing ${missing.join(', ')} — it was written by a seed ` +
+        'from before those fixtures existed (#42, F1). Re-run the full seed (npm run e2e:woo) ' +
+        'against this container.',
+    );
+  }
+
+  return fixtures;
 }

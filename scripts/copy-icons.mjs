@@ -34,6 +34,17 @@ const ICONS = [
   'sliders-horizontal', // catalogue filter rail head, and its mobile disclosure (s18 #41)
   'minus', // single-product quantity stepper, decrement (s18 #41)
   'plus', // single-product quantity stepper, increment (s18 #41)
+  'shopping-bag', // empty-cart state (s19 #42, plan row C12)
+  'lock', // secure-payment note on the cart and checkout panels (s19 #42, C10/K9)
+  'user', // checkout login notice, and My Account nav → Account details (s19 #42)
+  'info', // store notice, info variant (s19 #42, plan row K4)
+  'circle-check', // store notice, success variant (s19 #42, plan row K4)
+  'triangle-alert', // store notice, error variant (s19 #42, plan row K4)
+  'house', // My Account nav → Dashboard (s19 #42, plan row M2)
+  'file-text', // My Account nav → Orders (s19 #42, plan row M2)
+  'download', // My Account nav → Downloads, and the downloads table button (s19 #42)
+  'map-pin', // My Account nav → Addresses (s19 #42, plan row M2)
+  'log-out', // My Account nav → Log out (s19 #42, plan row M2)
 ];
 
 await mkdir(DEST, { recursive: true });

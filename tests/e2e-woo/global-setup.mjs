@@ -340,6 +340,368 @@ function writeFixtures(fixtures) {
 export const SHORTCODE_PAGE_SLUG = 'wtb-products-shortcode';
 
 /**
+ * Slugs of the pages carrying the CLASSIC cart / checkout shortcodes (#42, F1).
+ *
+ * WHY SEPARATE PAGES rather than rewriting the ones `install_pages` creates:
+ * WooCommerce 10.9.4's `install_pages` builds the Cart and Checkout pages out
+ * of the `woocommerce/cart` and `woocommerce/checkout` BLOCKS, and
+ * `assertBlockPageExists()` above exists precisely to fail the run if those
+ * pages ever stop carrying that block markup — `tests/e2e-woo/blocks.spec.mjs`
+ * (ADR-009 / B6) asserts against them. Overwriting `post_content` with a
+ * shortcode would satisfy the classic specs by breaking the block ones.
+ *
+ * These two pages are therefore ADDITIONAL, with their own slugs, and the
+ * `woocommerce_cart_page_id` / `woocommerce_checkout_page_id` options keep
+ * pointing at the block pages. Consequence worth knowing before writing a
+ * spec against them: because the options are unchanged, `is_cart()` and
+ * `is_checkout()` are FALSE on these pages. The shortcodes still render — the
+ * `[woocommerce_cart]` / `[woocommerce_checkout]` handlers call
+ * `wc_get_template()` directly rather than gating on those conditionals — but
+ * any theme code that branches on `is_cart()` / `is_checkout()` will not fire
+ * here, which is a property of the FIXTURE, not of a real store. Theme code
+ * that needs to run on the classic branch must therefore key off something the
+ * template itself provides (a hook inside `cart.php`/`form-checkout.php`), not
+ * off the page conditional — that is a design constraint this fixture makes
+ * visible, and it is the shape the plan's C1/K-row hooks already use.
+ */
+export const CLASSIC_CART_PAGE_SLUG = 'wtb-cart-classic';
+/** @see CLASSIC_CART_PAGE_SLUG */
+export const CLASSIC_CHECKOUT_PAGE_SLUG = 'wtb-checkout-classic';
+
+/** Slug of the downloadable product seeded for `/my-account/downloads/`. */
+export const DOWNLOADABLE_PRODUCT_SLUG = 'wtb-product-downloadable';
+
+/** Code of the percent coupon seeded so an order carries a discount row. */
+export const ORDER_COUPON_CODE = 'wtbe2e10';
+
+/**
+ * Seed one ordinary page whose entire content is a single shortcode.
+ *
+ * Kept separate from `seedShortcodePage()` rather than generalising it: that
+ * function's docblock documents a `[products]`-specific reason for existing
+ * (a NON-Woo page that still renders our `content-product.php` override), and
+ * folding two different intents into one helper would lose it.
+ *
+ * The shortcode string carries no attributes and no spaces on purpose — see
+ * `seedShortcodePage()` for why an inner-quoted attribute does not survive
+ * `npx wp-env run cli`'s second round of argument splitting.
+ *
+ * @param {string} slug      Page slug (also the idempotency key).
+ * @param {string} title     Page title.
+ * @param {string} shortcode e.g. "[woocommerce_cart]".
+ * @returns {number} the new page id.
+ */
+function seedSingleShortcodePage(slug, title, shortcode) {
+  const existing = wpTry(`post list --post_type=page --name=${slug} --field=ID`);
+  for (const id of existing.split(/\r?\n/).filter(Boolean)) {
+    wp(`post delete ${id} --force`);
+  }
+  return Number(
+    wp(
+      `post create --post_type=page --post_status=publish --post_title="${title}" ` +
+        `--post_name=${slug} --post_content="${shortcode}" --porcelain`,
+    ),
+  );
+}
+
+/**
+ * Reseed a downloadable, virtual product with one real file in uploads.
+ *
+ * `/my-account/downloads/` lists rows from `wc_get_customer_available_downloads()`,
+ * which reads the `woocommerce_downloadable_product_permissions` table — and
+ * those rows are written by `wc_downloadable_product_permissions()`, which runs
+ * on order COMPLETION. So a downloadable product alone puts nothing on that
+ * page; `seedCustomerOrders()` below has to complete an order containing it.
+ *
+ * The file is generated inside the container (nothing on the host is mounted
+ * where WordPress can read it) and written into the uploads dir so the download
+ * URL resolves. `--downloads=<json>` is not used for the same reason
+ * `assignColourAttribute()` avoids `--attributes=<json>`: the value needs both
+ * quotes and spaces, which do not survive `wp-env run cli`.
+ *
+ * WHY THE APPROVED DIRECTORY IS ADDED EXPLICITLY. This store runs WooCommerce's
+ * Approved Download Directories feature in `enabled` mode, and
+ * `WC_Product::set_downloads()` throws `WC_Data_Exception` for a file outside the
+ * approved list. It does try to self-heal — `WC_Product_Download::approved_directory_checks()`
+ * calls `add_approved_directory( parent_url, $is_site_administrator )` — but
+ * `$is_site_administrator` is `current_user_can( 'manage_options' )`, and a
+ * `wp eval` runs with NO current user, so the directory is added **disabled**,
+ * `is_valid_path()` stays false, and the save fatals with "does not exist on the
+ * server, or is not located within an approved directory" — a message that sends
+ * you looking for a missing file that is in fact present (measured: the file
+ * existed on disk while the save failed). Adding the uploads URL as ENABLED
+ * before the save removes the dependency on the acting user, and on the mode
+ * being off. Passing `--user=admin` to the eval would also work, but it would
+ * make a fixture silently depend on a capability check three classes deep.
+ *
+ * @returns {number} the product id.
+ */
+function seedDownloadableProduct() {
+  const id = reseedProduct(
+    DOWNLOADABLE_PRODUCT_SLUG,
+    [
+      '--type=simple',
+      '--name="WTB Care Guide PDF"',
+      '--regular_price=4.90',
+      '--virtual=true',
+      '--downloadable=true',
+      '--description="A downloadable product seeded so /my-account/downloads/ has a real row."',
+      '--short_description="Downloadable product for e2e."',
+    ].join(' '),
+  );
+
+  const php = [
+    `$product = wc_get_product(${id});`,
+    '$dir = wp_upload_dir();',
+    "$file = $dir['path'] . '/wtb-care-guide.txt';",
+    "$url = $dir['url'] . '/wtb-care-guide.txt';",
+    "file_put_contents($file, 'WTB e2e downloadable fixture.');",
+    // Approve the uploads directory (ENABLED) before the save — see the
+    // docblock above for why the auto-add inside set_downloads() is not enough
+    // under `wp eval`. Wrapped: add_approved_directory() throws on a malformed
+    // URL, and the is_valid_path() assertion below is what actually decides
+    // whether to continue, so a throw here must not mask it.
+    "$dirs = wc_get_container()->get('Automattic\\\\WooCommerce\\\\Internal\\\\ProductDownloads\\\\ApprovedDirectories\\\\Register');",
+    // add_approved_directory() returns the EXISTING row's id without touching
+    // its `enabled` flag when the URL is already listed, so on its own it is a
+    // no-op against a directory a previous run added DISABLED — which is
+    // exactly what set_downloads()'s own auto-add leaves behind under
+    // `wp eval` (no current user → not enabled). is_valid_path() only matches
+    // rows with `enabled = 1`, so the add has to be followed by an explicit
+    // update. Passing the id add_approved_directory() returned makes this
+    // correct in both branches: a fresh insert and a stale disabled row.
+    "try { $id = $dirs->add_approved_directory($dir['url'], true); $dirs->update_approved_directory($id, $dir['url'], true); } catch (Exception $e) {}",
+    "if (!$dirs->is_valid_path($url)) { throw new Exception('uploads dir is still not an approved download directory: ' . $dir['url']); }",
+    '$download = new WC_Product_Download();',
+    "$download->set_name('WTB Care Guide');",
+    "$download->set_id('wtb-care-guide');",
+    '$download->set_file($url);',
+    '$product->set_downloads([$download]);',
+    '$product->set_download_limit(3);',
+    '$product->save();',
+    // Read the download back off a FRESHLY loaded product rather than echoing
+    // the id: set_downloads() collects per-file errors and, for a file it
+    // cannot validate, silently DISABLES the download instead of throwing when
+    // the product was not yet read. A save that "worked" while shipping zero
+    // usable downloads is the exact shape of fixture that makes a downloads
+    // spec pass against an empty table.
+    'echo count(wc_get_product($product->get_id())->get_downloads());',
+  ].join(' ');
+
+  const downloads = Number(wp(`eval "${php}"`));
+  if (1 !== downloads) {
+    throw new Error(
+      `[e2e-woo:setup] expected the downloadable product to carry exactly 1 download, got ${downloads}`,
+    );
+  }
+
+  return Number(id);
+}
+
+/**
+ * Enable two payment gateways.
+ *
+ * WHY: measured on the seeded store before this existed, the classic checkout's
+ * payment section rendered nothing but "Sorry, it seems that there are no
+ * available payment methods" and a dead Place-order button. A fresh WooCommerce
+ * install enables no gateway at all, so `ul.wc_payment_methods` — the element
+ * plan row K6 styles as the mockup's payment cards, and the one that carries
+ * the `:has(input:checked)` accent — did not exist, and the whole checkout was
+ * not a checkout. Same class of gap as the missing shipping zone below.
+ *
+ * TWO gateways, not one: with a single available method WooCommerce still
+ * renders the `<li>` but there is nothing to choose between, so the selected-
+ * state styling and the radio behaviour are untestable. `cod` (Cash on
+ * delivery) and `bacs` (Direct bank transfer) are both core, both offline, and
+ * neither needs credentials or a network call.
+ *
+ * `wp wc payment_gateway update` is the documented CLI route; the settings are
+ * stored per-gateway as `woocommerce_{id}_settings`, which is what the
+ * assertion below reads back rather than trusting the write.
+ */
+function seedPaymentGateways() {
+  for (const id of ['cod', 'bacs']) {
+    wp(`wc payment_gateway update ${id} --user=admin --enabled=true`);
+  }
+
+  const enabled = wp(
+    'eval "$ids = []; foreach (WC()->payment_gateways()->get_available_payment_gateways() as $g) { $ids[] = $g->id; } echo implode(\',\', $ids);"',
+  );
+
+  for (const id of ['cod', 'bacs']) {
+    if (!enabled.split(',').includes(id)) {
+      throw new Error(
+        `[e2e-woo:setup] expected payment gateway "${id}" to be available, got: ${enabled || '(none)'}`,
+      );
+    }
+  }
+
+  return enabled.split(',');
+}
+
+/**
+ * Give the store one shipping zone with two flat-rate methods.
+ *
+ * WHY THIS IS A FIXTURE AND NOT AN AFTERTHOUGHT: measured on the seeded store
+ * before this existed, the classic checkout's review table had a `tfoot` of
+ * exactly two rows — `cart-subtotal` and `order-total`. No `tr.shipping`, no
+ * `ul#shipping_method`, because a store with no shipping zone offers no methods
+ * at all. That makes two things unverifiable rather than merely untested: the
+ * mockup's shipping-method cards (plan row K7 styles `ul#shipping_method li`,
+ * which did not exist) and the "Delivery" line the mockup draws in both totals
+ * panels (C8/R3). TWO methods, not one — Woo renders a single available method
+ * as plain text with no radio at all, so one method would style nothing.
+ *
+ * Idempotent: every zone this created before is deleted first, matched by name.
+ * Zone 0 ("Locations not covered by your other zones") cannot be deleted and is
+ * not touched — the methods go on a real zone so the `zone_id` lookup below has
+ * something stable to return.
+ *
+ * @returns {number} the zone id.
+ */
+function seedShippingZone() {
+  const php = [
+    '$zones = WC_Shipping_Zones::get_zones();',
+    "foreach ($zones as $z) { if ('WTB E2E Zone' === $z['zone_name']) { $old = new WC_Shipping_Zone($z['zone_id']); $old->delete(true); } }",
+    '$zone = new WC_Shipping_Zone();',
+    "$zone->set_zone_name('WTB E2E Zone');",
+    "$zone->add_location('US', 'country');",
+    '$zone->save();',
+    "$flat = $zone->add_shipping_method('flat_rate');",
+    "$local = $zone->add_shipping_method('local_pickup');",
+    '$zone->save();',
+    // add_shipping_method() creates the instance with default settings, which
+    // for flat_rate means a cost of '' — i.e. free, and indistinguishable from
+    // local pickup in the rendered list. Set a real cost so the mockup's
+    // "method name + price" row has a price in it.
+    '$m = WC_Shipping_Zones::get_shipping_method($flat);',
+    "if ($m) { $m->init_instance_settings(); $s = $m->instance_settings; $s['cost'] = '3.50'; $s['title'] = 'WTB Courier'; update_option($m->get_instance_option_key(), $s); }",
+    '$p = WC_Shipping_Zones::get_shipping_method($local);',
+    "if ($p) { $p->init_instance_settings(); $ps = $p->instance_settings; $ps['title'] = 'WTB Pickup Point'; update_option($p->get_instance_option_key(), $ps); }",
+    'echo $zone->get_id();',
+  ].join(' ');
+
+  const zoneId = Number(wp(`eval "${php}"`));
+
+  // Assert the methods actually landed: add_shipping_method() returns an
+  // instance id without validating that the method is registered, so a typo in
+  // a method id would leave a zone with zero methods and a checkout that still
+  // shows no shipping — the exact silent state this function exists to end.
+  const methods = Number(
+    wp(`eval "$z = new WC_Shipping_Zone(${zoneId}); echo count($z->get_shipping_methods());"`),
+  );
+  if (2 !== methods) {
+    throw new Error(
+      `[e2e-woo:setup] expected the shipping zone to carry 2 methods, got ${methods}`,
+    );
+  }
+
+  return zoneId;
+}
+
+/**
+ * Reseed a fixed-percent coupon, so an order (and a classic cart) can carry a
+ * discount row — the mockup draws one in `--sale` red on the cart, the checkout
+ * panel and the receipt (`woodev-base-identity.html` lines 2460, 2615, 2869),
+ * and nothing in the store produced one before.
+ */
+function seedOrderCoupon() {
+  const php = [
+    `$existing = get_posts(['post_type' => 'shop_coupon', 'post_status' => 'any', 'title' => '${ORDER_COUPON_CODE}', 'posts_per_page' => -1, 'fields' => 'ids']);`,
+    'foreach ($existing as $cid) { wp_delete_post($cid, true); }',
+    '$coupon = new WC_Coupon();',
+    `$coupon->set_code('${ORDER_COUPON_CODE}');`,
+    "$coupon->set_discount_type('percent');",
+    '$coupon->set_amount(10);',
+    '$coupon->save();',
+    'echo $coupon->get_id();',
+  ].join(' ');
+  return Number(wp(`eval "${php}"`));
+}
+
+/**
+ * Reseed two orders for the seeded customer: one `processing`, one `completed`.
+ *
+ * WHY TWO, IN THOSE STATUSES: the mockup's account section draws three status
+ * tones (`processing` / `completed` / `pending`, lines 2714-2728) and the plan's
+ * M6 renders them as pills; two real orders in two different statuses are what
+ * make that mapping measurable rather than asserted. The `completed` one is also
+ * what grants the download permission M9/`/my-account/downloads/` needs, and it
+ * is the one the order-received screen (D-block, R1-R5) is checked against —
+ * `is_order_received_page()` does not care about the status, but a completed
+ * order is the realistic case for a receipt that shows a paid total.
+ *
+ * Both carry a shipping line and the percent coupon, so the totals `tfoot` has
+ * a Доставка row and a Скидка row rather than just a subtotal and a total.
+ *
+ * IDEMPOTENCY: every order belonging to the seeded customer is deleted first.
+ * That is deliberately broader than a marker-meta query — this store's Woo runs
+ * HPOS, where a `meta_key` lookup goes through a different code path than the
+ * post-meta one `seedGalleryImages()` uses, and the customer is ours anyway, so
+ * "delete every order this customer has" is both simpler and impossible to miss
+ * a stale row with. (`seedGalleryImages()`'s docblock records what a
+ * marker query that silently matches nothing costs.)
+ *
+ * @param {number[]} productIds Products to put on the processing order.
+ * @param {number}   downloadableId Product for the completed order.
+ * @returns {{ processing: {id: number, key: string}, completed: {id: number, key: string} }}
+ */
+function seedCustomerOrders(productIds, downloadableId) {
+  const address = [
+    "$address = ['first_name' => 'Anna', 'last_name' => 'Sokolova', 'company' => '', " +
+      "'email' => 'wtb-e2e-customer@example.com', 'phone' => '+7 921 000-00-00', " +
+      "'address_1' => '12 Mill Race Road', 'address_2' => 'Apt. 34', 'city' => 'Brooklyn', " +
+      "'state' => 'NY', 'postcode' => '11201', 'country' => 'US'];",
+  ].join('');
+
+  const php = [
+    `$user = get_user_by('login', '${CUSTOMER_USERNAME}');`,
+    "if (!$user) { throw new Exception('seeded customer is missing'); }",
+    "$old = wc_get_orders(['limit' => -1, 'customer_id' => $user->ID, 'return' => 'ids', 'status' => 'any']);",
+    'foreach ($old as $oid) { $o = wc_get_order($oid); if ($o) { $o->delete(true); } }',
+    address,
+    '$made = [];',
+    `$plan = [['processing', [${productIds.join(', ')}]], ['completed', [${downloadableId}]]];`,
+    'foreach ($plan as $entry) {',
+    '  list($status, $items) = $entry;',
+    "  $order = wc_create_order(['customer_id' => $user->ID]);",
+    '  foreach ($items as $i => $pid) { $order->add_product(wc_get_product($pid), $i + 1); }',
+    "  $order->set_address($address, 'billing');",
+    "  $order->set_address($address, 'shipping');",
+    '  $shipping = new WC_Order_Item_Shipping();',
+    "  $shipping->set_method_title('WTB Courier');",
+    "  $shipping->set_method_id('flat_rate');",
+    '  $shipping->set_total(3.50);',
+    '  $order->add_item($shipping);',
+    `  $order->apply_coupon('${ORDER_COUPON_CODE}');`,
+    '  $order->calculate_totals();',
+    "  $order->set_payment_method('bacs');",
+    "  $order->set_payment_method_title('Direct bank transfer');",
+    "  $order->update_status($status, 'Seeded by the e2e-woo global setup.');",
+    '  $order->save();',
+    "  $made[] = $order->get_id() . ':' . $order->get_order_key();",
+    '}',
+    "echo implode('|', $made);",
+  ].join(' ');
+
+  const raw = wp(`eval "${php}"`);
+  const parts = raw.trim().split('|');
+  if (parts.length !== 2) {
+    throw new Error(
+      `[e2e-woo:setup] expected two "id:key" pairs from the order seeder, got ${JSON.stringify(raw)}`,
+    );
+  }
+  const parse = (pair) => {
+    const [id, key] = pair.split(':');
+    if (!/^\d+$/.test(id) || !key) {
+      throw new Error(`[e2e-woo:setup] unparseable order pair ${JSON.stringify(pair)}`);
+    }
+    return { id: Number(id), key };
+  };
+  return { processing: parse(parts[0]), completed: parse(parts[1]) };
+}
+
+/**
  * Seed an ordinary PAGE whose content is a `[products]` shortcode.
  *
  * This is not a Woo page: `is_woocommerce()` is `is_shop() ||
@@ -521,6 +883,70 @@ function seedShopFilterWidgets() {
         '`wp widget add` reports success and the widget lands nowhere.',
     );
   }
+}
+
+/**
+ * Everything #42 (cart / checkout / account / receipt) needs on top of the
+ * catalogue fixtures: the classic shortcode pages, a downloadable product, a
+ * percent coupon, and two orders for the seeded customer.
+ *
+ * Exported and self-contained so it can be run on its own against an
+ * already-seeded container — the full `globalSetup()` takes ~12 minutes
+ * (~50 sequential `wp-env run cli` calls at 10-15s each), and re-paying that to
+ * add four fixtures would be the whole reason a session stalls. `globalSetup()`
+ * calls this as its step 5a-b; a standalone runner calls it directly and merges
+ * the result into the existing `.fixtures.json`.
+ *
+ * @param {number[]} orderProductIds Products to put on the `processing` order.
+ * @returns {object} the fixture fragment to merge into `.fixtures.json`.
+ */
+export function seedIssue42Fixtures(orderProductIds) {
+  const log = (...a) => console.log('[e2e-woo:setup]', ...a);
+
+  // Additional pages, NOT a rewrite of the block ones — see
+  // CLASSIC_CART_PAGE_SLUG's docblock for why, and for the `is_cart()` /
+  // `is_checkout()` consequence any spec written against them has to respect.
+  const classicCart = seedSingleShortcodePage(
+    CLASSIC_CART_PAGE_SLUG,
+    'WTB Classic Cart',
+    '[woocommerce_cart]',
+  );
+  const classicCheckout = seedSingleShortcodePage(
+    CLASSIC_CHECKOUT_PAGE_SLUG,
+    'WTB Classic Checkout',
+    '[woocommerce_checkout]',
+  );
+  log(`classic shortcode pages: cart → ${classicCart}, checkout → ${classicCheckout}`);
+
+  const downloadable = seedDownloadableProduct();
+  log(`downloadable product ${DOWNLOADABLE_PRODUCT_SLUG} → id ${downloadable}`);
+
+  const shippingZone = seedShippingZone();
+  log(`shipping zone "WTB E2E Zone" → id ${shippingZone} (flat rate + local pickup)`);
+
+  const gateways = seedPaymentGateways();
+  log(`payment gateways available: ${gateways.join(', ')}`);
+
+  const couponId = seedOrderCoupon();
+  log(`percent coupon ${ORDER_COUPON_CODE} → id ${couponId}`);
+
+  const orders = seedCustomerOrders(orderProductIds, downloadable);
+  log(
+    `orders for ${CUSTOMER_USERNAME}: processing → ${orders.processing.id}, ` +
+      `completed → ${orders.completed.id}`,
+  );
+
+  // `orders.*.key` is the `order_key`. A logged-in owner reaching
+  // /checkout/order-received/{id}/ does not need it; a spec that checks the
+  // receipt WITHOUT logging in passes it as the `key` query arg.
+  return {
+    classicPages: { cart: classicCart, checkout: classicCheckout },
+    downloadable,
+    shippingZone,
+    gateways,
+    coupon: { code: ORDER_COUPON_CODE, id: couponId },
+    orders,
+  };
 }
 
 export default function globalSetup() {
@@ -789,6 +1215,9 @@ export default function globalSetup() {
   const shortcodePageId = seedShortcodePage();
   log(`[products] shortcode page ${SHORTCODE_PAGE_SLUG} → id ${shortcodePageId}`);
 
+  // ── 5a-b. The #42 fixtures: classic cart/checkout, downloads, orders ─────
+  const issue42 = seedIssue42Fixtures([Number(simpleId), Number(saleId)]);
+
   // ── 6. Export the seeded ids for specs/helpers.mjs ───────────────────────
   //
   // (The pagination question is settled at step 3a-bis above: the theme's own
@@ -820,6 +1249,8 @@ export default function globalSetup() {
         terms: colourTermIds,
       },
     },
+    productsShortcodePage: Number(shortcodePageId),
+    ...issue42,
   });
   log(`wrote fixture ids to ${FIXTURES_PATH}`);
 

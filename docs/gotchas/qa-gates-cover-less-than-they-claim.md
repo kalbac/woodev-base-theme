@@ -80,8 +80,36 @@ Two lessons worth more than the individual fixes:
   the *guards* to the critic instead of the implementation — which is now part of the routine, not
   an afterthought.
 
+## s19: five more, and one of them is a probe rather than an assertion
+
+Same routine, same result — the critic was given the two new e2e specs, not only the product code.
+
+| Assertion / probe | What it was believed to prove | What it actually did |
+|---|---|---|
+| `getComputedStyle(el, '::before').content` expecting `'"1"'` on a CSS-counter badge | "the checkout's numbered section badges render 1, 2, 3" | A counter's **computed** `content` is the unresolved `counter(name)` function notation — the rendered digit is a paint-time detail with no CSSOM-readable path. The string can never equal `"1"`, on correct CSS or broken. **Unpassable in both directions**, which is a new flavour: not trivially true, trivially false, and it was written as proof a fix worked. Replaced with the badge's readable box (size, background, radius) plus a named screenshot for the digit itself. |
+| `document.documentElement.scrollWidth` as an overflow probe | "the account layout does not overflow a 390px viewport" | This theme's `html`/`body` compute `overflow-x: clip`, so an overflowing descendant is *clipped* rather than made scrollable and `scrollWidth` reports 390 — no overflow — while a 640px form is visibly cut off in the screenshot. Replaced with the offending element's own `getBoundingClientRect().width` against its container's. |
+| `display === 'grid'` plus `toHaveCount(4)` on the order-meta card | "the four meta fields sit in a 4-up row" | `grid-template-columns: 1fr` with four children satisfies both while the fields stack vertically — the exact regression the test names. Replaced with the four boxes sharing a `top`. |
+| `flexDirection === 'row'` + `overflowX === 'auto'` on the mobile account nav | "the nav scrolls horizontally below the breakpoint" | Proves only that it *could*. If the items shrank to fit instead, both stay green and nothing scrolls. Replaced with `scrollWidth > clientWidth` **on the scroll container itself** — which is not the trap above, because that one measured the root, whose `overflow-x` is `clip`. |
+| `if ((await track.count()) > 0) { …compare backgrounds… }` | "the outline button is visually distinct from the default one" | Made half the test optional: with the default button absent the comparison never ran. And the button cannot legitimately be absent — the spec logs in as the order's owner, so an absent button IS the regression. Made unconditional. |
+
+**The probe, not an assertion, and the reason it belongs here:** `od -c file | grep '\r'` was used to
+check for CRLF after Serena writes. GNU grep 3.0 (the Git Bash build here) treats the BRE `\\r` as a
+plain `r`, so the probe matched every `od` line containing the letter r and reported CRs in files that
+had none — measured: `printf 'Car\n' | grep -c '\\r'` → `1`, and a real `\r` → `0`. The handoff already
+warned that `grep -c $'\r'` is unreliable here; the finding is broader. **Do not use grep to detect
+carriage returns in this environment.** Count the bytes:
+
+```js
+node -e "const b=require('fs').readFileSync(process.argv[1]);let n=0;for(const x of b)if(x===13)n++;console.log(n)" FILE
+```
+
+`file FILE` also reports "with CRLF line terminators" and was correct every time grep was not.
+
 ## Related
 
+- [[woo-clearfix-pseudo-elements-become-grid-items]] — s19's layout defect that a correct `gridTemplateColumns` assertion passed straight through
+- [[commerce-pages-inherit-the-prose-reading-measure]] — a 694px-wide cart that five gates and 500+ tests did not see
+- [[woocommerce-thankyou-fires-for-failed-orders-too]] — an entire code path with no test, so nothing said it was missing
 - [[make-pot-reports-one-defect-class-of-three]] — the s16 headline instance: a POT generator that reports one defect class of three and is silent on the two that delete the string
 - [[x-trap-focus-move-is-async]] — an e2e precondition that had been asserting nothing since s5, and only a slower machine revealed it
 - [[wp-test-suite-removes-html5-support]] — the same session's other flavour of false confidence: a test that passes for a reason unrelated to what it claims

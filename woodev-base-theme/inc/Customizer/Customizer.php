@@ -233,6 +233,41 @@ final class Customizer {
 			)
 		);
 
+		// --- Cart & checkout (C10/K9, docs/plans/2026-07-28-cart-checkout-account.md) ---
+		//
+		// Both default to EMPTY and render nothing until an owner fills them in.
+		// Settings::CART_SECURE_NOTE_DEFAULT's docblock has the reason: the
+		// sentence the mockup writes is only true for some payment gateways, so
+		// the theme must not make the claim on the store's behalf.
+
+		$this->add_text(
+			$wp_customize,
+			'cart_secure_note',
+			'woodev_base_shop',
+			__( 'Cart reassurance note', 'woodev-base-theme' ),
+			Settings::CART_SECURE_NOTE_DEFAULT,
+			Settings::sanitize_cart_secure_note( ... ),
+			sprintf(
+				/* translators: %s: comma-separated list of allowed icon slugs. */
+				__( 'Shown under the cart\'s checkout button. Formatted as "Text | icon" — the icon is optional and defaults to a padlock; it must be one of: %s. Leave empty to hide the line.', 'woodev-base-theme' ),
+				implode( ', ', Settings::FRONT_ICONS )
+			)
+		);
+
+		$this->add_text(
+			$wp_customize,
+			'checkout_secure_note',
+			'woodev_base_shop',
+			__( 'Checkout reassurance note', 'woodev-base-theme' ),
+			Settings::CHECKOUT_SECURE_NOTE_DEFAULT,
+			Settings::sanitize_checkout_secure_note( ... ),
+			sprintf(
+				/* translators: %s: comma-separated list of allowed icon slugs. */
+				__( 'Shown under the checkout\'s place-order button. Same "Text | icon" format, same padlock default. Leave empty to hide the line.', 'woodev-base-theme' ),
+				implode( ', ', Settings::FRONT_ICONS )
+			)
+		);
+
 		// --- Front page (F2, docs/plans/2026-07-28-front-page-completion.md) ---
 
 		$this->add_section( $wp_customize, 'woodev_base_front', __( 'Front page', 'woodev-base-theme' ), 45 );
