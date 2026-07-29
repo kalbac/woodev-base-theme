@@ -23,15 +23,22 @@
 
 ## Known bugs
 
-**None open.** `main` is still at **`b4f85f4`**; s19's work is on `feat/cart-checkout-account`, unmerged.
+**None open.** `main` is still at **`b4f85f4`**; s19's work is on `feat/cart-checkout-account`,
+PR [#50](https://github.com/kalbac/woodev-base-theme/pull/50), unmerged — merge is Maksim's call.
 
-### s19 measurements (branch `feat/cart-checkout-account`, local)
+### s19 measurements — CI green on all four jobs of PR #50, read by COUNTS
 
-unit **508** (1662 assertions, 1 Windows skip) · phpstan L8 **0** · phpcs **0** · prettier/eslint **0** ·
-build OK · **new e2e 32/32** — `cart-checkout.spec.mjs` **17** (13.2m) and `account-receipt.spec.mjs`
-**15** (5.9m), both run against the reseeded `:8891` store with the seed-skipping config. CI has NOT
-run this branch yet, and CI does not run `e2e:woo` at all ([#48](https://github.com/kalbac/woodev-base-theme/issues/48)),
-so those 32 exist only as a local measurement — the same caveat s18 recorded for its 37.
+- **CI** (`04b6b7c`) — `php-qa` unit **508** (1664 assertions) · `js-qa` vitest **64** in 3 files ·
+  `php-integration` **69** (235 assertions, 1 skip) · `e2e` **63 passed** in 2.9m — it ran, which is
+  worth stating each time, since that job declares `needs: js-qa` and has silently skipped on a PR
+  before. phpcs / phpstan L8 / eslint / prettier / `tokens:check` all 0.
+- **Local on the same tree** — unit **508** (1662 assertions; the 2-assertion difference is the one
+  test that skips on Windows, not a failure) · **new e2e 32/32**: `cart-checkout.spec.mjs` **17**
+  (13.2m) and `account-receipt.spec.mjs` **15** (5.9m), against the reseeded `:8891` store.
+- **CI still does not run `e2e:woo` at all** ([#48](https://github.com/kalbac/woodev-base-theme/issues/48)),
+  so those 32 exist only as a local measurement — the same caveat s18 recorded for its 37. Between
+  them that backlog item is now worth **69** Woo e2e tests and the only guards on eight shipped
+  defects.
 
 **Five defects that were already live on `main` were found and fixed on the way, none of them visible
 to any gate:**
@@ -220,11 +227,11 @@ the `#payment` repair are its own rather than theirs.
 
 1. **Keep implementing the mockup. It is approved, detailed, and still partly unbuilt.** The design
    document is `docs/design/v2-mockup/woodev-base-identity.html`; the remaining gap list is #40 and #43.
-2. **Get #42 merged first.** The branch is `feat/cart-checkout-account`, the PR is open and the local
-   battery is green, but **CI has never run it** and merge is Maksim's call. Read CI by COUNTS, not by
-   the tick — and remember CI does not run `e2e:woo` at all
-   ([#48](https://github.com/kalbac/woodev-base-theme/issues/48)), so the 32 new e2e tests are a local
-   measurement only.
+2. **Get #42 merged first.** Branch `feat/cart-checkout-account`, PR
+   [#50](https://github.com/kalbac/woodev-base-theme/pull/50), CI green on all four jobs (counts above).
+   Merge is Maksim's call. Remember CI does not run `e2e:woo`
+   ([#48](https://github.com/kalbac/woodev-base-theme/issues/48)), so the 32 new Woo e2e tests are a
+   local measurement only.
 3. **[#40](https://github.com/kalbac/woodev-base-theme/issues/40) — the front page's last three sections**:
    «Выбор недели», «Журнал», «Письмо раз в месяц». The first two have real data sources; the newsletter needs
    a decision, not an invention — a shortcode setting, never our own submit handler (plugin territory).

@@ -1,5 +1,74 @@
 # Session Log — Woodev Base
 
+## s19 — 29.07.2026 — the classic cart, checkout, account and receipt; five defects that had already shipped; and a rule that had never applied at all
+
+**PR [#50](https://github.com/kalbac/woodev-base-theme/pull/50) open on `feat/cart-checkout-account`,
+closing [#42](https://github.com/kalbac/woodev-base-theme/issues/42)** — the largest of the four gaps
+s17's inventory named. CI green on all four jobs, read by COUNTS: unit **508** (1664 assertions) ·
+vitest **64** · integration **69** (235, 1 skip) · base e2e **63** in 2.9m (it ran). Locally, on the
+same tree: unit 508 (1662 — the Windows skip) and **32/32 new Woo e2e** (`cart-checkout` 17,
+`account-receipt` 15). Not merged; merge is Maksim's call.
+
+**The scope fork came out of the plan, not the issue.** A default WooCommerce 10.9.4 install serves
+`/cart/` and `/checkout/` as BLOCKS, where [ADR-009](adr/ADR-009-block-cart-checkout-styling.md)
+already bounds what is reachable and `woo-blocks.css` owns it. So the work is the CLASSIC (shortcode)
+branch — first-party supported, the only branch that holds progressive enhancement, and the one every
+checkout-field and shipping-method extension hooks into — plus My Account and order-received, which
+are classic on any install. `docs/plans/2026-07-28-cart-checkout-account.md` walks all 38 mockup nodes
+with a CSS / hook / template-override verdict each, written against the installed Woo source.
+
+**What shipped:** `src/css/woo.css` became an index over five partials (the move proved byte-identical
+— same md5 AND the same content hash in the built filename); four hook classes
+(`Woo\{Cart,Checkout,Account,Receipt}`); three template overrides
+(`myaccount/{navigation,dashboard,view-order}.php`, taking the theme to five, each with a source-level
+hook-parity test that also pins the one hook dropped on purpose); eleven Lucide icons; two
+Customizer notes defaulting to empty; and fixtures the store had never had — classic cart/checkout
+pages on their own slugs, a shipping zone with two methods, two payment gateways, a downloadable
+product, a coupon and two orders.
+
+**Five defects were already live on `main`, and every one was found by looking at the rendered page:**
+
+1. The commerce screens were **694px wide inside a 1248px article** — they are ordinary PAGES carrying
+   a shortcode, so they inherited `.wtb-entry-content`'s prose reading measure, and the cart table's
+   six columns overflowed *under* the totals card. The mockup measures only `.article` and explicit
+   `.prose`. Lifted per-surface, with a control proving a `[products]` page keeps its measure.
+2. A publication date and an **empty byline** printed on the cart and checkout.
+3. **`woo.js` was never enqueued on the cart**, so the stepper shipped two permanently `hidden`
+   buttons. `wp_enqueue_scripts` cannot answer "will the cart render" — the shortcode has not run yet.
+4. The payment section sat on Woo's lavender slab, because Woo scopes it on an **ID**: our class-only
+   rules lost on specificity and **had never applied on a checkout at all**.
+5. Woo's clearfix `::before`/`::after` became grid items on two more containers — third occurrence.
+
+**The gate.** Codex critic, 6 chunks at `high`, plus a re-critic. It found one real product defect —
+`Receipt::actions()` had no failed-order guard, and `woocommerce_thankyou` fires AFTER
+`thankyou.php`'s failed/success `endif`, so a declined payment would have been offered "Track order"
+under Woo's own "payment declined" notice — one real media-query gap (`max-width: 63.9375rem` is not
+the complement of `min-width: 64rem`), **three more vacuous assertions**, and six false factual claims
+in comments. **The re-critic found a defect inside the fixes**, as every round in this project has.
+Five findings were rejected with reasons; one of them was caused by an incomplete token list in the
+orchestrator's own preamble — a cost of the prompt, not of the code, and worth remembering when
+composing the next one.
+
+**Both CSS subagents died mid-task on a weekly API limit.** Their files had landed. The first thing
+checked was whether either had left a live mutation behind — one's last words were literally "let's
+revert the CSS mutation" — and the way that was answered was by running its spec rather than by
+reading 600 lines of CSS: 14 of 15 green means no mutation any assertion covers. The remaining spec
+repairs, the `#payment` fix and the re-critic follow-ups are the orchestrator's own, criticked rather
+than self-certified.
+
+**Three new gotchas (45 now):** the clearfix/grid trap, the reading measure on commerce pages, and
+`woocommerce_thankyou` firing for failed orders. Five more entries went into the vacuous-assertion
+index, including a CSS counter whose computed `content` is the unresolved `counter()` notation —
+unpassable on correct *and* broken CSS — and the discovery that **`grep` cannot detect carriage
+returns in this environment at all**: GNU grep 3.0 here treats the BRE `\r` as a plain `r`, so the
+probe reported CRs in files that had none.
+
+Carded: [#51](https://github.com/kalbac/woodev-base-theme/issues/51) the free-shipping progress notice,
+[#52](https://github.com/kalbac/woodev-base-theme/issues/52) the i18n text-domain decision for the
+overrides, [#53](https://github.com/kalbac/woodev-base-theme/issues/53) two unguarded `querySelector`
+sites left in a spec, [#54](https://github.com/kalbac/woodev-base-theme/issues/54) promote the
+one-off surface probe to a committed dev script — it found more than the whole existing battery did.
+
 ## s18 — 28.07.2026 — the catalogue and the product page, three defects that had already shipped, and four guards that measured nothing
 
 **PR [#44](https://github.com/kalbac/woodev-base-theme/pull/44) squashed onto `main` as `042c1a1`**, closing
