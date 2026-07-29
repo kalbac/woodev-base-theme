@@ -2,12 +2,14 @@
 
 ## s19 — 29.07.2026 — the classic cart, checkout, account and receipt; five defects that had already shipped; and a rule that had never applied at all
 
-**PR [#50](https://github.com/kalbac/woodev-base-theme/pull/50) open on `feat/cart-checkout-account`,
-closing [#42](https://github.com/kalbac/woodev-base-theme/issues/42)** — the largest of the four gaps
-s17's inventory named. CI green on all four jobs, read by COUNTS: unit **508** (1664 assertions) ·
-vitest **64** · integration **69** (235, 1 skip) · base e2e **63** in 2.9m (it ran). Locally, on the
-same tree: unit 508 (1662 — the Windows skip) and **32/32 new Woo e2e** (`cart-checkout` 17,
-`account-receipt` 15). Not merged; merge is Maksim's call.
+**PR [#50](https://github.com/kalbac/woodev-base-theme/pull/50) squashed onto `main` as `e800e09`**,
+closing [#42](https://github.com/kalbac/woodev-base-theme/issues/42) — the largest of the four gaps
+s17's inventory named. CI green on all four jobs of the branch head, read by COUNTS: unit **508**
+(1664 assertions) · vitest **64** · integration **69** (235, 1 skip) · base e2e **63** in 3.4m (it
+ran — worth stating each time, since that job declares `needs: js-qa` and has silently skipped on a
+PR before). Locally, on the same tree: unit 508 (1662 — the Windows skip) and **32/32 new Woo e2e**
+(`cart-checkout` 17, `account-receipt` 15). The battery was re-run on merged `main` afterwards rather
+than assumed to survive the squash.
 
 **The scope fork came out of the plan, not the issue.** A default WooCommerce 10.9.4 install serves
 `/cart/` and `/checkout/` as BLOCKS, where [ADR-009](adr/ADR-009-block-cart-checkout-styling.md)

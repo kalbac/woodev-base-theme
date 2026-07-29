@@ -18,17 +18,18 @@
 | M3 — Public release prep | 🟡 In flight | Plan: `docs/plans/2026-07-26-m3-release-prep.md`. **R1 done and merged** ([ADR-010](adr/ADR-010-theme-json-identity.md), closes #26 + #25). **R4 largely done** — `readme.txt`, direct-access guards, Theme Check run, `comment-reply`, the eight core CSS classes; screenshot deferred to [#36](https://github.com/kalbac/woodev-base-theme/issues/36). **R2 measured and cut down** to a provenance question ([#17](https://github.com/kalbac/woodev-base-theme/issues/17)). **R3 done s16** — audit + a guard test; the `.pot`/`.po`/`.mo` stay Maksim's, in Poedit. Remaining: version bump off `0.1.0`, the `Tags:` list against wp.org's current allowed set, and the screenshot |
 | Front page (#18) | ✅ **Done s17**, merged `b4c592c` | Hero (eyebrow, lede, trust badges, art column), value band, promo, category tiles with plate art. Ten Customizer settings defaulting to EMPTY, every section self-suppressing. `Templates\Plate` ports the mockup's eight plates byte-identically. Coverage (#37) in the same PR [#39](https://github.com/kalbac/woodev-base-theme/pull/39). **Three mockup sections remain and are NOT part of #18** — «Выбор недели», «Журнал», «Письмо раз в месяц» → [#40](https://github.com/kalbac/woodev-base-theme/issues/40) |
 | Catalogue + product page (#41) | ✅ **Done s18**, merged `042c1a1` | PR [#44](https://github.com/kalbac/woodev-base-theme/pull/44). Filter rail (`sidebar-shop`, holding WooCommerce's own filter widgets — the theme builds no filtering), subcategory chips, `−24%` sale badge, breadcrumb separator, pagination chevrons with accessible names, card category eyebrow. Product page: breadcrumb + sale badge into the buy box, SKU by the rating, savings badge, quantity stepper, `<dl>` meta, 64px thumbnail column, two default-empty trust badges. Two template overrides only. **Three defects that had already shipped were fixed on the way** — see Known bugs |
-| Cart, checkout, account, receipt (#42) | 🟡 **Built s19, PR open** | Branch `feat/cart-checkout-account`. Plan: `docs/plans/2026-07-28-cart-checkout-account.md` — 38 nodes walked, verdict CSS/hook/override each. **Classic (shortcode) branch only** — a default Woo 10.9.4 install serves the cart and checkout as BLOCKS, where [ADR-009](adr/ADR-009-block-cart-checkout-styling.md) already bounds what is reachable and `woo-blocks.css` owns it. Account and order-received are classic regardless. `woo.css` split into an index + five partials (verified a byte-identical bundle). Three template overrides added (`myaccount/{navigation,dashboard,view-order}.php`), taking the theme to five. 32/32 new e2e green |
+| Cart, checkout, account, receipt (#42) | ✅ **Done s19**, merged `e800e09` | PR [#50](https://github.com/kalbac/woodev-base-theme/pull/50) squashed onto `main`. Plan: `docs/plans/2026-07-28-cart-checkout-account.md` — 38 nodes walked, verdict CSS/hook/override each. **Classic (shortcode) branch only** — a default Woo 10.9.4 install serves the cart and checkout as BLOCKS, where [ADR-009](adr/ADR-009-block-cart-checkout-styling.md) already bounds what is reachable and `woo-blocks.css` owns it. Account and order-received are classic regardless. `woo.css` split into an index + five partials (verified a byte-identical bundle). Three template overrides added (`myaccount/{navigation,dashboard,view-order}.php`), taking the theme to five. 32/32 new e2e green |
 | **Pages vs the approved mockup** | 🟡 **Two gaps left** | Operator verdict s17 was **4/10, still a skeleton**; s18 closed the catalogue and product page (#41), s19 closed cart/checkout/account/receipt (#42). Outstanding: the front page's last three sections → [#40](https://github.com/kalbac/woodev-base-theme/issues/40), and blog/text pages never compared against the mockup → [#43](https://github.com/kalbac/woodev-base-theme/issues/43). All designed in detail in `docs/design/v2-mockup/` |
 
 ## Known bugs
 
-**None open.** `main` is still at **`b4f85f4`**; s19's work is on `feat/cart-checkout-account`,
-PR [#50](https://github.com/kalbac/woodev-base-theme/pull/50), unmerged — merge is Maksim's call.
+**None open.** `main` is at **`e800e09`** (s19, the classic commerce surfaces —
+PR [#50](https://github.com/kalbac/woodev-base-theme/pull/50) squashed, #42 closed).
 
 ### s19 measurements — CI green on all four jobs of PR #50, read by COUNTS
 
-- **CI** (`04b6b7c`) — `php-qa` unit **508** (1664 assertions) · `js-qa` vitest **64** in 3 files ·
+- **CI** (branch head `84e2614`, the commit that was squashed) — `php-qa` unit **508** (1664
+  assertions) · `js-qa` vitest **64** in 3 files ·
   `php-integration` **69** (235 assertions, 1 skip) · `e2e` **63 passed** in 2.9m — it ran, which is
   worth stating each time, since that job declares `needs: js-qa` and has silently skipped on a PR
   before. phpcs / phpstan L8 / eslint / prettier / `tokens:check` all 0.
@@ -227,11 +228,10 @@ the `#payment` repair are its own rather than theirs.
 
 1. **Keep implementing the mockup. It is approved, detailed, and still partly unbuilt.** The design
    document is `docs/design/v2-mockup/woodev-base-identity.html`; the remaining gap list is #40 and #43.
-2. **Get #42 merged first.** Branch `feat/cart-checkout-account`, PR
-   [#50](https://github.com/kalbac/woodev-base-theme/pull/50), CI green on all four jobs (counts above).
-   Merge is Maksim's call. Remember CI does not run `e2e:woo`
-   ([#48](https://github.com/kalbac/woodev-base-theme/issues/48)), so the 32 new Woo e2e tests are a
-   local measurement only.
+2. Nothing to merge — #42 landed as `e800e09` and the battery was re-run on merged `main`
+   (unit 508, and the 32 new Woo e2e green there too). Remember CI does not run `e2e:woo`
+   ([#48](https://github.com/kalbac/woodev-base-theme/issues/48)), so those 32 stay a local
+   measurement.
 3. **[#40](https://github.com/kalbac/woodev-base-theme/issues/40) — the front page's last three sections**:
    «Выбор недели», «Журнал», «Письмо раз в месяц». The first two have real data sources; the newsletter needs
    a decision, not an invention — a shortcode setting, never our own submit handler (plugin territory).
