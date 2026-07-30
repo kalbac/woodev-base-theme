@@ -126,10 +126,43 @@
 		<exclude-pattern>tests/*</exclude-pattern>
 	</rule>
 
+	<!--
+	DEVIATION: `woocommerce` is accepted alongside the theme's own domain, for the
+	carve-out decided in issue #52 — the WooCommerce template overrides under
+	woodev-base-theme/woocommerce/ may name the `woocommerce` domain for strings
+	WooCommerce core already ships, so core's own translation applies instead of
+	being re-translated here.
+
+	The carve-out is meant to be SCOPED to that subtree, and this sniff cannot
+	express that. Both narrower shapes were measured against real phpcs before
+	settling here:
+
+	  - a second `<rule ref="WordPress.WP.I18n">` carrying an <include-pattern>
+	    for the subtree does NOT scope the property, it scopes the SNIFF: with it,
+	    a foreign domain and a missing $domain argument both stopped being reported
+	    anywhere outside woodev-base-theme/woocommerce/ (measured: 0 findings on a
+	    file calling esc_html_e( 'x', 'some-plugin' ) and esc_html_e( 'x' )). That
+	    reads as a tightening and behaves as switching i18n checking off for the
+	    rest of the theme;
+	  - excluding the sniff for the subtree is worse still — it also blinds the
+	    missing-domain check in the files most likely to copy core.
+
+	So the path scope, and the far stricter question of WHICH strings may use the
+	other domain, live in tests/php/Unit/I18nSourceTest.php, which checks an exact
+	allowlist of msgids (with context for _x()) and requires the file to be under
+	woodev-base-theme/woocommerce/. That test runs in the same gate as this
+	ruleset, so the effective rule is the intersection of the two.
+
+	What this line alone costs: phpcs no longer distinguishes a `woocommerce`
+	domain inside the overrides from one outside. Nothing else is relaxed —
+	measured after the change, a foreign domain and a missing $domain argument are
+	still errors everywhere, inside the subtree and out.
+	-->
 	<rule ref="WordPress.WP.I18n">
 		<properties>
 			<property name="text_domain" type="array">
 				<element value="woodev-base-theme"/>
+				<element value="woocommerce"/>
 			</property>
 		</properties>
 	</rule>
