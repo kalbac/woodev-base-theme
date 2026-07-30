@@ -41,14 +41,13 @@
  * guards against (s16).
  *
  * Two strings below reproduce core's own copy — the "#" hash-prefix
- * disambiguation and "Order updates" — and both are re-declared under THIS
- * theme's text domain rather than reused as `woocommerce`:
- * `tests/php/Unit/I18nSourceTest.php` enforces a zero-exception rule that
- * every i18n call in shipped theme source names `woodev-base-theme`, which a
- * literal copy of core's own translation call cannot satisfy. The rendered
- * English text is unchanged; only which `.po` resolves it for other locales
- * is — fresh strings for this theme's own `ru_RU` catalogue (ADR-006) instead
- * of the ones WooCommerce already ships translated.
+ * disambiguation and "Order updates" — and both reuse the `woocommerce` text
+ * domain rather than declaring a new one: each is on the issue #52 carve-out
+ * allowlist in `tests/php/Unit/I18nSourceTest.php`, which grants that domain
+ * only to the exact msgids WooCommerce core already ships and translates, and
+ * only at a call site under `woodev-base-theme/woocommerce/`. "Order %s" is
+ * this theme's own composition of that hash-prefix string with the order
+ * number — not a core msgid itself — so it keeps `woodev-base-theme`.
  *
  * Two OTHER core strings are gone rather than re-declared, and that is the
  * better outcome: the status sentence (dropped with its filter, above) and
@@ -78,7 +77,7 @@ $wtb_notes = $order->get_customer_order_notes();
 		printf(
 			/* translators: %s: the order number, formatted the same way core formats it elsewhere on this page (e.g. "#1024"). */
 			esc_html__( 'Order %s', 'woodev-base-theme' ),
-			esc_html( _x( '#', 'hash before order number', 'woodev-base-theme' ) . $order->get_order_number() )
+			esc_html( _x( '#', 'hash before order number', 'woocommerce' ) . $order->get_order_number() )
 		);
 		?>
 	</span>
@@ -90,7 +89,7 @@ $wtb_notes = $order->get_customer_order_notes();
 		printf(
 			/* translators: %s: the order number, formatted the same way core formats it elsewhere on this page (e.g. "#1024"). */
 			esc_html__( 'Order %s', 'woodev-base-theme' ),
-			esc_html( _x( '#', 'hash before order number', 'woodev-base-theme' ) . $order->get_order_number() )
+			esc_html( _x( '#', 'hash before order number', 'woocommerce' ) . $order->get_order_number() )
 		);
 		?>
 	</h2>
@@ -123,13 +122,13 @@ $wtb_notes = $order->get_customer_order_notes();
 		</p>
 	</div>
 	<div>
-		<p class="wtb-order-meta__l"><?php esc_html_e( 'Total', 'woodev-base-theme' ); ?></p>
+		<p class="wtb-order-meta__l"><?php esc_html_e( 'Total', 'woocommerce' ); ?></p>
 		<p class="wtb-order-meta__v"><?php echo wp_kses_post( $order->get_formatted_order_total() ); ?></p>
 	</div>
 </div>
 
 <?php if ( $wtb_notes ) : ?>
-	<h2><?php esc_html_e( 'Order updates', 'woodev-base-theme' ); ?></h2>
+	<h2><?php esc_html_e( 'Order updates', 'woocommerce' ); ?></h2>
 	<ol class="woocommerce-OrderUpdates commentlist notes">
 		<?php foreach ( $wtb_notes as $wtb_note ) : ?>
 		<li class="woocommerce-OrderUpdate comment note">

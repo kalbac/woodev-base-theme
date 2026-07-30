@@ -44,6 +44,81 @@ final class I18nSourceTest extends PHPUnitTestCase {
 	private const TEXT_DOMAIN = 'woodev-base-theme';
 
 	/**
+	 * The only text domain the carve-out (issue #52) may ever name instead of
+	 * {@see TEXT_DOMAIN}, and only at a call site under {@see WOOCOMMERCE_TEMPLATE_PREFIX}.
+	 */
+	private const WOOCOMMERCE_TEXT_DOMAIN = 'woocommerce';
+
+	/**
+	 * The theme-relative path prefix the carve-out is scoped to.
+	 */
+	private const WOOCOMMERCE_TEMPLATE_PREFIX = 'woocommerce/';
+
+	/**
+	 * The exact msgids (plus, for the `_x` family, their disambiguation context)
+	 * that WooCommerce core ships under the `woocommerce` text domain and that
+	 * this theme's WooCommerce template overrides reproduce verbatim. A `context`
+	 * of `null` means the msgid carries no context — it must be called through
+	 * one of the non-`_x` functions to match. Anything not listed here, or
+	 * listed but used with a different context, keeps `woodev-base-theme` even
+	 * inside a WooCommerce template override: a near-miss string both fails to
+	 * resolve against core's catalogue AND drops out of the theme's own POT
+	 * file.
+	 *
+	 * @var list<array{msgid: string, context: string|null}>
+	 */
+	private const WOOCOMMERCE_ALLOWLIST = [
+		[
+			'msgid'   => 'Out of stock',
+			'context' => null,
+		],
+		[
+			'msgid'   => 'Hello %1$s (not %1$s? <a href="%2$s">Log out</a>)',
+			'context' => null,
+		],
+		[
+			'msgid'   => 'Recent orders',
+			'context' => null,
+		],
+		[
+			'msgid'   => 'Order',
+			'context' => null,
+		],
+		[
+			'msgid'   => 'Date',
+			'context' => null,
+		],
+		[
+			'msgid'   => 'Status',
+			'context' => null,
+		],
+		[
+			'msgid'   => 'Total',
+			'context' => null,
+		],
+		[
+			'msgid'   => '#',
+			'context' => 'hash before order number',
+		],
+		[
+			'msgid'   => 'View',
+			'context' => null,
+		],
+		[
+			'msgid'   => 'Account pages',
+			'context' => null,
+		],
+		[
+			'msgid'   => 'Order updates',
+			'context' => null,
+		],
+		[
+			'msgid'   => 'N/A',
+			'context' => null,
+		],
+	];
+
+	/**
 	 * Translation functions mapped to the argument index carrying the text domain.
 	 *
 	 * The `_x` family takes a disambiguation context before the domain, which is
@@ -192,6 +267,32 @@ final class I18nSourceTest extends PHPUnitTestCase {
 		return 1 === \count( $argument ) && T_CONSTANT_ENCAPSED_STRING === $argument[0]['type'];
 	}
 
+	/**
+	 * Whether `$domain_value` is a legitimate use of the issue #52 carve-out:
+	 * naming `woocommerce`, for an msgid/context pair on the allowlist, at a
+	 * call site under `woodev-base-theme/woocommerce/`. All three have to hold
+	 * — an allowlisted string called from outside that directory still has to
+	 * name `woodev-base-theme`, and a call inside that directory naming a
+	 * string that is not on the list gets no exemption either.
+	 */
+	private function is_woocommerce_carveout( string $domain_value, string $label, ?string $msgid, ?string $context ): bool {
+		if ( self::WOOCOMMERCE_TEXT_DOMAIN !== $domain_value || null === $msgid ) {
+			return false;
+		}
+
+		if ( ! str_starts_with( $label, self::WOOCOMMERCE_TEMPLATE_PREFIX ) ) {
+			return false;
+		}
+
+		foreach ( self::WOOCOMMERCE_ALLOWLIST as $entry ) {
+			if ( $entry['msgid'] === $msgid && $entry['context'] === $context ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	private function literal_value( array $argument ): string {
 		$raw = $argument[0]['text'];
 
@@ -303,15 +404,35 @@ final class I18nSourceTest extends PHPUnitTestCase {
 				continue;
 			}
 
-			if ( self::TEXT_DOMAIN !== $this->literal_value( $domain ) ) {
-				$findings[] = sprintf(
-					'%s: %s() uses text domain "%s", not "%s" — the string is extracted into somebody else\'s POT, silently.',
-					$where,
-					$name,
-					$this->literal_value( $domain ),
-					self::TEXT_DOMAIN
-				);
+			$domain_value = $this->literal_value( $domain );
+
+			if ( self::TEXT_DOMAIN === $domain_value ) {
+				continue;
 			}
+
+			$msgid = null;
+
+			if ( isset( $arguments[0] ) && $this->is_literal_string( $arguments[0] ) ) {
+				$msgid = $this->literal_value( $arguments[0] );
+			}
+
+			$context = null;
+
+			if ( 2 === $domain_index && isset( $arguments[1] ) && $this->is_literal_string( $arguments[1] ) ) {
+				$context = $this->literal_value( $arguments[1] );
+			}
+
+			if ( $this->is_woocommerce_carveout( $domain_value, $label, $msgid, $context ) ) {
+				continue;
+			}
+
+			$findings[] = sprintf(
+				'%s: %s() uses text domain "%s", not "%s" — the string is extracted into somebody else\'s POT, silently.',
+				$where,
+				$name,
+				$domain_value,
+				self::TEXT_DOMAIN
+			);
 		}
 
 		return $findings;
@@ -401,6 +522,44 @@ final class I18nSourceTest extends PHPUnitTestCase {
 		self::assertStringContainsString( 'argument 1 is not a literal string', $findings[5] );
 		self::assertStringContainsString( '_n() cannot express the Russian plural rule', $findings[6] );
 		self::assertStringContainsString( 'text domain "woodev-base-theme"', $findings[7] );
+	}
+
+	/**
+	 * The carve-out (issue #52) is an explicit allowlist scoped to
+	 * `woodev-base-theme/woocommerce/`, not a blanket "woocommerce is fine" rule
+	 * and not a global allowlist either — both directions have to be caught:
+	 * an allowlisted string naming `woocommerce` OUTSIDE that directory, and a
+	 * non-allowlisted string naming `woocommerce` INSIDE it.
+	 */
+	public function test_the_carveout_allowlist_is_scoped_both_ways(): void {
+		$fixture = <<<'PHP'
+			<?php
+			esc_html_e( 'Out of stock', 'woocommerce' );
+			esc_html_e( 'Not on the allowlist', 'woocommerce' );
+			_x( '#', 'hash before order number', 'woocommerce' );
+			_x( '#', 'wrong context', 'woocommerce' );
+			PHP;
+
+		$inside  = $this->findings( $fixture, 'woocommerce/content-product.php' );
+		$outside = $this->findings( $fixture, 'inc/Customizer/Customizer.php' );
+
+		// Inside the override directory: the allowlisted msgid/context pairs
+		// (line 2, line 4) are exempt; the non-allowlisted string (line 3) and
+		// the allowlisted msgid used with the WRONG context (line 5) are not.
+		self::assertCount( 2, $inside, "Expected two findings, got:\n  " . implode( "\n  ", $inside ) );
+		self::assertStringContainsString( 'woocommerce/content-product.php:3', $inside[0] );
+		self::assertStringContainsString( 'text domain "woocommerce"', $inside[0] );
+		self::assertStringContainsString( 'woocommerce/content-product.php:5', $inside[1] );
+		self::assertStringContainsString( 'text domain "woocommerce"', $inside[1] );
+
+		// Outside the override directory, the allowlist grants nothing: every
+		// line — including the two that ARE on the list — still has to name
+		// woodev-base-theme. Line 2 ('Out of stock') is the msgid the allowlist
+		// DOES cover; flagging it here is the proof the carve-out is scoped to
+		// the path, not granted globally.
+		self::assertCount( 4, $outside, "Expected four findings, got:\n  " . implode( "\n  ", $outside ) );
+		self::assertStringContainsString( 'inc/Customizer/Customizer.php:2', $outside[0] );
+		self::assertStringContainsString( 'text domain "woocommerce"', $outside[0] );
 	}
 
 	public function test_every_shipped_string_is_extractable_and_ours(): void {
