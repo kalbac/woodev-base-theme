@@ -117,7 +117,7 @@ This is a well-trodden domain. **Follow WordPress/WooCommerce canon and establis
 **WordPress canon (non-negotiable):**
 
 - Escape on output (`esc_html`, `esc_attr`, `esc_url`, `wp_kses_post`), sanitize on input.
-- Every user-facing string is translatable, text domain `woodev-base-theme`, no variables inside i18n functions. Carve-out (final decision, issue #52): files under `woodev-base-theme/woocommerce/` (WooCommerce template overrides) may use the `woocommerce` text domain, but only for i18n calls reproducing WooCommerce core's own copy verbatim; enforced by `tests/php/Unit/I18nSourceTest.php`. Every other shipped file still requires `woodev-base-theme` with zero exceptions.
+- Every user-facing string is translatable, text domain `woodev-base-theme`, no variables inside i18n functions. Carve-out (final decision, issue #52): files under `woodev-base-theme/woocommerce/` (WooCommerce template overrides) may use the `woocommerce` text domain, but only for an explicit allowlist of msgids (and, for the `_x` family, their context) that WooCommerce core ships under that exact domain — a string not on the list, or the same string called from outside that directory, still requires `woodev-base-theme`; enforced by `tests/php/Unit/I18nSourceTest.php`. Every other shipped file still requires `woodev-base-theme` with zero exceptions.
 - Russian plural rule: avoid `_n()` for count-sensitive copy; use count-agnostic phrasing + `number_format_i18n()`.
 - Hooks/functions prefixed `woodev_base_`; CSS custom properties `--wtb-*`.
 - Assets only via `wp_enqueue_*` (through the Vite manifest resolver in `Assets.php`).
