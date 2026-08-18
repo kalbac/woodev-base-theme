@@ -24,9 +24,10 @@ defined( 'ABSPATH' ) || exit;
  */
 final class Layout {
 
-	public const HEADER_VARIANTS   = [ 'inline', 'centered' ];
-	public const FOOTER_VARIANTS   = [ 'simple', 'columns' ];
-	public const SIDEBAR_POSITIONS = [ 'none', 'right' ];
+	public const HEADER_VARIANTS      = [ 'inline', 'centered' ];
+	public const FOOTER_VARIANTS      = [ 'simple', 'columns' ];
+	public const SIDEBAR_POSITIONS    = [ 'none', 'left', 'right' ];
+	public const POST_FEATURED_IMAGES = [ 'show', 'hide' ];
 
 	/**
 	 * Which header part to load.
@@ -47,6 +48,13 @@ final class Layout {
 	 */
 	public static function sidebar_position(): string {
 		return self::sanitize_sidebar_position( get_theme_mod( 'sidebar_position', 'none' ) );
+	}
+
+	/**
+	 * Whether single posts render their featured image above the article body.
+	 */
+	public static function show_post_featured_image(): bool {
+		return 'show' === self::sanitize_post_featured_image( get_theme_mod( 'post_featured_image', 'show' ) );
 	}
 
 	/**
@@ -77,10 +85,19 @@ final class Layout {
 	}
 
 	/**
+	 * Customizer sanitize callback for `post_featured_image`.
+	 *
+	 * @param mixed $value Raw value from the Customizer or the database.
+	 */
+	public static function sanitize_post_featured_image( mixed $value ): string {
+		return self::validate( $value, self::POST_FEATURED_IMAGES, 'show' );
+	}
+
+	/**
 	 * Whether the current view renders the sidebar column.
 	 */
 	public static function has_sidebar(): bool {
-		if ( 'right' !== self::sidebar_position() ) {
+		if ( 'none' === self::sidebar_position() ) {
 			return false;
 		}
 

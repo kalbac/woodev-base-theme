@@ -110,12 +110,36 @@ final class LayoutTest extends TestCase {
 	}
 
 	public function test_sanitizers_are_reusable_by_the_customizer(): void {
+		Functions\when( 'get_theme_mod' )->alias( static fn( string $key, $default = false ) => $default );
+
 		self::assertSame( 'centered', Layout::sanitize_header_variant( 'centered' ) );
 		self::assertSame( 'inline', Layout::sanitize_header_variant( 'bogus' ) );
 		self::assertSame( 'columns', Layout::sanitize_footer_variant( 'columns' ) );
 		self::assertSame( 'simple', Layout::sanitize_footer_variant( null ) );
 		self::assertSame( 'right', Layout::sanitize_sidebar_position( 'right' ) );
-		self::assertSame( 'none', Layout::sanitize_sidebar_position( 'left' ) );
+		self::assertSame( 'left', Layout::sanitize_sidebar_position( 'left' ) );
+		self::assertSame( 'none', Layout::sanitize_sidebar_position( 'elsewhere' ) );
+		self::assertTrue( Layout::show_post_featured_image() );
+		self::assertSame( 'show', Layout::sanitize_post_featured_image( 'show' ) );
+		self::assertSame( 'hide', Layout::sanitize_post_featured_image( 'hide' ) );
+		self::assertSame( 'show', Layout::sanitize_post_featured_image( 'elsewhere' ) );
+	}
+
+	public function test_post_featured_images_can_be_hidden(): void {
+		Functions\when( 'get_theme_mod' )->justReturn( 'hide' );
+
+		self::assertFalse( Layout::show_post_featured_image() );
+	}
+
+	public function test_a_left_sidebar_is_visible_when_enabled_and_filled(): void {
+		Functions\when( 'get_theme_mod' )->justReturn( 'left' );
+		Functions\when( 'is_active_sidebar' )->justReturn( true );
+		Functions\when( 'is_home' )->justReturn( false );
+		Functions\when( 'is_archive' )->justReturn( false );
+		Functions\when( 'is_search' )->justReturn( false );
+		Functions\when( 'is_singular' )->justReturn( true );
+
+		self::assertTrue( Layout::has_sidebar() );
 	}
 
 	/**

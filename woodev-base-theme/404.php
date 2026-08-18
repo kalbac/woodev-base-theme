@@ -31,7 +31,16 @@ get_header();
 			</section>
 		</div>
 
-		<div class="mt-4">
+		<div class="wtb-error-404__actions">
+			<a class="btn" data-variant="primary" href="<?php echo esc_url( home_url( '/' ) ); ?>">
+				<?php esc_html_e( 'Back to home', 'woodev-base-theme' ); ?>
+			</a>
+			<a class="btn" data-variant="outline" href="#wtb-404-search">
+				<?php esc_html_e( 'Search the site', 'woodev-base-theme' ); ?>
+			</a>
+		</div>
+
+		<div id="wtb-404-search" class="wtb-error-404__search">
 			<?php get_search_form(); ?>
 		</div>
 	</div>

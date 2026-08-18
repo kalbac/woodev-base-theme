@@ -15,7 +15,7 @@ import { isInteger, isToggleValue, readThemeMod, restoreThemeMod, wp } from './l
 
 const SCHEMES = ['system', 'light', 'dark'];
 
-const SIDEBAR_POSITIONS = ['none', 'right'];
+const SIDEBAR_POSITIONS = ['none', 'left', 'right'];
 
 /**
  * theme_mod name -> guard, for everything this file touches.
@@ -126,6 +126,38 @@ test.describe.serial('site-global theme_mods', () => {
           .length,
     );
     expect(trackCount).toBe(2);
+  });
+
+  test('a left sidebar moves visually before content only on desktop', async ({ page }) => {
+    wp('theme mod set sidebar_position left');
+    await page.setViewportSize({ width: 1400, height: 900 });
+    await page.goto('/');
+
+    const sidebar = page.locator('.wtb-sidebar');
+    const content = page.locator('.wtb-layout__content');
+    await expect(sidebar).toBeVisible();
+    await expect(content).toBeVisible();
+
+    const [sidebarBox, contentBox] = await Promise.all([
+      sidebar.boundingBox(),
+      content.boundingBox(),
+    ]);
+    expect(sidebarBox).not.toBeNull();
+    expect(contentBox).not.toBeNull();
+    expect(sidebarBox.x).toBeLessThan(contentBox.x);
+
+    // The DOM deliberately remains content first. Narrow layouts collapse to
+    // that reading order instead of duplicating the sidebar or moving it with JS.
+    await page.setViewportSize({ width: 375, height: 800 });
+    await page.reload();
+
+    const [narrowSidebar, narrowContent] = await Promise.all([
+      sidebar.boundingBox(),
+      content.boundingBox(),
+    ]);
+    expect(narrowSidebar).not.toBeNull();
+    expect(narrowContent).not.toBeNull();
+    expect(narrowContent.y).toBeLessThan(narrowSidebar.y);
   });
 
   // --radius drives Basecoat's --radius-md/-lg/-xl through calc(), so one

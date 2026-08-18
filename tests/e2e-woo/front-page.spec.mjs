@@ -7,10 +7,11 @@
 // while the card counts catch a query that silently returns the wrong source.
 import { expect, test } from '@playwright/test';
 
+import { loadFixtures } from './fixtures.mjs';
+
 test.describe('front-page sections', () => {
-  test('renders four popularity-sourced product picks in a four-column home grid', async ({
-    page,
-  }) => {
+  test('renders four sales-sorted product picks in a four-column home grid', async ({ page }) => {
+    const { frontPageProducts } = loadFixtures();
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/');
 
@@ -26,9 +27,26 @@ test.describe('front-page sections', () => {
         (element) => getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/).length,
       );
     expect(columns).toBe(4);
+
+    const productIds = await cards.evaluateAll((elements) =>
+      elements.map((element) =>
+        Number([...element.classList].find((className) => /^post-\d+$/.test(className))?.slice(5)),
+      ),
+    );
+    expect(productIds).toEqual(frontPageProducts);
+
+    await page.goto('/shop/');
+    const archiveColumns = await page
+      .locator('ul.products')
+      .first()
+      .evaluate(
+        (element) => getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/).length,
+      );
+    expect(archiveColumns).toBe(3);
   });
 
   test('renders three newest posts as editorial cards with links and artwork', async ({ page }) => {
+    const { journal } = loadFixtures();
     await page.goto('/');
 
     const section = page.locator('.wtb-front-journal');
@@ -38,6 +56,14 @@ test.describe('front-page sections', () => {
     await expect(
       section.locator('.wtb-front-editorial__thumb img, .wtb-front-editorial__thumb svg'),
     ).toHaveCount(3);
+    await expect(section.locator('.wtb-front-editorial__card h3 a')).toHaveText(
+      journal.map(({ title }) => title),
+    );
+    expect(
+      await section
+        .locator('.wtb-front-editorial__card h3 a')
+        .evaluateAll((links) => links.map((link) => new URL(link.href).pathname)),
+    ).toEqual(journal.map(({ slug }) => `/${slug}/`));
   });
 
   test('does not print a newsletter shell or raw shortcode without a plugin setting', async ({

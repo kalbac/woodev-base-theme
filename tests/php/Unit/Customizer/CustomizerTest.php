@@ -27,6 +27,7 @@ final class CustomizerTest extends TestCase {
 			'container_width'            => [ 'container_width', 1440 ],
 			'radius'                     => [ 'radius', 10 ],
 			'sidebar_position'           => [ 'sidebar_position', 'none' ],
+			'post_featured_image'        => [ 'post_featured_image', 'show' ],
 			'header_variant'             => [ 'header_variant', 'inline' ],
 			'footer_variant'             => [ 'footer_variant', 'simple' ],
 			'cta_reveal'                 => [ 'cta_reveal', 'hover' ],

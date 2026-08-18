@@ -44,6 +44,8 @@ const FIXTURES_PATH = path.join(__dirname, '.fixtures.json');
  *     colour: { id: number, taxonomy: string, terms: Record<string, number> },
  *   },
  *   productsShortcodePage: number,
+ *   frontPageProducts: number[],
+ *   journal: Array<{ slug: string, title: string }>,
  *   classicPages: { cart: number, checkout: number },
  *   downloadable: number,
  *   coupon: { code: string, id: number },
@@ -85,14 +87,20 @@ export function loadFixtures() {
   // the spec navigates to `/checkout/order-received/undefined/`, and the
   // failure it reports is a 404 assertion rather than "your store was seeded
   // before these fixtures existed" — which is minutes of the wrong
-  // investigation. The keys checked are exactly the ones #42 (F1) added.
-  const missing = ['classicPages', 'downloadable', 'coupon', 'orders'].filter(
-    (key) => !(key in fixtures),
-  );
+  // investigation. The keys checked are exactly the ones #42 (F1) and #40
+  // added.
+  const missing = [
+    'classicPages',
+    'downloadable',
+    'coupon',
+    'orders',
+    'frontPageProducts',
+    'journal',
+  ].filter((key) => !(key in fixtures));
   if (missing.length > 0) {
     throw new Error(
       `[e2e-woo] ${FIXTURES_PATH} is missing ${missing.join(', ')} — it was written by a seed ` +
-        'from before those fixtures existed (#42, F1). Re-run the full seed (npm run e2e:woo) ' +
+        'from before the current fixture schema (#42, F1; #40). Re-run the full seed (npm run e2e:woo) ' +
         'against this container.',
     );
   }

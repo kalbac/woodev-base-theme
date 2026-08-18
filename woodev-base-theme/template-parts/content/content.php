@@ -13,6 +13,8 @@ declare(strict_types=1);
 // prints a path. Fail closed instead.
 defined( 'ABSPATH' ) || exit;
 
+use Woodev\Theme\Base\Templates\Layout;
+
 /*
  * `$args` is get_template_part()'s third parameter (WP 5.5+; the theme's floor
  * is 6.8). front-page.php passes `hide_entry_head` because the hero above it
@@ -28,7 +30,10 @@ defined( 'ABSPATH' ) || exit;
  * The explicit `true ===` comparison is the part that matters — a truthy
  * string or `1` should not silently suppress the header.
  */
-$wtb_hide_entry_head = isset( $args['hide_entry_head'] ) && true === $args['hide_entry_head'];
+$wtb_hide_entry_head     = isset( $args['hide_entry_head'] ) && true === $args['hide_entry_head'];
+$wtb_is_post             = 'post' === get_post_type();
+$wtb_show_featured_image = ! $wtb_is_post || Layout::show_post_featured_image();
+$wtb_post_categories     = $wtb_is_post ? get_the_category() : [];
 ?>
 <article id="post-<?php the_ID(); ?>" <?php post_class( 'wtb-entry mb-8' ); ?>>
 	<?php if ( ! $wtb_hide_entry_head ) : ?>
@@ -51,7 +56,7 @@ $wtb_hide_entry_head = isset( $args['hide_entry_head'] ) && true === $args['hide
 			 * `is_single()` for attachments and every public CPT, which is the
 			 * mistake `Layout::has_sidebar()` already records having made once.
 			 */
-			if ( 'post' === get_post_type() ) :
+			if ( $wtb_is_post ) :
 				?>
 				<div class="wtb-entry-meta">
 					<time datetime="<?php echo esc_attr( get_the_date( DATE_W3C ) ); ?>">
@@ -66,12 +71,21 @@ $wtb_hide_entry_head = isset( $args['hide_entry_head'] ) && true === $args['hide
 						);
 						?>
 					</span>
+					<?php if ( ! empty( $wtb_post_categories ) ) : ?>
+						<span class="wtb-entry-meta__categories">
+							<?php foreach ( $wtb_post_categories as $wtb_category ) : ?>
+								<a href="<?php echo esc_url( get_category_link( $wtb_category->term_id ) ); ?>">
+									<?php echo esc_html( $wtb_category->name ); ?>
+								</a>
+							<?php endforeach; ?>
+						</span>
+					<?php endif; ?>
 				</div>
 			<?php endif; ?>
 		</header>
 	<?php endif; ?>
 
-	<?php if ( ! $wtb_hide_entry_head && has_post_thumbnail() ) : ?>
+	<?php if ( ! $wtb_hide_entry_head && $wtb_show_featured_image && has_post_thumbnail() ) : ?>
 		<div class="wtb-entry-thumbnail mb-6">
 			<?php the_post_thumbnail( 'large', [ 'class' => 'w-full h-auto rounded-lg' ] ); ?>
 		</div>

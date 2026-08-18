@@ -27,12 +27,14 @@ declare(strict_types=1);
 // prints a path. Fail closed instead.
 defined( 'ABSPATH' ) || exit;
 
+use Woodev\Theme\Base\Templates\Breadcrumbs;
 use Woodev\Theme\Base\Templates\Layout;
 
 get_header();
 ?>
-<div class="wtb-layout<?php echo Layout::has_sidebar() ? ' wtb-layout--has-sidebar' : ''; ?>">
+<div class="wtb-layout<?php echo Layout::has_sidebar() ? ' wtb-layout--has-sidebar wtb-layout--sidebar-' . esc_attr( Layout::sidebar_position() ) : ''; ?>">
 	<div class="wtb-layout__content">
+		<?php Breadcrumbs::render(); ?>
 		<?php
 		while ( have_posts() ) {
 			the_post();

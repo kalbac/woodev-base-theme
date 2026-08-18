@@ -64,6 +64,29 @@ test('post excerpts render as cards with header, section and footer', async ({ p
   }
 });
 
+test('post-card images use the approved 16:10 crop', async ({ page }) => {
+  await page.goto('/');
+
+  // The base fixture deliberately contains text-only posts, so inject a real
+  // image into the live card shape rather than asserting an absent author
+  // thumbnail. This exercises the shipped selector and computed geometry.
+  const card = page.locator('.wtb-entry-card').first();
+  await card.evaluate((element) => {
+    const image = document.createElement('img');
+    image.alt = '';
+    image.src =
+      'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" />';
+    element.prepend(image);
+  });
+
+  const image = card.locator('> img:first-child');
+  await expect(image).toBeVisible();
+
+  const box = await image.boundingBox();
+  expect(box).not.toBeNull();
+  expect(box.width / box.height).toBeCloseTo(16 / 10, 1);
+});
+
 test('a category badge in a card header links to a live category archive', async ({ page }) => {
   await page.goto('/');
 

@@ -15,7 +15,7 @@ use Woodev\Theme\Base\Templates\Layout;
 
 get_header();
 ?>
-<div class="wtb-layout<?php echo Layout::has_sidebar() ? ' wtb-layout--has-sidebar' : ''; ?>">
+<div class="wtb-layout<?php echo Layout::has_sidebar() ? ' wtb-layout--has-sidebar wtb-layout--sidebar-' . esc_attr( Layout::sidebar_position() ) : ''; ?>">
 	<div class="wtb-layout__content">
 		<header class="wtb-archive-header mb-8">
 			<h1 class="wtb-archive-title wtb-search-summary">
@@ -29,7 +29,11 @@ get_header();
 			</h1>
 		</header>
 
-		<?php get_template_part( 'template-parts/content/loop' ); ?>
+		<div class="wtb-search-form">
+			<?php get_search_form( [ 'aria_label' => __( 'Search the site', 'woodev-base-theme' ) ] ); ?>
+		</div>
+
+		<?php get_template_part( 'template-parts/content/search-results' ); ?>
 	</div>
 	<?php get_template_part( 'template-parts/sidebar' ); ?>
 </div>

@@ -1,12 +1,12 @@
 <?php
 /**
- * Front-page product picks — mockup §05, sourced from WooCommerce popularity.
+ * Front-page product picks — mockup §05, ordered by product sales.
  *
- * This is intentionally not a "current week" report. WooCommerce exposes a
- * native popularity ordering, but a calendar-week report needs a plugin-owned
- * query and cache. The editorial label remains useful without inventing that
- * reporting layer, and the section disappears when WooCommerce or products do
- * not exist.
+ * This is intentionally not a "current week" report. Product sales are the
+ * closest native, queryable popularity signal. A calendar-week
+ * report needs a plugin-owned query and cache. The editorial label remains useful
+ * without inventing that reporting layer, and the section disappears when
+ * WooCommerce or products do not exist.
  *
  * @package Woodev\Theme\Base
  */
@@ -24,8 +24,11 @@ $wtb_products = wc_get_products(
 		'limit'      => 4,
 		'status'     => 'publish',
 		'visibility' => 'visible',
-		'orderby'    => 'popularity',
-		'order'      => 'DESC',
+		'orderby'    => [
+			'meta_value_num' => 'DESC',
+			'ID'             => 'DESC',
+		],
+		'meta_key'   => 'total_sales', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- WooCommerce-managed sales counter; the front page reads four visible products.
 		'return'     => 'objects',
 	]
 );
@@ -83,19 +86,24 @@ $wtb_original_loop    = $woocommerce_loop ?? null;
 wp_reset_postdata();
 
 if ( null === $wtb_original_post ) {
-	unset( $post );
+	unset( $GLOBALS['post'] );
+
+	foreach ( [ 'id', 'authordata', 'currentday', 'currentmonth', 'page', 'pages', 'multipage', 'more', 'numpages' ] as $wtb_postdata_global ) {
+		unset( $GLOBALS[ $wtb_postdata_global ] );
+	}
 } else {
 	$post = $wtb_original_post; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- restore the front-page post after rendering the isolated Woo loop.
+	setup_postdata( $post );
 }
 
 if ( null === $wtb_original_product ) {
-	unset( $product );
+	unset( $GLOBALS['product'] );
 } else {
 	$product = $wtb_original_product;
 }
 
 if ( null === $wtb_original_loop ) {
-	unset( $woocommerce_loop );
+	unset( $GLOBALS['woocommerce_loop'] );
 } else {
 	$woocommerce_loop = $wtb_original_loop; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- restore WooCommerce loop state after rendering the isolated front-page loop.
 }

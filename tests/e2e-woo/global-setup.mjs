@@ -81,8 +81,8 @@ export const COLOUR_TERM_SLUGS = Object.freeze([
   'blue',
 ]);
 
-/** Published posts used by the front-page Journal section. */
-const JOURNAL_POSTS = Object.freeze([
+/** Published posts used by the front-page Journal section, newest first. */
+export const JOURNAL_POSTS = Object.freeze([
   {
     slug: 'wtb-journal-kitchen-rhythm',
     title: 'Kitchen rhythm',
@@ -151,6 +151,11 @@ function reseedProduct(slug, args) {
     }
   }
   return wp(`wc product create --user=admin --slug=${slug} --porcelain ${args}`);
+}
+
+/** Set the metric the front-page product query orders on. */
+function setProductSales(productId, totalSales) {
+  wp(`post meta update ${productId} total_sales ${totalSales}`);
 }
 
 /**
@@ -847,15 +852,21 @@ function seedCustomer() {
  * own no-post/no-Woo contract.
  */
 export function seedJournalPosts() {
-  for (const { slug, title, content } of JOURNAL_POSTS) {
+  for (const [index, { slug, title, content }] of JOURNAL_POSTS.entries()) {
     const existing = wpTry(`post list --post_type=post --name=${slug} --field=ID`);
     for (const id of existing.split(/\r?\n/).filter(Boolean)) {
       wp(`post delete ${id} --force`);
     }
 
+    const postDate = new Date(Date.now() - (index + 1) * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 19)
+      .replace('T', ' ');
+
     wp(
       `post create --post_type=post --post_status=publish --post_title="${title}" ` +
-        `--post_name=${slug} --post_content="${content}" --porcelain`,
+        `--post_name=${slug} --post_content="${content}" --post_date="${postDate}" ` +
+        `--post_date_gmt="${postDate}" --porcelain`,
     );
   }
 }
@@ -1074,6 +1085,10 @@ export default function globalSetup() {
   seedCustomer();
   log(`seeded customer account: ${CUSTOMER_USERNAME}`);
 
+  // The front-page journal e2e asserts canonical paths. Pinning the structure
+  // here keeps that assertion independent from any previous wp-env state.
+  wp("rewrite structure '/%postname%/' --hard");
+
   seedJournalPosts();
   log(`seeded ${JOURNAL_POSTS.length} journal posts`);
 
@@ -1253,12 +1268,26 @@ export default function globalSetup() {
     log(`catalogue product ${p.slug} → id ${id}`);
   }
 
+  const frontPageProducts = [
+    Number(simpleId),
+    Number(saleId),
+    catalogueProductIds['wtb-maple-utensil-crock'],
+    catalogueProductIds['wtb-woven-table-runner'],
+  ];
+
   // ── 5. Seed a NON-Woo page that renders a Woo product loop ───────────────
   const shortcodePageId = seedShortcodePage();
   log(`[products] shortcode page ${SHORTCODE_PAGE_SLUG} → id ${shortcodePageId}`);
 
   // ── 5a-b. The #42 fixtures: classic cart/checkout, downloads, orders ─────
   const issue42 = seedIssue42Fixtures([Number(simpleId), Number(saleId)]);
+
+  // The order fixtures above may update total_sales through WooCommerce's CRUD
+  // path. Set the known values afterwards so this query's rendered order stays
+  // deterministic.
+  for (const [index, productId] of frontPageProducts.entries()) {
+    setProductSales(productId, (frontPageProducts.length - index) * 10);
+  }
 
   // ── 6. Export the seeded ids for specs/helpers.mjs ───────────────────────
   //
@@ -1292,6 +1321,8 @@ export default function globalSetup() {
       },
     },
     productsShortcodePage: Number(shortcodePageId),
+    frontPageProducts,
+    journal: JOURNAL_POSTS.map(({ slug, title }) => ({ slug, title })),
     ...issue42,
   });
   log(`wrote fixture ids to ${FIXTURES_PATH}`);

@@ -29,16 +29,17 @@ final class CustomizerTest extends WP_UnitTestCase {
 	}
 
 	private const SETTINGS = [
-		'base_font_size'   => 16,
-		'container_width'  => 1440,
-		'palette'          => 'warm-clay',
-		'accent'           => '',
-		'radius'           => 10,
-		'font'             => 'identity',
-		'sidebar_position' => 'none',
-		'header_variant'   => 'inline',
-		'footer_variant'   => 'simple',
-		'cta_reveal'       => 'hover',
+		'base_font_size'      => 16,
+		'container_width'     => 1440,
+		'palette'             => 'warm-clay',
+		'accent'              => '',
+		'radius'              => 10,
+		'font'                => 'identity',
+		'sidebar_position'    => 'none',
+		'post_featured_image' => 'show',
+		'header_variant'      => 'inline',
+		'footer_variant'      => 'simple',
+		'cta_reveal'          => 'hover',
 	];
 
 	public function test_wordpress_accepts_every_setting_with_its_default(): void {

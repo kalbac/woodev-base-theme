@@ -18,10 +18,9 @@ use Woodev\Theme\Base\Customizer\Settings;
 
 $wtb_shortcode = Settings::front_newsletter_shortcode();
 
-if ( '' === $wtb_shortcode || 1 !== preg_match_all( '/\[\s*\/?\s*([a-z0-9_-]+)/i', $wtb_shortcode, $wtb_matches ) ) {
+if ( '' === $wtb_shortcode || str_contains( $wtb_shortcode, '[[' ) || str_contains( $wtb_shortcode, ']]' ) || 1 > preg_match_all( '/\[\s*\/?\s*([^<>&\/\[\]\x00-\x20=]+)[^\[\]]*\]/', $wtb_shortcode, $wtb_matches ) ) {
 	return;
 }
-
 
 foreach ( array_unique( $wtb_matches[1] ) as $wtb_shortcode_tag ) {
 	if ( ! shortcode_exists( $wtb_shortcode_tag ) ) {

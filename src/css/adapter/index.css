@@ -80,6 +80,20 @@
 @media (min-width: 64rem) {
   .wtb-layout--has-sidebar {
     grid-template-columns: minmax(0, 1fr) 18rem;
+    grid-template-areas: 'content sidebar';
+  }
+
+  .wtb-layout--sidebar-left {
+    grid-template-columns: 18rem minmax(0, 1fr);
+    grid-template-areas: 'sidebar content';
+  }
+
+  .wtb-layout--has-sidebar > .wtb-layout__content {
+    grid-area: content;
+  }
+
+  .wtb-layout--has-sidebar > .wtb-sidebar {
+    grid-area: sidebar;
   }
 }
 

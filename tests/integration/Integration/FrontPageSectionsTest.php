@@ -354,6 +354,57 @@ final class FrontPageSectionsTest extends WP_UnitTestCase {
 		self::assertStringContainsString( '<form>', $html );
 	}
 
+	public function test_newsletter_wraps_a_registered_enclosing_shortcode(): void {
+		add_shortcode(
+			'test_newsletter_form',
+			static fn ( mixed $attributes = [], ?string $content = null ): string => '<form>' . $content . '</form>'
+		);
+		set_theme_mod( 'front_newsletter_shortcode', '[test_newsletter_form]Sign up[/test_newsletter_form]' );
+
+		$html = $this->render();
+
+		remove_shortcode( 'test_newsletter_form' );
+
+		self::assertSame( 1, self::count_class( self::xpath( $html ), 'wtb-front-newsletter' ) );
+		self::assertStringContainsString( '<form>Sign up</form>', $html );
+	}
+
+	public function test_newsletter_accepts_a_registered_shortcode_tag_with_a_period(): void {
+		add_shortcode( 'test.newsletter_form', static fn (): string => '<form><input type="email" /></form>' );
+		set_theme_mod( 'front_newsletter_shortcode', '[test.newsletter_form]' );
+
+		$html = $this->render();
+
+		remove_shortcode( 'test.newsletter_form' );
+
+		self::assertSame( 1, self::count_class( self::xpath( $html ), 'wtb-front-newsletter' ) );
+		self::assertStringContainsString( '<form>', $html );
+	}
+
+	public function test_newsletter_rejects_an_escaped_registered_shortcode(): void {
+		add_shortcode( 'test_newsletter_form', static fn (): string => '<form><input type="email" /></form>' );
+		set_theme_mod( 'front_newsletter_shortcode', '[[test_newsletter_form]]' );
+
+		$html = $this->render();
+
+		remove_shortcode( 'test_newsletter_form' );
+
+		self::assertSame( 0, self::count_class( self::xpath( $html ), 'wtb-front-newsletter' ) );
+		self::assertStringNotContainsString( '[test_newsletter_form]', $html );
+	}
+
+	public function test_newsletter_rejects_an_unterminated_registered_shortcode(): void {
+		add_shortcode( 'test_newsletter_form', static fn (): string => '<form><input type="email" /></form>' );
+		set_theme_mod( 'front_newsletter_shortcode', '[test_newsletter_form' );
+
+		$html = $this->render();
+
+		remove_shortcode( 'test_newsletter_form' );
+
+		self::assertSame( 0, self::count_class( self::xpath( $html ), 'wtb-front-newsletter' ) );
+		self::assertStringNotContainsString( '[test_newsletter_form', $html );
+	}
+
 	/**
 	 * The tile plate, without WooCommerce.
 	 *
