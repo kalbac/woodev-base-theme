@@ -1,5 +1,35 @@
 # Session Log — Woodev Base
 
+## s21 — 18.08.2026 — #40 re-critic repairs and #43 pre-change inventory
+
+Worked on the uncommitted follow-up to front-page sections commit `0d25e3e` on
+`feat/front-page-sections`. No code was committed or merged; that remains
+Maksim's call.
+
+- Replaced the ineffective `wc_get_products( [ 'orderby' => 'popularity' ] )`
+  query with explicit `total_sales` meta ordering and a stable `ID` tiebreak.
+- Made Woo fixtures deterministic: sales values are set after order fixtures,
+  journal post dates include `post_date_gmt`, and the seed pins `/%postname%/`.
+- Repaired product-loop global cleanup, exact card-ID matching, and newsletter
+  rejection of escaped or unterminated shortcode syntax; added two integration
+  regressions for the latter.
+- Claude Opus 5 independently re-criticked the repairs in focused rounds. Its
+  final verdict found no P0/P1; remaining notes were non-blocking P2 scope or
+  documentation observations.
+- Added `wc-get-products-popularity-is-not-a-query-order` to the gotcha index
+  (47 entries): catalogue popularity is not a valid `wc_get_products()` order.
+- Recorded #43's required pre-change comparison in
+  `docs/plans/2026-08-18-issue-43-mockup-comparison.md`; it separates real
+  template gaps from mockup-only store content.
+- Verified: PHPCS 122 files, PHPStan L8, ESLint, Prettier, unit 516 (1704
+  assertions, 1 skip), integration 78 (271 assertions, 1 skip), build, and
+  `git diff --check`.
+- Full Woo e2e was not rerun: the known global setup stall at `wp widget add`
+  (#48) prevents a trustworthy fresh browser verdict. Do not call it green.
+
+**Next:** commit/merge #40 repairs only with Maksim's direction; then implement
+#43 from its comparison plan, followed by M3 release mechanics.
+
 ## s20 — 18.08.2026 — front-page sections, surface probe, and the Woo scope trap
 
 Implemented issue [#40](https://github.com/kalbac/woodev-base-theme/issues/40) on
