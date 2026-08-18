@@ -7,7 +7,7 @@ Requires PHP: 8.1
 Stable tag: 0.1.0
 License: GNU General Public License v2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
-Tags: custom-colors, custom-menu, translation-ready, featured-images, threaded-comments, right-sidebar, one-column, two-columns, e-commerce
+Tags: custom-colors, custom-menu, translation-ready, featured-images, threaded-comments, left-sidebar, right-sidebar, one-column, two-columns, footer-widgets, theme-options, e-commerce
 
 A universal WordPress theme with an optional WooCommerce layer, one coherent visual identity, and a light/dark colour scheme that follows the visitor's system preference.
 
