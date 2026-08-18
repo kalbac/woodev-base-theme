@@ -197,6 +197,31 @@
   color: var(--primary);
 }
 
+/* 404 keeps the alert's existing no-results treatment, but the recovery
+ * controls sit outside it so its icon/title/body grid remains semantic. */
+.wtb-error-404 {
+  max-width: var(--measure);
+  margin-inline: auto;
+  text-align: center;
+}
+
+.wtb-error-404 .alert {
+  text-align: left;
+}
+
+.wtb-error-404__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-lg);
+}
+
+.wtb-error-404__search {
+  max-width: 34rem;
+  margin: var(--space-lg) auto 0;
+}
+
 /* WooCommerce's store notices (`.woocommerce-message` / `-info` / `-error`)
  * deliberately do NOT live here. They are declared un-layered in src/css/woo.css
  * instead: WooCommerce ships those same classes in its own un-layered stylesheet,

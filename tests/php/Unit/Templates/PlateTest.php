@@ -24,14 +24,17 @@ final class PlateTest extends TestCase {
 	 */
 	public static function provide_variants(): array {
 		return [
-			'hero'  => [ 'hero', 480, 400, 6 ],
-			'promo' => [ 'promo', 480, 400, 5 ],
-			'mug'   => [ 'mug', 400, 400, 5 ],
-			'lamp'  => [ 'lamp', 400, 400, 6 ],
-			'box'   => [ 'box', 400, 400, 5 ],
-			'plaid' => [ 'plaid', 400, 400, 4 ],
-			'vase'  => [ 'vase', 400, 400, 5 ],
-			'towel' => [ 'towel', 400, 400, 5 ],
+			'hero'   => [ 'hero', 480, 400, 6 ],
+			'promo'  => [ 'promo', 480, 400, 5 ],
+			'mug'    => [ 'mug', 400, 400, 5 ],
+			'lamp'   => [ 'lamp', 400, 400, 6 ],
+			'box'    => [ 'box', 400, 400, 5 ],
+			'plaid'  => [ 'plaid', 400, 400, 4 ],
+			'vase'   => [ 'vase', 400, 400, 5 ],
+			'towel'  => [ 'towel', 400, 400, 5 ],
+			'post-a' => [ 'post-a', 480, 300, 5 ],
+			'post-b' => [ 'post-b', 480, 300, 4 ],
+			'post-c' => [ 'post-c', 480, 300, 4 ],
 		];
 	}
 
@@ -78,7 +81,7 @@ final class PlateTest extends TestCase {
 	 * why it is pinned by name rather than left to a browser check.
 	 */
 	public function test_only_the_panel_plates_cover_their_box(): void {
-		foreach ( [ 'hero', 'promo' ] as $variant ) {
+		foreach ( [ 'hero', 'promo', 'post-a', 'post-b', 'post-c' ] as $variant ) {
 			self::assertStringContainsString(
 				'preserveAspectRatio="xMidYMid slice"',
 				Plate::render( $variant ),

@@ -92,6 +92,7 @@ for (const [schemeName, isDark] of Object.entries(SCHEMES)) {
 
       await expect(page.locator('article.wtb-entry')).toBeVisible();
       await expect(page.locator('h1.wtb-entry-title')).toBeVisible();
+      await expect(page.locator('.wtb-entry-meta__categories a').first()).toBeVisible();
       await expect(page.getByText(NOT_FOUND_TEXT)).toHaveCount(0);
 
       expect(errors).toEqual([]);
@@ -129,6 +130,8 @@ for (const [schemeName, isDark] of Object.entries(SCHEMES)) {
       expect(response.status()).toBe(200);
 
       await expect(page.locator('h1.wtb-archive-title')).toContainText('Search results for:');
+      await expect(page.locator('.wtb-search-form')).toBeVisible();
+      await expect(page.locator('.wtb-search-results .wtb-search-result').first()).toBeVisible();
       await expect(page.getByText(NOT_FOUND_TEXT)).toHaveCount(0);
 
       expect(errors).toEqual([]);
@@ -141,6 +144,8 @@ for (const [schemeName, isDark] of Object.entries(SCHEMES)) {
       expect(response.status()).toBe(404);
 
       await expect(page.locator('h1')).toHaveText(NOT_FOUND_TEXT);
+      await expect(page.locator('.wtb-error-404__actions a[data-variant="primary"]')).toBeVisible();
+      await expect(page.locator('.wtb-error-404__actions a[data-variant="outline"]')).toBeVisible();
 
       // Investigated (not blanket-suppressed): Chromium logs "Failed to load
       // resource: the server responded with a status of 404" to the console

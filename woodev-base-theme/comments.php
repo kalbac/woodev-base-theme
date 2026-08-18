@@ -118,6 +118,7 @@ $woodev_base_fields = [
 			'comment_field' => $woodev_base_comment_field,
 			'fields'        => $woodev_base_fields,
 			'class_submit'  => 'btn',
+			'submit_button' => '<input name="%1$s" type="submit" id="%2$s" class="%3$s" value="%4$s" data-variant="primary" />',
 		]
 	);
 	?>

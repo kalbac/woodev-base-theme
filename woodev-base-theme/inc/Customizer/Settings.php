@@ -327,6 +327,8 @@ final class Settings {
 		'lock',
 	];
 
+	public const FRONT_NEWSLETTER_SHORTCODE_DEFAULT = '';
+
 	/**
 	 * Customizer sanitize callback for `front_hero_eyebrow`.
 	 *
@@ -747,6 +749,31 @@ final class Settings {
 	 */
 	public static function front_promo_image(): int {
 		return self::sanitize_front_promo_image( get_theme_mod( 'front_promo_image', self::FRONT_PROMO_IMAGE_DEFAULT ) );
+	}
+
+
+	/**
+	 * Customizer sanitize callback for the optional newsletter shortcode.
+	 *
+	 * The theme stores only the shortcode text. The template verifies that its
+	 * tag is currently registered before executing it, so a removed plugin never
+	 * leaves a raw shortcode or an empty visual shell on the page.
+	 *
+	 * @param mixed $value Raw value.
+	 */
+	public static function sanitize_front_newsletter_shortcode( mixed $value ): string {
+		return \is_string( $value )
+			? \sanitize_textarea_field( $value )
+			: self::FRONT_NEWSLETTER_SHORTCODE_DEFAULT;
+	}
+
+	/**
+	 * Registered third-party newsletter form shortcode, or an empty string.
+	 */
+	public static function front_newsletter_shortcode(): string {
+		return self::sanitize_front_newsletter_shortcode(
+			get_theme_mod( 'front_newsletter_shortcode', self::FRONT_NEWSLETTER_SHORTCODE_DEFAULT )
+		);
 	}
 
 	/**

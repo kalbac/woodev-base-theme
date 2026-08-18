@@ -156,11 +156,26 @@ final class Customizer {
 			__( 'Sidebar', 'woodev-base-theme' ),
 			[
 				'none'  => __( 'No sidebar', 'woodev-base-theme' ),
+				'left'  => __( 'Left sidebar', 'woodev-base-theme' ),
 				'right' => __( 'Right sidebar', 'woodev-base-theme' ),
 			],
 			'none',
 			Layout::sanitize_sidebar_position( ... ),
 			__( 'Shown on the blog, archives, search results and single posts, when the Sidebar widget area has widgets.', 'woodev-base-theme' )
+		);
+
+		$this->add_select(
+			$wp_customize,
+			'post_featured_image',
+			'woodev_base_layout',
+			__( 'Featured image on posts', 'woodev-base-theme' ),
+			[
+				'show' => __( 'Show above the article', 'woodev-base-theme' ),
+				'hide' => __( 'Hide', 'woodev-base-theme' ),
+			],
+			'show',
+			Layout::sanitize_post_featured_image( ... ),
+			__( 'Controls the featured image on single posts. Pages keep their own featured-image treatment.', 'woodev-base-theme' )
 		);
 
 		$this->add_select(
@@ -383,6 +398,16 @@ final class Customizer {
 			Settings::FRONT_PROMO_IMAGE_DEFAULT,
 			Settings::sanitize_front_promo_image( ... ),
 			__( 'Image shown beside the promo text. Leave empty to use a themed illustration instead.', 'woodev-base-theme' )
+		);
+
+		$this->add_textarea(
+			$wp_customize,
+			'front_newsletter_shortcode',
+			'woodev_base_front',
+			__( 'Newsletter form shortcode', 'woodev-base-theme' ),
+			Settings::FRONT_NEWSLETTER_SHORTCODE_DEFAULT,
+			Settings::sanitize_front_newsletter_shortcode( ... ),
+			__( 'Optional shortcode supplied by a newsletter plugin. The section stays hidden when empty or when the shortcode is not registered. The theme does not store subscribers or process submissions.', 'woodev-base-theme' )
 		);
 	}
 

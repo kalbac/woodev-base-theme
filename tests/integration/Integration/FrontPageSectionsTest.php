@@ -47,6 +47,7 @@ final class FrontPageSectionsTest extends WP_UnitTestCase {
 		'front_promo_cta_label',
 		'front_promo_cta_url',
 		'front_promo_image',
+		'front_newsletter_shortcode',
 	];
 
 	public function tear_down(): void {
@@ -295,6 +296,113 @@ final class FrontPageSectionsTest extends WP_UnitTestCase {
 			self::count_class( $xpath, 'wtb-promo__cta' ),
 			'a button with a label and nowhere to go must not render.'
 		);
+	}
+
+	public function test_product_picks_are_absent_without_woocommerce(): void {
+		$xpath = self::xpath( $this->render() );
+
+		self::assertSame( 0, self::count_class( $xpath, 'wtb-front-products' ) );
+	}
+
+	public function test_the_journal_renders_the_three_newest_posts(): void {
+		self::factory()->post->create_many(
+			4,
+			[
+				'post_title'   => 'Journal item',
+				'post_excerpt' => 'A real excerpt.',
+			]
+		);
+
+		$html  = $this->render();
+		$xpath = self::xpath( $html );
+
+		self::assertSame( 1, self::count_class( $xpath, 'wtb-front-journal' ) );
+		self::assertSame( 3, self::count_class( $xpath, 'wtb-front-editorial__card' ) );
+		self::assertSame( 3, self::count_class( $xpath, 'wtb-plate--post-a' ) + self::count_class( $xpath, 'wtb-plate--post-b' ) + self::count_class( $xpath, 'wtb-plate--post-c' ) );
+	}
+
+	public function test_newsletter_is_absent_when_the_shortcode_is_unregistered(): void {
+		set_theme_mod( 'front_newsletter_shortcode', '[not_registered_form]' );
+
+		$html = $this->render();
+
+		self::assertStringNotContainsString( 'not_registered_form', $html );
+		self::assertSame( 0, self::count_class( self::xpath( $html ), 'wtb-front-newsletter' ) );
+	}
+
+	public function test_newsletter_rejects_a_registered_shortcode_followed_by_an_unregistered_one(): void {
+		add_shortcode( 'test_newsletter_form', static fn (): string => '<form></form>' );
+		set_theme_mod( 'front_newsletter_shortcode', '[test_newsletter_form][not_registered_form]' );
+
+		$html = $this->render();
+
+		remove_shortcode( 'test_newsletter_form' );
+
+		self::assertSame( 0, self::count_class( self::xpath( $html ), 'wtb-front-newsletter' ) );
+		self::assertStringNotContainsString( 'not_registered_form', $html );
+	}
+
+	public function test_newsletter_wraps_registered_shortcode_output(): void {
+		add_shortcode( 'test_newsletter_form', static fn (): string => '<form><input type="email" /></form>' );
+		set_theme_mod( 'front_newsletter_shortcode', '[test_newsletter_form]' );
+
+		$html = $this->render();
+
+		remove_shortcode( 'test_newsletter_form' );
+
+		self::assertSame( 1, self::count_class( self::xpath( $html ), 'wtb-front-newsletter' ) );
+		self::assertStringContainsString( '<form>', $html );
+	}
+
+	public function test_newsletter_wraps_a_registered_enclosing_shortcode(): void {
+		add_shortcode(
+			'test_newsletter_form',
+			static fn ( mixed $attributes = [], ?string $content = null ): string => '<form>' . $content . '</form>'
+		);
+		set_theme_mod( 'front_newsletter_shortcode', '[test_newsletter_form]Sign up[/test_newsletter_form]' );
+
+		$html = $this->render();
+
+		remove_shortcode( 'test_newsletter_form' );
+
+		self::assertSame( 1, self::count_class( self::xpath( $html ), 'wtb-front-newsletter' ) );
+		self::assertStringContainsString( '<form>Sign up</form>', $html );
+	}
+
+	public function test_newsletter_accepts_a_registered_shortcode_tag_with_a_period(): void {
+		add_shortcode( 'test.newsletter_form', static fn (): string => '<form><input type="email" /></form>' );
+		set_theme_mod( 'front_newsletter_shortcode', '[test.newsletter_form]' );
+
+		$html = $this->render();
+
+		remove_shortcode( 'test.newsletter_form' );
+
+		self::assertSame( 1, self::count_class( self::xpath( $html ), 'wtb-front-newsletter' ) );
+		self::assertStringContainsString( '<form>', $html );
+	}
+
+	public function test_newsletter_rejects_an_escaped_registered_shortcode(): void {
+		add_shortcode( 'test_newsletter_form', static fn (): string => '<form><input type="email" /></form>' );
+		set_theme_mod( 'front_newsletter_shortcode', '[[test_newsletter_form]]' );
+
+		$html = $this->render();
+
+		remove_shortcode( 'test_newsletter_form' );
+
+		self::assertSame( 0, self::count_class( self::xpath( $html ), 'wtb-front-newsletter' ) );
+		self::assertStringNotContainsString( '[test_newsletter_form]', $html );
+	}
+
+	public function test_newsletter_rejects_an_unterminated_registered_shortcode(): void {
+		add_shortcode( 'test_newsletter_form', static fn (): string => '<form><input type="email" /></form>' );
+		set_theme_mod( 'front_newsletter_shortcode', '[test_newsletter_form' );
+
+		$html = $this->render();
+
+		remove_shortcode( 'test_newsletter_form' );
+
+		self::assertSame( 0, self::count_class( self::xpath( $html ), 'wtb-front-newsletter' ) );
+		self::assertStringNotContainsString( '[test_newsletter_form', $html );
 	}
 
 	/**

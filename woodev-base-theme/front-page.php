@@ -37,6 +37,9 @@ get_template_part( 'template-parts/front/hero' );
 get_template_part( 'template-parts/front/value-band' );
 get_template_part( 'template-parts/front/category-tiles' );
 get_template_part( 'template-parts/front/promo' );
+get_template_part( 'template-parts/front/product-picks' );
+get_template_part( 'template-parts/front/journal' );
+get_template_part( 'template-parts/front/newsletter' );
 
 /*
  * The layout wrapper and the sidebar partial are index.php's, reproduced here
@@ -51,7 +54,7 @@ get_template_part( 'template-parts/front/promo' );
  * doubled the page padding on every front-page section.
  */
 ?>
-<div class="wtb-front-content wtb-layout<?php echo Layout::has_sidebar() ? ' wtb-layout--has-sidebar' : ''; ?>">
+<div class="wtb-front-content wtb-layout<?php echo Layout::has_sidebar() ? ' wtb-layout--has-sidebar wtb-layout--sidebar-' . esc_attr( Layout::sidebar_position() ) : ''; ?>">
 	<div class="wtb-layout__content">
 		<?php if ( is_home() ) : ?>
 			<?php

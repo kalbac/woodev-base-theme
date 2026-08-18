@@ -245,6 +245,21 @@ final class SettingsTest extends TestCase {
 		self::assertSame( 'Hello', Settings::front_hero_eyebrow() );
 	}
 
+	public function test_front_newsletter_shortcode_sanitizes_textarea_input(): void {
+		self::assertSame(
+			'[newsletter_form id="7"]',
+			Settings::sanitize_front_newsletter_shortcode( "\n[newsletter_form id=\"7\"]\n" )
+		);
+		self::assertSame( '', Settings::sanitize_front_newsletter_shortcode( [ 'shortcode' ] ) );
+		self::assertSame( '', Settings::sanitize_front_newsletter_shortcode( new \stdClass() ) );
+	}
+
+	public function test_front_newsletter_shortcode_resolver_reads_the_theme_mod(): void {
+		$this->stub_theme_mod( ' [newsletter_form id="7"] ' );
+
+		self::assertSame( '[newsletter_form id="7"]', Settings::front_newsletter_shortcode() );
+	}
+
 	public function test_front_hero_lede_sanitizes_a_valid_value(): void {
 		self::assertSame( 'Quality that lasts.', Settings::sanitize_front_hero_lede( 'Quality that lasts.' ) );
 	}

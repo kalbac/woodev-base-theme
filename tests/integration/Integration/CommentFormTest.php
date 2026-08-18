@@ -52,8 +52,8 @@ final class CommentFormTest extends WP_UnitTestCase {
 		self::assertMatchesRegularExpression( '#<textarea[^>]*class="[^"]*\btextarea\b#', $this->render_comment_form() );
 	}
 
-	public function test_the_submit_button_carries_the_basecoat_class(): void {
-		self::assertMatchesRegularExpression( '#<(input|button)[^>]*class="[^"]*\bbtn\b#', $this->render_comment_form() );
+	public function test_the_submit_button_is_the_primary_basecoat_action(): void {
+		self::assertMatchesRegularExpression( '#<(input|button)[^>]*class="[^"]*\bbtn\b[^"]*"[^>]*data-variant="primary"#', $this->render_comment_form() );
 	}
 
 	public function test_the_author_and_email_inputs_carry_the_basecoat_class(): void {

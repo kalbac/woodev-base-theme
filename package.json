@@ -14,6 +14,7 @@
     "test:js": "vitest run",
     "lint:js": "eslint .",
     "format": "prettier --check .",
+    "probe:surfaces": "node scripts/surface-probe.mjs",
     "e2e": "playwright test",
     "e2e:dev": "playwright test --config=playwright.dev.config.mjs",
     "e2e:woo": "playwright test --config=playwright.woo.config.mjs",

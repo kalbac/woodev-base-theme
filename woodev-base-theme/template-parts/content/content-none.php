@@ -14,6 +14,8 @@ declare(strict_types=1);
 // Direct access to a theme file runs outside WordPress: the fatal that follows
 // prints a path. Fail closed instead.
 defined( 'ABSPATH' ) || exit;
+
+$wtb_show_search_form = ! isset( $args['show_search_form'] ) || true === $args['show_search_form'];
 ?>
 <div class="wtb-no-results alert">
 	<?php woodev_base_icon( 'search' ); ?>
@@ -27,7 +29,7 @@ defined( 'ABSPATH' ) || exit;
 	</section>
 </div>
 
-<?php if ( is_search() ) : ?>
+<?php if ( is_search() && $wtb_show_search_form ) : ?>
 	<div class="mt-4">
 		<?php get_search_form(); ?>
 	</div>
