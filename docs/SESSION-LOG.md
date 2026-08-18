@@ -1,5 +1,34 @@
 # Session Log — Woodev Base
 
+## s22 — 19.08.2026 — #40/#43 merged, M3 metadata and WP 6.8 floor coverage
+
+- Merged `feat/front-page-sections` into `main` as `1ba4440`, including #40's
+  re-critic repairs and #43's blog/text/sidebar/service-surface work.
+- #43 added the left sidebar modifier, featured-image Customizer setting,
+  server-rendered breadcrumbs, compact search rows, 404 recovery, and Journal
+  header/category treatment. Claude Opus 5 re-critic found no blockers after
+  P1 fixes.
+- Validated the current official wp.org Theme Tags list, then synchronised
+  `style.css` and `readme.txt` in `6b2083d`.
+- Added `languages/index.php` plus a real integration guard in `cc424d3`, so
+  `translation-ready` no longer names a directory the package does not ship.
+- Added `.wp-env.wp68.json`, `php-integration-wp68`, explicit `wp core version`
+  verification, and production/dev integration floor suites in `5849510`
+  (`Closes #49`). Claude Opus 5 reviewed and re-reviewed the CI change.
+- Verified locally on WordPress 6.8 + PHP 8.1: production integration 83 tests,
+  286 assertions, 1 expected skip; dev integration 4 tests, 8 assertions.
+- PHPCS 127 files and Prettier were green after the languages fix. The #43
+  battery earlier in the session was green: PHPCS, PHPStan L8, unit 518,
+  integration 82, ESLint, build and diff check.
+- Screenshot capture works at the required 1200×900 but the default local seed
+  renders `woodev_base_theme`; it was not committed as a wp.org artefact.
+- #48 was measured, not fixed: all four `wp widget add` commands succeed in
+  isolation (~14–16s each), while the full setup makes 39 separate `wp-env run
+  cli` calls. A two-command `sh -c` batch took 52s, so it is not an improvement.
+
+**Next:** design portable batch seeding for #48; do not use Docker-generated
+container names. Finish M3 screenshot/R2 provenance/version afterwards.
+
 ## s21 — 18.08.2026 — #40 re-critic repairs and #43 pre-change inventory
 
 Worked on the uncommitted follow-up to front-page sections commit `0d25e3e` on
