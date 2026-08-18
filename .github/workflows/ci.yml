@@ -67,6 +67,35 @@ jobs:
       - run: npm run test:integration:install
       - run: npm run test:integration
 
+  php-integration-wp68:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      # The asset tests resolve hashed filenames through the Vite manifest and
+      # markTestSkipped() without one. Keep this floor job as strict as the
+      # latest-core one; a skipped assertion is not compatibility coverage.
+      - run: npm run build
+      # A distinct config path gives wp-env a distinct Docker project, so this
+      # floor run cannot share the latest-core containers or checkout.
+      - run: npm run wp:wp68:start
+      - name: Verify the declared WordPress floor
+        run: |
+          version="$(npx wp-env run cli --config=.wp-env.wp68.json wp core version | tr -d '\r' | tail -n 1)"
+          case "$version" in
+            6.8|6.8.*) ;;
+            *) echo "Expected WordPress 6.8, got '$version'"; exit 1 ;;
+          esac
+      - run: npm run test:integration:wp68:install
+      - run: npm run test:integration:wp68
+      # ScriptModuleGuard has a separate dev-mode consumer. Its graceful 6.8
+      # fallback is the regression this floor job was created to exercise.
+      - run: npm run test:integration:wp68:dev
+
   e2e:
     runs-on: ubuntu-latest
     needs: js-qa

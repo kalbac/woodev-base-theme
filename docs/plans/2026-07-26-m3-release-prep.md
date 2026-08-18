@@ -233,10 +233,9 @@ must run on the final tree.
 - [ ] **No plugin territory:** confirm nothing registers a CPT, taxonomy, shortcode, or
       admin page that would belong in a plugin.
 - [ ] **Version and floors:** bump `Version:` off `0.1.0`; re-verify `Requires at least: 6.8`
-      and `Tested up to: 7.0` against the current releases. Note the standing blind spot —
-      **nothing in this project tests the declared 6.8 floor**; wp-env runs `core: null` and
-      CI does not matrix. One CI job with `core: "WordPress/WordPress#6.8"` closes it and is
-      cheap. If it is not done, say so in the release notes rather than implying coverage.
+      and `Tested up to: 7.0` against the current releases. The declared 6.8 floor is covered
+      by `php-integration-wp68`: an isolated `WordPress/WordPress#6.8`, PHP 8.1 environment
+      that asserts its core version before running production and dev-mode integration suites.
 - [ ] **Full battery on the merge commit**, not per-branch, including the three suites CI
       never runs (`e2e:woo`, `integration-dev`, `e2e-dev`).
 - [ ] Commit; tag the release.
