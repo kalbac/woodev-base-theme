@@ -16,7 +16,7 @@ Implemented issue [#40](https://github.com/kalbac/woodev-base-theme/issues/40) o
 - The full Woo setup stalled at `wp widget add` before reseeding products; a no-setup Woo battery reached 65 passed with 7 stale-fixture failures. This remains the existing [#48](https://github.com/kalbac/woodev-base-theme/issues/48) / wp-env CLI caveat, not a green full Woo gate.
 - An independent review found and the implementation fixed three issues: raw unregistered shortcode tails, position-based rather than post-id-based fallback plates, and Woo loop-global restoration.
 
-No commit yet; the branch is ready for final review/commit. Next: #43 blog/text mockup comparison, then M3 release mechanics.
+Implementation commit `0d25e3e` is on `feat/front-page-sections`; the branch is ready for final critic/merge review. Next: #43 blog/text mockup comparison, then M3 release mechanics.
 
 ## s19 — 29.07.2026 — the classic cart, checkout, account and receipt; five defects that had already shipped; and a rule that had never applied at all
 

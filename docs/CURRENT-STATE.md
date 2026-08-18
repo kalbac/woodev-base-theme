@@ -225,7 +225,7 @@ T0→T1→T2 sequential; T3 parallel with T1/T2; T4–T6 parallelisable once T1�
 
 ## Last session
 
-s20 (18.08.2026): **#40 completed on `feat/front-page-sections`**. Added popularity-sourced Woo product
+s20 (18.08.2026): **#40 completed on `feat/front-page-sections`**, implementation commit `0d25e3e`. Added popularity-sourced Woo product
 picks, three-post Journal with deterministic SVG fallback plates, and an optional registered third-party
 newsletter shortcode setting. Added the committed nine-surface probe and a fresh plan at
 `docs/plans/2026-08-18-front-page-sections.md`.
@@ -243,6 +243,6 @@ CLI degradation is resolved.
 
 **Next session starts here:**
 
-1. Review and merge/commit the `feat/front-page-sections` implementation after the critic gate.
+1. Run the final critic/merge review for `0d25e3e`.
 2. Implement [#43](https://github.com/kalbac/woodev-base-theme/issues/43): compare blog, text and service pages against the approved mockup.
 3. Then return to M3 release mechanics: version, wp.org tags, and the deferred screenshot.
