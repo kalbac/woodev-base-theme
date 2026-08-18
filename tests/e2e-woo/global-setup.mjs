@@ -30,8 +30,8 @@
 // The `--config` flag is what pins commands to :8891 rather than the default
 // :8888; omitting it silently talks to the wrong container.
 
-import { execSync } from 'node:child_process';
-import { writeFileSync } from 'node:fs';
+import { spawn } from 'node:child_process';
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -47,6 +47,27 @@ const FIXTURES_PATH = path.join(__dirname, '.fixtures.json');
 const THEME_SLUG = 'woodev-base-theme';
 /** Plugin slug — WooCommerce. */
 const WOO_SLUG = 'woocommerce';
+const BATCH_DIR = path.resolve(__dirname, '../../scripts/.wp-cli-batch');
+let batchProcess;
+let batchRequestId = 0;
+
+function sleep(milliseconds) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, milliseconds);
+}
+
+function startBatch() {
+  if (batchProcess) return;
+  rmSync(BATCH_DIR, { recursive: true, force: true });
+  mkdirSync(BATCH_DIR, { recursive: true });
+  const command = `npx wp-env run cli --config=${CONFIG} wp eval-file wp-content/woodev-scripts/wp-cli-batch-server.php`;
+  batchProcess = spawn(process.platform === 'win32' ? 'cmd.exe' : 'npx', process.platform === 'win32' ? ['/d', '/s', '/c', command] : command.split(' '), {
+    cwd: path.resolve(__dirname, '../..'),
+    stdio: 'ignore',
+  });
+  const ready = path.join(BATCH_DIR, 'ready');
+  for (let attempt = 0; attempt < 600 && !existsSync(ready); attempt += 1) sleep(100);
+  if (!existsSync(ready)) throw new Error('[e2e-woo:setup] wp-cli batch server did not become ready');
+}
 
 /**
  * Product category slugs seeded for the catalogue e2e specs (filter rail,
@@ -112,8 +133,33 @@ export const CUSTOMER_PASSWORD = 'WtbE2eCustomer!1';
 
 /** Run a wp-cli command against the Woo environment, return trimmed stdout. */
 function wp(command) {
-  const full = `npx wp-env run cli --config=${CONFIG} wp ${command}`;
-  return execSync(full, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+  startBatch();
+  const id = String(++batchRequestId);
+  const request = path.join(BATCH_DIR, 'request.json');
+  const response = path.join(BATCH_DIR, 'response.json');
+  const temporary = `${request}.${id}`;
+  writeFileSync(temporary, JSON.stringify({ id, command }));
+  renameSync(temporary, request);
+  for (let attempt = 0; attempt < 12000; attempt += 1) {
+    if (existsSync(response)) {
+      let result;
+      try {
+        result = JSON.parse(readFileSync(response, 'utf8'));
+      } catch (error) {
+        if (error instanceof SyntaxError) {
+          sleep(10);
+          continue;
+        }
+        throw error;
+      }
+      if (result.id === id) {
+        if (result.code !== 0) throw new Error(result.stdout);
+        return result.stdout.trim();
+      }
+    }
+    sleep(10);
+  }
+  throw new Error(`[e2e-woo:setup] timed out waiting for batch command: ${command}`);
 }
 
 /** Same, but swallow a non-zero exit (e.g. deleting something that isn't there). */

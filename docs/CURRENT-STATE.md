@@ -1,6 +1,6 @@
 # Current State — Woodev Base
 
-> Updated: 19.08.2026 (s22)
+> Updated: 19.08.2026 (s23)
 
 ## Phase status
 
@@ -15,7 +15,7 @@
 | Identity implementation (T0–T8) | ✅ **Merged s15** | ADR-007 (fonts) + ADR-008 (identity replaces the 8 style packs). Plan: `docs/plans/2026-07-25-visual-identity.md`. All four areas criticked and re-criticked (s12); test debt paid s13. PR [#24](https://github.com/kalbac/woodev-base-theme/pull/24) squashed onto `main` as `f040eaa` |
 | M2a — Woo storefront | ✅ **Merged s15**, in `f040eaa` | Classic storefront on the approved identity. The block cart/checkout gap was M2b |
 | M2b — Woo block cart & checkout | ✅ **Merged s15** | [ADR-009](adr/ADR-009-block-cart-checkout-styling.md) implemented B0–B6, criticked **and** re-criticked. PR [#29](https://github.com/kalbac/woodev-base-theme/pull/29) squashed onto `main` as `1d769ae` |
-| M3 — Public release prep | 🟡 In flight | Plan: `docs/plans/2026-07-26-m3-release-prep.md`. **R1/R3 done. R4 advanced s22:** current wp.org tags synced (`6b2083d`), `languages/index.php` shipped and guarded (`cc424d3`), WP 6.8 floor covered in CI (`5849510`). Remaining: version bump off `0.1.0`, release-worthy screenshot [#36](https://github.com/kalbac/woodev-base-theme/issues/36), and R2 provenance choice [#17](https://github.com/kalbac/woodev-base-theme/issues/17). |
+| M3 — Public release prep | 🟡 In flight | Plan: `docs/plans/2026-07-26-m3-release-prep.md`. **R1/R3 done. R4 advanced s23:** a browser-verified 1200×900 showcase screenshot is staged locally; release commit still needs QA/review. Remaining: version bump off `0.1.0` and R2 provenance choice [#17](https://github.com/kalbac/woodev-base-theme/issues/17). |
 | Front page (#18) | ✅ **Done s17**, merged `b4c592c` | Hero (eyebrow, lede, trust badges, art column), value band, promo, category tiles with plate art. Ten Customizer settings defaulting to EMPTY, every section self-suppressing. `Templates\Plate` ports the mockup's eight plates byte-identically. Coverage (#37) in the same PR [#39](https://github.com/kalbac/woodev-base-theme/pull/39). |
 | Front page sections (#40) | ✅ **Merged s22** | Four sales-ordered Woo product picks, three-post Journal with deterministic Plate fallbacks, and an optional registered third-party newsletter shortcode. Repairs and #43 merged to `main` in `1ba4440`. |
 | Catalogue + product page (#41) | ✅ **Done s18**, merged `042c1a1` | PR [#44](https://github.com/kalbac/woodev-base-theme/pull/44). Filter rail (`sidebar-shop`, holding WooCommerce's own filter widgets — the theme builds no filtering), subcategory chips, `−24%` sale badge, breadcrumb separator, pagination chevrons with accessible names, card category eyebrow. Product page: breadcrumb + sale badge into the buy box, SKU by the rating, savings badge, quantity stepper, `<dl>` meta, 64px thumbnail column, two default-empty trust badges. Two template overrides only. **Three defects that had already shipped were fixed on the way** — see Known bugs |
@@ -24,9 +24,24 @@
 
 ## Known bugs
 
-`main` is at **`5849510`**. Product defects are closed; the remaining gate issue is
-[#48](https://github.com/kalbac/woodev-base-theme/issues/48): full `e2e:woo`
-setup has 39 separate `wp-env run cli` calls and exceeds practical foreground time.
+`main` is at **`2f6530f`** before the s23 WIP commit. Product defects are closed; the
+remaining gate issue is [#48](https://github.com/kalbac/woodev-base-theme/issues/48):
+full `e2e:woo` setup has 39 separate `wp-env run cli` calls. An experimental
+single-process IPC transport exists but is not yet a passing replacement.
+
+### s23 — showcase and #48 batch experiment
+
+- Added a portable, idempotent Woo showcase seed through a `wp-env` mapping and one
+  `wp eval-file` call. It seeds human-readable home, journal, menu, categories, products,
+  generated product art, and required Customizer content without touching the shipped theme.
+- Browser-checked seven real routes on `:8891`: home, catalogue, product, journal, search,
+  404 and sidebar. The first walk exposed WooCommerce Coming Soon intercepting store pages;
+  the seed now explicitly disables it. Catalogue/product then render correctly.
+- Captured and visually checked `woodev-base-theme/screenshot.png` at 1200×900 from the
+  production build. It is release-worthy in content, but remains uncommitted pending gates.
+- #48 experiment: replaced the individual host-side CLI round trips with a persistent
+  `wp eval-file` command server and file IPC. Four fresh `e2e:woo` attempts were red before
+  specs: result-shape handling, response-read races, then a setup timeout. Do not call it green.
 
 ### s21 repairs — #40 re-critic and #43 inventory
 

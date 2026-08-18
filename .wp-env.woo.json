@@ -3,6 +3,9 @@
   "phpVersion": "8.1",
   "themes": ["./woodev-base-theme"],
   "plugins": ["https://downloads.wordpress.org/plugin/woocommerce.10.9.4.zip"],
+  "mappings": {
+    "wp-content/woodev-scripts": "./scripts"
+  },
   "testsEnvironment": false,
   "port": 8891
 }

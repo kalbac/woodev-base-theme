@@ -1,5 +1,28 @@
 # Session Log — Woodev Base
 
+## s23 — 19.08.2026 — release showcase and incomplete #48 batch transport
+
+- Added an idempotent `npm run seed:showcase` workflow for the isolated Woo `wp-env`.
+  It uses the versioned `.wp-env.woo.json` mapping plus one `wp eval-file` call, never a
+  Docker-generated container name.
+- Seeded a real editorial storefront: static home and Journal pages, primary navigation,
+  four named products, reproducible GD product images, Notes posts, front-page Customizer
+  copy, product trust badges and a clean taxonomy set.
+- Browser-walked home, catalogue, product, Journal, search, 404 and sidebar at 1200px. All
+  reported the expected status and no horizontal overflow. The expected 404 resource notice
+  is the sole console message.
+- Found that fresh Woo enables Coming Soon, which intercepts `/shop/` and `/product/*` with
+  “Great things are on the horizon” despite valid products. The showcase seed disables it;
+  catalogue and product were then visually verified.
+- Created and visually checked the 1200×900 `woodev-base-theme/screenshot.png` from the
+  production build. It now shows real, release-quality theme content.
+- Began #48 replacement: `tests/e2e-woo/global-setup.mjs` now experiments with one persistent
+  `wp eval-file` server and mapped file IPC. Fresh full `e2e:woo` attempts exposed transport
+  defects (WP-CLI result objects, Windows read races, stale request locks) and then timed out
+  during setup. No e2e:woo pass was obtained or claimed.
+- The WIP is intentionally committed for continuity. Next session must finish or replace the
+  IPC approach, add teardown/process ownership, then obtain one complete fresh full Woo run.
+
 ## s22 — 19.08.2026 — #40/#43 merged, M3 metadata and WP 6.8 floor coverage
 
 - Merged `feat/front-page-sections` into `main` as `1ba4440`, including #40's
