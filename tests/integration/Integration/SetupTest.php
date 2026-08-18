@@ -96,4 +96,8 @@ final class SetupTest extends WP_UnitTestCase {
 		// the wiring, not a translation.
 		self::assertSame( 'woodev-base-theme', wp_get_theme()->get( 'TextDomain' ) );
 	}
+
+	public function test_the_translation_directory_is_shipped(): void {
+		self::assertFileExists( get_template_directory() . '/languages/index.php' );
+	}
 }
