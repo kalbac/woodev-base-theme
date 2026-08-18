@@ -1,10 +1,11 @@
 # Gotchas Index — Woodev Base
 
-> 45 entries. Each gotcha is a separate file in `docs/gotchas/`.
+> 46 entries. Each gotcha is a separate file in `docs/gotchas/`.
 
 | Gotcha | Area | Summary |
 |---|---|---|
 | [woo-clearfix-pseudo-elements-become-grid-items](gotchas/woo-clearfix-pseudo-elements-become-grid-items.md) | CSS/WooCommerce | Woo clearfixes its own containers with `::before`/`::after` + `content`. Grid promotes both to GRID ITEMS, shifting every real child by one cell — the columns render stacked while `gridTemplateColumns` measures correct. Hit three times (`ul.products`, `.col2-set`, `.woocommerce` itself). Kill the clearfix with `display: none` at the vendor's own specificity, and assert the children share a row |
+| [woo-front-loop-needs-woocommerce-scope](gotchas/woo-front-loop-needs-woocommerce-scope.md) | CSS/WooCommerce | A product loop rendered directly by `front-page.php` has valid Woo markup but no Woo body class, so storefront rules scoped under `.woocommerce` miss it: the list stays block layout and intrinsic product images make the page enormous. Add the standard `woocommerce` class to the theme-owned wrapper, then keep only the front-specific four-column override outside the archive scope |
 | [commerce-pages-inherit-the-prose-reading-measure](gotchas/commerce-pages-inherit-the-prose-reading-measure.md) | CSS/Layout | The classic cart, checkout, account and receipt are ordinary PAGES, so they render through `.wtb-entry-content` and inherited its `max-width: var(--measure)` — a 1248px article containing a **694px** cart, with the table's columns overflowing under the totals card. The mockup only measures `.article` and explicit `.prose`. Lift the cap per-surface, never with a bare `:has(> .woocommerce)` |
 | [woocommerce-thankyou-fires-for-failed-orders-too](gotchas/woocommerce-thankyou-fires-for-failed-orders-too.md) | WooCommerce | `woocommerce_thankyou` sits AFTER the failed/success `endif` in `thankyou.php`, so it runs on a declined payment as well; `woocommerce_before_thankyou` fires before the branch; neither fires when the id resolves to no order. Guard each callback on the status separately — one guard does not cover the other |
 | [tailwind-v4-layer-precedence](gotchas/tailwind-v4-layer-precedence.md) | CSS | `@layer components` loses to utilities; un-layered CSS beats all layers — plan overrides accordingly |

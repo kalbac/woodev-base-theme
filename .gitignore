@@ -51,3 +51,6 @@ woodev-base-theme/screenshot.png
 # process.cwd()). They exist for the length of one debugging loop; ignoring the
 # suffix is what stops one being committed by accident.
 *.tmp.mjs
+
+# Committed surface-probe output (screenshots and computed-style JSON).
+surface-probe-out/

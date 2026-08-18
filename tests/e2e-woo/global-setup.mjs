@@ -81,6 +81,25 @@ export const COLOUR_TERM_SLUGS = Object.freeze([
   'blue',
 ]);
 
+/** Published posts used by the front-page Journal section. */
+const JOURNAL_POSTS = Object.freeze([
+  {
+    slug: 'wtb-journal-kitchen-rhythm',
+    title: 'Kitchen rhythm',
+    content: 'A seeded journal entry for the front-page editorial surface.',
+  },
+  {
+    slug: 'wtb-journal-quiet-light',
+    title: 'Quiet light',
+    content: 'A second seeded journal entry for the front-page editorial surface.',
+  },
+  {
+    slug: 'wtb-journal-things-kept',
+    title: 'Things kept',
+    content: 'A third seeded journal entry for the front-page editorial surface.',
+  },
+]);
+
 // Known credentials for a seeded customer account. Some `.form-row select`
 // legibility assertions (storefront.spec.mjs) need a page that only exists
 // for a logged-in shopper — WooCommerce's country/state `<select>` lives on
@@ -822,6 +841,26 @@ function seedCustomer() {
 }
 
 /**
+ * Seed the three ordinary posts the front-page Journal section reads. The
+ * posts are test data, not theme copy: they make the Woo e2e environment able
+ * to exercise a real post query while the Woo-free integration suite keeps its
+ * own no-post/no-Woo contract.
+ */
+export function seedJournalPosts() {
+  for (const { slug, title, content } of JOURNAL_POSTS) {
+    const existing = wpTry(`post list --post_type=post --name=${slug} --field=ID`);
+    for (const id of existing.split(/\r?\n/).filter(Boolean)) {
+      wp(`post delete ${id} --force`);
+    }
+
+    wp(
+      `post create --post_type=post --post_status=publish --post_title="${title}" ` +
+        `--post_name=${slug} --post_content="${content}" --porcelain`,
+    );
+  }
+}
+
+/**
  * Widget area the theme renders as the catalogue filter rail
  * (woodev-base-theme/inc/Woo/FilterRail.php — `FilterRail::SIDEBAR_ID`).
  */
@@ -1034,6 +1073,9 @@ export default function globalSetup() {
   // ── 3c. Seed a customer account for login-gated assertions ───────────────
   seedCustomer();
   log(`seeded customer account: ${CUSTOMER_USERNAME}`);
+
+  seedJournalPosts();
+  log(`seeded ${JOURNAL_POSTS.length} journal posts`);
 
   // ── 3d. Seed the category tree and the colour attribute ──────────────────
   //

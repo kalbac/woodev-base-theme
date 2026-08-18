@@ -2358,6 +2358,17 @@
   }
 }
 
+/* The front-page picks are the mockup's four-card merchandising row. Keep the
+ * archive contract above at three columns; only this theme-owned wrapper gets
+ * the wider home layout. This rule is intentionally outside the `.woocommerce`
+ * scope: the front page is a normal WordPress page and carries no Woo body
+ * class, although its product loop uses WooCommerce's template contract. */
+@media (min-width: 80rem) {
+  .wtb-front-products ul.products {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
 /* ================================================================== *
  * The reading measure does not apply to a commerce surface.
  *

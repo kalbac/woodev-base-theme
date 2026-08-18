@@ -384,6 +384,16 @@ final class Customizer {
 			Settings::sanitize_front_promo_image( ... ),
 			__( 'Image shown beside the promo text. Leave empty to use a themed illustration instead.', 'woodev-base-theme' )
 		);
+
+		$this->add_textarea(
+			$wp_customize,
+			'front_newsletter_shortcode',
+			'woodev_base_front',
+			__( 'Newsletter form shortcode', 'woodev-base-theme' ),
+			Settings::FRONT_NEWSLETTER_SHORTCODE_DEFAULT,
+			Settings::sanitize_front_newsletter_shortcode( ... ),
+			__( 'Optional shortcode supplied by a newsletter plugin. The section stays hidden when empty or when the shortcode is not registered. The theme does not store subscribers or process submissions.', 'woodev-base-theme' )
+		);
 	}
 
 	/**

@@ -1,5 +1,23 @@
 # Session Log — Woodev Base
 
+## s20 — 18.08.2026 — front-page sections, surface probe, and the Woo scope trap
+
+Implemented issue [#40](https://github.com/kalbac/woodev-base-theme/issues/40) on
+`feat/front-page-sections`, following the approved mockup and a new plan
+`docs/plans/2026-08-18-front-page-sections.md`.
+
+- Added four popularity-sourced Woo product picks, reusing the standard Woo loop and existing card contract.
+- Added a three-post Journal query with real links, date/category metadata, featured-image support, and deterministic SVG Plate fallbacks.
+- Added an optional `front_newsletter_shortcode` Customizer setting; only registered third-party shortcode output renders, with no subscription logic in the theme.
+- Added `scripts/surface-probe.mjs`, `probe:surfaces`, nine full-page PNG captures, computed-style JSON, and the browser baseline workflow.
+- The probe found a real front-loop defect: Woo CSS is scoped under `.woocommerce`; adding that class to the theme-owned wrapper changed the page from 7421px/block layout to 2498px/four tracks. Recorded in `docs/gotchas/woo-front-loop-needs-woocommerce-scope.md`.
+- Added 3 fallback post plates, front CSS, Customizer/unit/integration coverage, Woo journal fixtures, and 4 Woo front-page e2e checks including phone geometry.
+- Verification: build, PHPCS 122 files, PHPStan L8, ESLint, Prettier, tokens check, Vitest 64, unit 516 (1704 assertions, 1 skip), integration 74 (255 assertions, 1 skip), base e2e 63/63, targeted Woo e2e 4/4.
+- The full Woo setup stalled at `wp widget add` before reseeding products; a no-setup Woo battery reached 65 passed with 7 stale-fixture failures. This remains the existing [#48](https://github.com/kalbac/woodev-base-theme/issues/48) / wp-env CLI caveat, not a green full Woo gate.
+- An independent review found and the implementation fixed three issues: raw unregistered shortcode tails, position-based rather than post-id-based fallback plates, and Woo loop-global restoration.
+
+No commit yet; the branch is ready for final review/commit. Next: #43 blog/text mockup comparison, then M3 release mechanics.
+
 ## s19 — 29.07.2026 — the classic cart, checkout, account and receipt; five defects that had already shipped; and a rule that had never applied at all
 
 **PR [#50](https://github.com/kalbac/woodev-base-theme/pull/50) squashed onto `main` as `e800e09`**,

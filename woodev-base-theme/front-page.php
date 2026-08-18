@@ -37,6 +37,9 @@ get_template_part( 'template-parts/front/hero' );
 get_template_part( 'template-parts/front/value-band' );
 get_template_part( 'template-parts/front/category-tiles' );
 get_template_part( 'template-parts/front/promo' );
+get_template_part( 'template-parts/front/product-picks' );
+get_template_part( 'template-parts/front/journal' );
+get_template_part( 'template-parts/front/newsletter' );
 
 /*
  * The layout wrapper and the sidebar partial are index.php's, reproduced here

@@ -17,7 +17,8 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Shapes are ported VERBATIM from the `<symbol>` definitions in
  * docs/design/v2-mockup/woodev-base-identity.html (ids `p-hero`, `p-promo`,
- * `p-mug`, `p-lamp`, `p-box`, `p-plaid`, `p-vase`, `p-towel`) — that file is
+ * `p-mug`, `p-lamp`, `p-box`, `p-plaid`, `p-vase`, `p-towel`, `p-post-a`,
+ * `p-post-b`, `p-post-c`) — that file is
  * the approved design artefact (ADR-008), so this is a port, not a redraw.
  *
  * The shapes are inlined directly into the returned `<svg>` rather than
@@ -51,7 +52,7 @@ final class Plate {
 	 * @var array<string, array{width: int, height: int, cover?: bool, shapes: string}>
 	 */
 	private const VARIANTS = [
-		'hero'  => [
+		'hero'   => [
 			'width'  => 480,
 			'cover'  => true,
 			'height' => 400,
@@ -61,7 +62,7 @@ final class Plate {
 				. '<circle fill="var(--c-obj)" opacity=".86" cx="310" cy="112" r="44"/>'
 				. '<path fill="none" stroke="var(--c-ln)" stroke-width="6" opacity=".34" stroke-linecap="round" stroke-linejoin="round" d="M88 348h304M252 216h112"/>',
 		],
-		'promo' => [
+		'promo'  => [
 			'width'  => 480,
 			'cover'  => true,
 			'height' => 400,
@@ -70,7 +71,32 @@ final class Plate {
 				. '<circle fill="var(--c-obj3)" opacity=".92" cx="176" cy="212" r="72"/>'
 				. '<path fill="none" stroke="var(--c-ln)" stroke-width="6" opacity=".34" stroke-linecap="round" stroke-linejoin="round" d="M60 320h360M176 140v-40"/>',
 		],
-		'mug'   => [
+		'post-a' => [
+			'width'  => 480,
+			'cover'  => true,
+			'height' => 300,
+			'shapes' => '<circle fill="var(--c-obj2)" opacity=".14" cx="360" cy="90" r="96"/>'
+				. '<path fill="var(--c-obj)" opacity=".86" d="M60 190h150v110H60z"/>'
+				. '<path fill="var(--c-obj3)" opacity=".92" d="M232 140h120v160H232z"/>'
+				. '<path fill="none" stroke="var(--c-ln)" stroke-width="6" opacity=".34" stroke-linecap="round" stroke-linejoin="round" d="M0 240h480"/>',
+		],
+		'post-b' => [
+			'width'  => 480,
+			'cover'  => true,
+			'height' => 300,
+			'shapes' => '<path fill="var(--c-obj2)" opacity=".14" d="M0 300 200 60h120L120 300z"/>'
+				. '<circle fill="var(--c-obj)" opacity=".86" cx="330" cy="176" r="76"/>'
+				. '<path fill="none" stroke="var(--c-ln)" stroke-width="6" opacity=".34" stroke-linecap="round" stroke-linejoin="round" d="M300 40h180"/>',
+		],
+		'post-c' => [
+			'width'  => 480,
+			'cover'  => true,
+			'height' => 300,
+			'shapes' => '<rect fill="var(--c-obj2)" opacity=".14" x="40" y="40" width="400" height="220" rx="20"/>'
+				. '<path fill="var(--c-obj)" opacity=".86" d="M120 260V128h80v132zM240 260V96h80v164z"/>'
+				. '<path fill="none" stroke="var(--c-ln)" stroke-width="6" opacity=".34" stroke-linecap="round" stroke-linejoin="round" d="M40 260h400"/>',
+		],
+		'mug'    => [
 			'width'  => 400,
 			'height' => 400,
 			'shapes' => '<circle fill="var(--c-obj2)" opacity=".14" cx="118" cy="296" r="98"/>'
@@ -78,7 +104,7 @@ final class Plate {
 				. '<path fill="var(--c-obj)" opacity=".86" d="M126 150h126v98a63 63 0 0 1-63 63 63 63 0 0 1-63-63z"/>'
 				. '<rect fill="var(--c-obj3)" opacity=".92" x="126" y="150" width="126" height="18" rx="9"/>',
 		],
-		'lamp'  => [
+		'lamp'   => [
 			'width'  => 400,
 			'height' => 400,
 			'shapes' => '<circle fill="var(--c-obj2)" opacity=".14" cx="200" cy="150" r="104"/>'
@@ -87,7 +113,7 @@ final class Plate {
 				. '<path fill="var(--c-obj)" opacity=".86" d="M146 300h108l12 20H134z"/>'
 				. '<circle fill="var(--c-obj3)" opacity=".92" cx="200" cy="230" r="14"/>',
 		],
-		'box'   => [
+		'box'    => [
 			'width'  => 400,
 			'height' => 400,
 			'shapes' => '<rect fill="var(--c-obj2)" opacity=".14" x="56" y="118" width="288" height="204" rx="18"/>'
@@ -95,14 +121,14 @@ final class Plate {
 				. '<path fill="var(--c-obj)" opacity=".86" d="M96 170h208v138a16 16 0 0 1-16 16H112a16 16 0 0 1-16-16Z"/>'
 				. '<rect fill="var(--c-obj3)" opacity=".92" x="82" y="142" width="236" height="32" rx="10"/>',
 		],
-		'plaid' => [
+		'plaid'  => [
 			'width'  => 400,
 			'height' => 400,
 			'shapes' => '<rect fill="var(--c-obj)" opacity=".86" x="70" y="94" width="260" height="212" rx="22"/>'
 				. '<path fill="none" stroke="var(--c-ln)" stroke-width="6" opacity=".34" stroke-linecap="round" stroke-linejoin="round" d="M70 164h260M70 236h260M138 94v212M262 94v212"/>'
 				. '<rect fill="var(--c-obj3)" opacity=".92" x="102" y="126" width="76" height="42" rx="10"/>',
 		],
-		'vase'  => [
+		'vase'   => [
 			'width'  => 400,
 			'height' => 400,
 			'shapes' => '<circle fill="var(--c-obj2)" opacity=".14" cx="300" cy="298" r="86"/>'
@@ -110,7 +136,7 @@ final class Plate {
 				. '<path fill="var(--c-obj)" opacity=".86" d="M168 122h64v42c26 22 40 52 40 86 0 42-32 66-72 66s-72-24-72-66c0-34 14-64 40-86z"/>'
 				. '<circle fill="var(--c-obj3)" opacity=".92" cx="200" cy="252" r="28"/>',
 		],
-		'towel' => [
+		'towel'  => [
 			'width'  => 400,
 			'height' => 400,
 			'shapes' => '<rect fill="var(--c-obj2)" opacity=".14" x="86" y="70" width="228" height="260" rx="20"/>'
