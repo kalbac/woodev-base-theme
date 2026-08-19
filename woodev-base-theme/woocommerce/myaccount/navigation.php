@@ -23,14 +23,11 @@
  * that map (a plugin-added tab) renders no icon at all — not a fallback glyph
  * — and still renders its label.
  *
- * The `aria-label` below is core's own copy, but re-declared under THIS
- * theme's text domain rather than reused as `woocommerce`:
- * `tests/php/Unit/I18nSourceTest.php` enforces a zero-exception rule that
- * every i18n call in shipped theme source names `woodev-base-theme`, which a
- * literal copy of core's own translation call cannot satisfy. The rendered
- * English text is unchanged; only which `.po` resolves it for other locales
- * is — a fresh string for this theme's own `ru_RU` catalogue (ADR-006)
- * instead of the one WooCommerce already ships translated.
+ * The `aria-label` below reuses core's own copy under the `woocommerce` text
+ * domain rather than re-declaring it under this theme's own: it is on the
+ * issue #52 carve-out allowlist in `tests/php/Unit/I18nSourceTest.php`, which
+ * grants that domain only to the exact msgids WooCommerce core already ships
+ * and translates, and only at a call site under `woodev-base-theme/woocommerce/`.
  *
  * @see     https://woocommerce.com/document/template-structure/
  * @package WooCommerce\Templates
@@ -44,7 +41,7 @@ defined( 'ABSPATH' ) || exit;
 do_action( 'woocommerce_before_account_navigation' );
 ?>
 
-<nav class="woocommerce-MyAccount-navigation" aria-label="<?php esc_attr_e( 'Account pages', 'woodev-base-theme' ); ?>">
+<nav class="woocommerce-MyAccount-navigation" aria-label="<?php esc_attr_e( 'Account pages', 'woocommerce' ); ?>">
 	<ul>
 		<?php foreach ( wc_get_account_menu_items() as $wtb_endpoint => $wtb_label ) : ?>
 			<li class="<?php echo esc_attr( wc_get_account_menu_item_classes( $wtb_endpoint ) ); ?>">

@@ -38,14 +38,16 @@
  * found-rows count, never hydrating a single `WC_Order` object, per
  * `includes/data-stores/class-wc-order-data-store-cpt.php::query()`.
  *
- * The greeting sentence below is core's own copy, but re-declared under THIS
- * theme's text domain rather than reused as `woocommerce`:
- * `tests/php/Unit/I18nSourceTest.php` enforces a zero-exception rule that
- * every i18n call in shipped theme source names `woodev-base-theme`, which a
- * literal copy of core's own translation call cannot satisfy. The rendered
- * English text is unchanged; only which `.po` resolves it for other locales
- * is — a fresh string for this theme's own `ru_RU` catalogue (ADR-006)
- * instead of the one WooCommerce already ships translated.
+ * The strings below that reproduce core's own copy verbatim (the greeting
+ * sentence, and the "Recent orders" table's headings, "#" hash-prefix and
+ * "View" action) reuse the `woocommerce` text domain rather than declaring a
+ * new one: each is on the issue #52 carve-out allowlist in
+ * `tests/php/Unit/I18nSourceTest.php`, which grants that domain only to the
+ * exact msgids WooCommerce core already ships and translates, and only at a
+ * call site under `woodev-base-theme/woocommerce/`. Strings the mockup adds
+ * that core has no equivalent for ("Orders in the last 12 months", "Orders in
+ * progress", "Lifetime spent", "No orders yet.") keep `woodev-base-theme`, as
+ * does "Action" (core's own copy is "Actions", plural).
  *
  * @see     https://woocommerce.com/document/template-structure/
  * @package WooCommerce\Templates
@@ -99,7 +101,7 @@ $wtb_recent_orders = wc_get_orders(
 		<?php
 		printf(
 			/* translators: 1: user display name 2: logout url */
-			wp_kses( __( 'Hello %1$s (not %1$s? <a href="%2$s">Log out</a>)', 'woodev-base-theme' ), $wtb_allowed_html ),
+			wp_kses( __( 'Hello %1$s (not %1$s? <a href="%2$s">Log out</a>)', 'woocommerce' ), $wtb_allowed_html ),
 			'<strong>' . esc_html( $current_user->display_name ) . '</strong>',
 			esc_url( wc_logout_url() )
 		);
@@ -122,7 +124,7 @@ $wtb_recent_orders = wc_get_orders(
 	</div>
 </div>
 
-<h2 class="wtb-account-section-title"><?php esc_html_e( 'Recent orders', 'woodev-base-theme' ); ?></h2>
+<h2 class="wtb-account-section-title"><?php esc_html_e( 'Recent orders', 'woocommerce' ); ?></h2>
 
 <?php if ( [] === $wtb_recent_orders ) : ?>
 	<p><?php esc_html_e( 'No orders yet.', 'woodev-base-theme' ); ?></p>
@@ -130,19 +132,19 @@ $wtb_recent_orders = wc_get_orders(
 	<table class="shop_table wtb-recent-orders">
 		<thead>
 			<tr>
-				<th scope="col"><?php esc_html_e( 'Order', 'woodev-base-theme' ); ?></th>
-				<th scope="col"><?php esc_html_e( 'Date', 'woodev-base-theme' ); ?></th>
-				<th scope="col"><?php esc_html_e( 'Status', 'woodev-base-theme' ); ?></th>
-				<th scope="col"><?php esc_html_e( 'Total', 'woodev-base-theme' ); ?></th>
+				<th scope="col"><?php esc_html_e( 'Order', 'woocommerce' ); ?></th>
+				<th scope="col"><?php esc_html_e( 'Date', 'woocommerce' ); ?></th>
+				<th scope="col"><?php esc_html_e( 'Status', 'woocommerce' ); ?></th>
+				<th scope="col"><?php esc_html_e( 'Total', 'woocommerce' ); ?></th>
 				<th scope="col"><span class="screen-reader-text"><?php esc_html_e( 'Action', 'woodev-base-theme' ); ?></span></th>
 			</tr>
 		</thead>
 		<tbody>
 			<?php foreach ( $wtb_recent_orders as $wtb_order ) : ?>
 				<tr>
-					<td data-title="<?php esc_attr_e( 'Order', 'woodev-base-theme' ); ?>">
+					<td data-title="<?php esc_attr_e( 'Order', 'woocommerce' ); ?>">
 						<a href="<?php echo esc_url( $wtb_order->get_view_order_url() ); ?>">
-							<?php echo esc_html( _x( '#', 'hash before order number', 'woodev-base-theme' ) . $wtb_order->get_order_number() ); ?>
+							<?php echo esc_html( _x( '#', 'hash before order number', 'woocommerce' ) . $wtb_order->get_order_number() ); ?>
 						</a>
 					</td>
 					<?php
@@ -158,21 +160,21 @@ $wtb_recent_orders = wc_get_orders(
 					 */
 					$wtb_created = $wtb_order->get_date_created();
 					?>
-					<td data-title="<?php esc_attr_e( 'Date', 'woodev-base-theme' ); ?>">
+					<td data-title="<?php esc_attr_e( 'Date', 'woocommerce' ); ?>">
 						<?php if ( null === $wtb_created ) : ?>
 							&mdash;
 						<?php else : ?>
 							<time datetime="<?php echo esc_attr( $wtb_created->date( 'c' ) ); ?>"><?php echo esc_html( wc_format_datetime( $wtb_created ) ); ?></time>
 						<?php endif; ?>
 					</td>
-					<td data-title="<?php esc_attr_e( 'Status', 'woodev-base-theme' ); ?>">
+					<td data-title="<?php esc_attr_e( 'Status', 'woocommerce' ); ?>">
 						<?php echo Account::status_badge( $wtb_order->get_status() ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Account::status_badge() escapes its own output. ?>
 					</td>
-					<td data-title="<?php esc_attr_e( 'Total', 'woodev-base-theme' ); ?>">
+					<td data-title="<?php esc_attr_e( 'Total', 'woocommerce' ); ?>">
 						<?php echo wp_kses_post( $wtb_order->get_formatted_order_total() ); ?>
 					</td>
 					<td>
-						<a class="button" href="<?php echo esc_url( $wtb_order->get_view_order_url() ); ?>"><?php esc_html_e( 'View', 'woodev-base-theme' ); ?></a>
+						<a class="button" href="<?php echo esc_url( $wtb_order->get_view_order_url() ); ?>"><?php esc_html_e( 'View', 'woocommerce' ); ?></a>
 					</td>
 				</tr>
 			<?php endforeach; ?>

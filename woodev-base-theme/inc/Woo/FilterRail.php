@@ -145,10 +145,10 @@ final class FilterRail {
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only: detecting which Woo filter query vars are present to build a Reset link, nothing is processed or written.
 		foreach ( array_keys( $_GET ) as $raw_key ) {
-			$key = sanitize_key( (string) $raw_key );
+			$raw_key = (string) $raw_key;
 
-			if ( self::is_filter_query_var( $key ) ) {
-				$active_keys[] = $key;
+			if ( self::is_filter_query_var( sanitize_key( $raw_key ) ) ) {
+				$active_keys[] = $raw_key;
 			}
 		}
 

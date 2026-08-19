@@ -50,7 +50,7 @@ $wtb_tag_list      = wc_get_product_tag_list( $product->get_id(), ', ', '', '' )
 		<div>
 			<dt><?php esc_html_e( 'SKU', 'woodev-base-theme' ); ?></dt>
 			<?php $wtb_sku = $product->get_sku(); ?>
-			<dd class="sku"><?php echo '' !== $wtb_sku ? esc_html( $wtb_sku ) : esc_html__( 'N/A', 'woodev-base-theme' ); ?></dd>
+			<dd class="sku"><?php echo '' !== $wtb_sku ? esc_html( $wtb_sku ) : esc_html__( 'N/A', 'woocommerce' ); ?></dd>
 		</div>
 	<?php endif; ?>
 
